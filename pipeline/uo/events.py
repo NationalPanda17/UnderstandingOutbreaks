@@ -127,6 +127,45 @@ def parse_cdc_travel(ds: dict, content: bytes, fetch_id: str) -> list[dict]:
     return out
 
 
+def parse_rss_notices(ds: dict, content: bytes, fetch_id: str) -> list[dict]:
+    """A plain RSS feed of notices (title, link, pubDate, description), one item per notice.
+
+    The feed carries no country list, so countries come only from the title's place part, if it has one. With
+    ``require_disease: true`` in the dataset config, the build keeps only items whose title names a disease in the
+    vocabulary: a general feed also carries items that are not about one disease, and those are not events.
+    """
+    label = ds.get("label", ds["id"])
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as e:
+        raise SchemaChange(f"{label}: feed is not XML: {e}")
+    if root.find("./channel") is None:
+        raise SchemaChange(f"{label}: RSS channel missing", expected=["channel/item"], found=[root.tag])
+    out = []
+    for it in root.findall("./channel/item"):
+        title = (it.findtext("title") or "").strip()
+        link = (it.findtext("link") or "").strip()
+        pub = (it.findtext("pubDate") or "").strip()
+        if not title or not link or not pub:
+            raise SchemaChange(f"{label}: item fields missing", expected=["title", "link", "pubDate"], found=[c.tag for c in it])
+        try:
+            d = dt.datetime.strptime(pub[:25].strip(), "%a, %d %b %Y %H:%M:%S").date()
+        except ValueError as e:
+            raise SchemaChange(f"{label}: unreadable pubDate {pub!r}: {e}")
+        slug = link.rstrip("/").split("/")[-1]
+        out.append({
+            "report_id": f"{ds['source_id']}:{slug}:{d.isoformat()}", "source_id": ds["source_id"], "dataset_id": ds["id"],
+            "title": title, "url": link, "published": d.isoformat(), "last_modified": d.isoformat(),
+            "text": strip_html(it.findtext("description")), "fetch_id": fetch_id, "raw_record_ref": f"guid={link};pubDate={d.isoformat()}",
+            "countries_hint": None, "source_weight": ds.get("source_type_weight", 0.6),
+        })
+    return out
+
+
+FETCHERS = {"who_don": fetch_who_don, "cdc_travel": fetch_cdc_travel, "rss_notices": fetch_cdc_travel}
+PARSERS = {"who_don": parse_who_don, "cdc_travel": parse_cdc_travel, "rss_notices": parse_rss_notices}
+
+
 # ----------------------------------------------------------------------------- disease normalization
 
 class DiseaseNormalizer:

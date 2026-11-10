@@ -567,3 +567,21 @@ def test_geometry_simplification_keeps_rings_closed_and_drops_islets():
     islet = [[20, 20], [20.001, 20], [20.001, 20.001], [20, 20.001], [20, 20]]
     g = S.simplify_geometry({"type": "MultiPolygon", "coordinates": [[big], [islet]]})
     assert g["type"] == "Polygon" and g["coordinates"][0][0] == g["coordinates"][0][-1] and [5, 0.001] not in g["coordinates"][0]
+
+
+def test_rss_notice_parser_reads_items_and_rejects_a_changed_feed():
+    feed = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>Updates</title>
+      <item><title>Ebola disease: Multi-country outbreak 2026</title><link>https://example.org/en/ebola-2026</link>
+        <description>&lt;p&gt;Since May 2026, 12 confirmed cases.&lt;/p&gt;</description><pubDate>Mon, 19 Oct 2026 17:36:21 +0200</pubDate></item>
+      <item><title>Job vacancies</title><link>https://example.org/en/jobs</link><description/><pubDate>Tue, 20 Oct 2026 09:00:00 +0200</pubDate></item>
+    </channel></rss>"""
+    ds = {"id": "x_feed", "source_id": "x", "label": "X feed"}
+    reps = E.parse_rss_notices(ds, feed, "x_feed@abc")
+    assert [r["report_id"] for r in reps] == ["x:ebola-2026:2026-10-19", "x:jobs:2026-10-20"]
+    assert reps[0]["text"] == "Since May 2026, 12 confirmed cases." and reps[0]["countries_hint"] is None and reps[0]["url"].startswith("https://")
+    norm = E.DiseaseNormalizer(core.load_diseases())
+    assert [norm.normalize(r["title"])[0] for r in reps] == ["ebola", None]     # require_disease keeps only the first
+    with pytest.raises(E.SchemaChange):
+        E.parse_rss_notices(ds, b"<rss><channel><item><title>No date</title><link>https://example.org/a</link></item></channel></rss>", "f")
+    with pytest.raises(E.SchemaChange):
+        E.parse_rss_notices(ds, b"<html>moved</html>", "f")

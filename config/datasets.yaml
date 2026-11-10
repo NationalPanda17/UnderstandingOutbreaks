@@ -239,6 +239,16 @@ events:
     url: "https://wwwnc.cdc.gov/travel/rss/notices.xml"
     link_kind: deep
     source_type_weight: 0.6
+  - id: ecdc_epi_updates
+    source_id: ecdc
+    connector: rss_notices
+    label: ECDC epidemiological updates
+    raw_ext: xml
+    url: "https://www.ecdc.europa.eu/en/taxonomy/term/1310/feed"
+    link_kind: deep
+    source_type_weight: 0.8
+    # The feed also carries items that are not about one disease; only titles naming a disease in the vocabulary are kept.
+    require_disease: true
 
 # Subnational products (first-level regions). Large downloads, refreshed at most every refresh_days; see
 # pipeline/uo/subnational.py for what is and is not done with them.

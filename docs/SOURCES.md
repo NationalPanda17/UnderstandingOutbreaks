@@ -68,8 +68,11 @@ for human review.**
 |---|---|---|---|---|---|
 | WHO Disease Outbreak News | `https://www.who.int/api/news/diseaseoutbreaknews` (OData; 3,204 notices in total) | Title, publication date, id, HTML summary and overview | several per week | WHO terms of use; publications are CC BY-NC-SA 3.0 IGO | **Primary.** Notices from 2022-01-01. Text is not redistributed: only titles, links, dates and short quoted phrases |
 | US CDC Travel Health Notices | `https://wwwnc.cdc.gov/travel/rss/notices.xml` | RSS items with level, disease, country list | as issued | US Government work | **Used.** The feed lists current notices only; earlier ones are kept from previous runs |
-| ECDC CDTR | see above | PDF reports | weekly | CC BY 4.0 | Not ingested |
-| Africa CDC briefings | feed empty | – | – | unclear | Dropped |
+| ECDC epidemiological updates | `https://www.ecdc.europa.eu/en/taxonomy/term/1310/feed` (RSS; 10 most recent items, checked 2026-11-10) | Title, link, date, one-paragraph description; no country list | a few per month | ECDC copyright notice; reuse terms not confirmed, so only titles, dates and links are shown and the raw feed is not redistributed | **Used.** Only items whose title names a disease in the vocabulary are kept; earlier items are kept from previous runs. Notices carry no country, so they join the multi-country event for that disease |
+| ECDC CDTR | `https://www.ecdc.europa.eu/en/taxonomy/term/1505/feed` | Weekly PDF reports covering many topics | weekly | as above | Not ingested: not per-event records |
+| PAHO | `https://www.paho.org/en/rss.xml` is general news (checked 2026-11-10); epidemiological alerts are listed only as an HTML page | – | – | – | Not used: no machine-readable feed of alerts |
+| Africa CDC | `https://africacdc.org/news-item/feed/` now has items (checked 2026-11-10) but they are general news and statements, not per-event records | – | – | unclear | Not used |
+| WHO Regional Office for Africa | `https://www.afro.who.int/rss/emergencies.xml` held 2 items, the newest from 2025 (checked 2026-11-10) | – | – | – | Not used: stale |
 | CDC Health Alert Network | HTTP 403 to automated clients | – | – | – | Dropped |
 | ReliefWeb | API v1 retired; v2 requires an approved app name | – | – | – | Not used until a maintainer registers an app name |
 | ProMED | subscription / restricted | – | – | – | Not used |

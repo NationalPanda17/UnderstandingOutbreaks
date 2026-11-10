@@ -139,6 +139,19 @@ sources:
     citation: "US Centers for Disease Control and Prevention. Travel Health Notices. https://wwwnc.cdc.gov/travel/notices"
     cadence: daily
     kind: events
+  - id: ecdc
+    name: European Centre for Disease Prevention and Control, epidemiological updates
+    short_name: ECDC epidemiological updates
+    publisher: European Centre for Disease Prevention and Control
+    landing_url: https://www.ecdc.europa.eu/en/news-events
+    license: ECDC copyright notice (reuse terms not confirmed by this project; only titles, dates and links are shown)
+    license_url: https://www.ecdc.europa.eu/en/legal-notice
+    license_verification: stated-unverified
+    license_checked: "2026-11-10"
+    redistribute_raw: false
+    citation: "European Centre for Disease Prevention and Control. Epidemiological updates. https://www.ecdc.europa.eu/en/news-events"
+    cadence: daily
+    kind: events
   - id: worldbank
     name: World Bank, World Development Indicators (total population)
     short_name: World Bank population

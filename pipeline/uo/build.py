@@ -201,6 +201,7 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
     reports: list[dict] = []
     failed = []
     cfg = load_yaml(CONFIG / "datasets.yaml")["events"]
+    normalizer = ev.DiseaseNormalizer(diseases_doc)
     last_good: dict = read_json(STATE / "event_reports.json", {})
     for ds in cfg:
         dsid, source = ds["id"], registry[ds["source_id"]]
@@ -209,14 +210,17 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
             fetches = _load_fetches(dsid) if offline else None
             if fetches is None:
                 log("fetching", dsid)
-                fetches = ev.fetch_who_don(ds, registry) if ds["connector"] == "who_don" else ev.fetch_cdc_travel(ds, registry)
+                fetches = ev.FETCHERS[ds["connector"]](ds, registry)
                 _save_fetches(dsid, fetches)
                 st["last_checked"] = iso(now)
-            parse = ev.parse_who_don if ds["connector"] == "who_don" else ev.parse_cdc_travel
+            parse = ev.PARSERS[ds["connector"]]
             reps = []
             for f in fetches:
                 reps += parse(ds, open(f.raw_path, "rb").read(), f.fetch_id)
                 all_fetches[f.fetch_id] = f.public()
+            if ds.get("require_disease"):
+                # A general feed: keep only notices whose title names a disease in the vocabulary.
+                reps = [r for r in reps if normalizer.normalize(r["title"])[0] is not None]
             # feeds only list current notices: keep earlier ones from the last good run
             known = {r["report_id"]: r for r in last_good.get(dsid, [])}
             prev_n = len(known)
@@ -244,7 +248,6 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
             for f in (_load_fetches(dsid) or []):
                 all_fetches.setdefault(f.fetch_id, f.public())
     write_json(STATE / "event_reports.json", last_good)
-    normalizer = ev.DiseaseNormalizer(diseases_doc)
     geocoder = ev.Geocoder(places, load_yaml(CONFIG / "country_aliases.yaml"), gazetteer)
     reports = [dict(r) for r in reports]
     reports, unmapped = ev.normalize_reports(reports, normalizer, geocoder)
