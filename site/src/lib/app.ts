@@ -3,7 +3,8 @@ import { useEffect, useState } from 'preact/hooks';
 import site from '../../../config/site.json';
 
 // In local development the tool runtimes and raw archive are served from site/public/r2, not from the hosted bucket.
-export const SITE = import.meta.env.DEV ? { ...site, r2BaseUrl: '/r2', toolAssetsBaseUrl: '/r2/tools' } : site;
+// The hosted basemap only answers the live site's origin, so local development draws boundaries without it.
+export const SITE = import.meta.env.DEV ? { ...site, r2BaseUrl: '/r2', toolAssetsBaseUrl: '/r2/tools', basemapUrl: '' } : site;
 export const LOCALES = site.locales.map((l) => l.code);
 export type Mode = 'simple' | 'analyst';
 

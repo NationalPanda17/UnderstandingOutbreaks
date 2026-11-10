@@ -17,7 +17,7 @@ const basemap = /^https?:\/\//.test(site.basemapUrl) ? new URL(site.basemapUrl).
 const ext = [...new Set([r2, tools, basemap].filter(Boolean))].join(' ');
 const csp = (ancestors) => [
   `default-src 'self'`, `script-src 'self' 'wasm-unsafe-eval' blob:${tools ? ' ' + tools : ''}`, `worker-src 'self' blob:`, `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob:`, `font-src 'self' data:`, `connect-src 'self' blob: data:${ext ? ' ' + ext : ''}`, `frame-src 'self'${tools ? ' ' + tools : ''}`,
+  `img-src 'self' data: blob:${basemap ? ' ' + basemap : ''}`, `font-src 'self' data:`, `connect-src 'self' blob: data:${ext ? ' ' + ext : ''}`, `frame-src 'self'${tools ? ' ' + tools : ''}`,
   `object-src 'none'`, `base-uri 'self'`, `form-action 'none'`, `frame-ancestors ${ancestors}`,
 ].join('; ');
 const common = ['  X-Content-Type-Options: nosniff', '  Referrer-Policy: no-referrer', '  Permissions-Policy: geolocation=(), camera=(), microphone=(), interest-cohort=()'];

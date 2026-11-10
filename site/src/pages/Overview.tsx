@@ -10,7 +10,7 @@ import { Sparkline } from '../components/Chart';
 import { EventRow } from '../components/Events';
 import { DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
-import { MapLegend, quantileBreaks } from '../components/mapUtil';
+import { MapLegend, quantileBreaks, type MapPoint } from '../components/mapUtil';
 import { Dialog, SourceChip, useApp } from '../components/SourceChip';
 
 export function overviewProv(core: Core, ov: Ov, snapshot: string | null): Prov {
@@ -78,9 +78,16 @@ export function Overview() {
     && (!region || e.countries.some(inRegion)) && (!type || (type === 'ts') === !!core.diseaseById[e.disease]?.has_timeseries)
     && (!route.params.get('ed') || e.disease === route.params.get('ed')));
 
+  // Active event notices on the overview map: where official notices place events that are still being reported.
+  const showEvents = route.params.get('ev') !== '0';
+  const points: MapPoint[] = !showEvents ? [] : active.flatMap((e) => e.locations.filter((l) => l.lon !== null && (!region || inRegion(l.iso3 ?? e.countries[0]))).map((l) => ({
+    id: e.event_id, lon: l.lon as number, lat: l.lat as number, label: `${diseaseName(core, e.disease)} — ${l.name}`, precision: l.precision, sources: e.source_ids,
+    radius: e.days_since_last_report <= 30 ? 7.5 : 5.5, sub: t('event.lastUpdate', { date: e.last_report }),
+  })));
   if (ov.error) return <ErrorBox error={ov.error} />;
   const d = core.diseaseById[disease];
-  const prov = ov.data ? overviewProv(core, ov.data, route.snapshot) : null;
+  const baseProv = ov.data ? overviewProv(core, ov.data, route.snapshot) : null;
+  const prov = baseProv && points.length ? { ...baseProv, sourceIds: Array.from(new Set([...baseProv.sourceIds, ...active.flatMap((e) => e.source_ids), 'geonames'])) } : baseProv;
   const metricLabel = ov.data ? mapMetricLabel(core, disease, ov.data.method.window_periods, ov.data.period_type) : '';
   const windowText = ov.data ? `${periodLabel(ov.data.latest[Object.keys(ov.data.latest)[0]]?.window[0] ?? ov.data.anchor, ov.data.period_type)} – ${periodLabel(ov.data.anchor, ov.data.period_type)}` : '';
   const meta = ov.data ? core.seriesByKey[ov.data.skey] : null;
@@ -120,9 +127,11 @@ export function Overview() {
           {ov.loading && <Loading />}
           {ov.data && !table && (
             <LazyMap values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
+              points={points} pointMode="markers" onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
               onSelect={(iso3) => navigate(href(route, 'place/' + iso3, { d: disease }))} ariaLabel={t('map.aria', { title })} apiRef={mapApi} />
           )}
           {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} />}
+          {ov.data && !table && <p class="small"><label><input type="checkbox" checked={showEvents} onChange={(e) => setParams({ ev: (e.target as HTMLInputElement).checked ? null : '0' })} /> {t('overview.showEvents')}</label>{showEvents && points.length > 0 && <span class="muted"> · {t('overview.eventsOnMap')}</span>}</p>}
           {ov.data && table && (
             <div class="tablewrap" tabIndex={0}><table class="data">
               <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metricLabel}</th><th scope="col" class="n">{t('table.count')}</th><th scope="col">{t('table.lastPeriod')}</th></tr></thead>

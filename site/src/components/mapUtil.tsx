@@ -5,8 +5,15 @@ export const RAMP = ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#22
 export const DENSITY_RAMP = ['#f7f7f7', '#d9d9d9', '#bdbdbd', '#969696', '#636363', '#252525'];
 
 export interface MapPoint { id: string; lon: number; lat: number; label: string; precision?: string; sources: string[]; weight?: number; color?: string; radius?: number; sub?: string }
+/** Why an area has no value. 'pending': it reports to this source but not yet for this period. 'none': no report for this period. */
+export type Missing = 'pending' | 'none';
 export interface MapProps {
   values?: Record<string, number | null | undefined>;
+  /** Areas without a value, by reason. Anything not listed and without a value is drawn as 'none'. */
+  missing?: Record<string, Missing>;
+  /** Tooltip text for an area without a value (for example "Not yet reported; last report March 2026"). */
+  missingLabel?: Record<string, string>;
+  projection?: 'mercator' | 'globe';
   breaks?: number[];
   ramp?: string[];
   valueLabel?: string;
@@ -49,15 +56,38 @@ export function colorFor(v: number | null | undefined, breaks: number[], ramp: s
 }
 
 
-export function MapLegend({ breaks, ramp = RAMP, title }: { breaks: number[]; ramp?: string[]; title: string }) {
+/** For one period of a place-by-period grid, say why each place without a value has none. */
+export function classifyMissing(grid: Record<string, (number | null)[]>, ti: number): Record<string, { kind: Missing; last: number }> {
+  const out: Record<string, { kind: Missing; last: number }> = {};
+  for (const [iso3, row] of Object.entries(grid)) {
+    if (row[ti] !== null && row[ti] !== undefined) continue;
+    let last = -1;
+    for (let i = row.length - 1; i >= 0; i--) if (row[i] !== null && row[i] !== undefined) { last = i; break; }
+    out[iso3] = { kind: last >= 0 && ti > last ? 'pending' : 'none', last };
+  }
+  return out;
+}
+
+export function MapLegend({ breaks, ramp = RAMP, title, pending }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean }) {
   const stops = [0, ...breaks];
   return (
     <div class="maplegend" aria-label={title}>
       <span>{title}:</span>
-      <span class="sw" style={{ background: ramp[0] }} /> 0
+      <span><span class="sw" style={{ background: ramp[0] }} /> {t('map.zero')}</span>
       {stops.slice(1).map((b, i) => <span key={b}><span class="sw" style={{ background: ramp[Math.min(ramp.length - 1, i + 1)] }} /> {i === 0 ? '<' : '≥'} {smart(i === 0 ? b : stops[i])}</span>)}
       {stops.length > 1 && <span><span class="sw" style={{ background: ramp[Math.min(ramp.length - 1, stops.length)] }} /> ≥ {smart(stops[stops.length - 1])}</span>}
-      <span><span class="sw missing" /> {t('map.noData')}</span>
+      {pending && <span><span class="sw pending" /> {t('map.pending')}</span>}
+      <span><span class="sw missing" /> {pending ? t('map.noReport') : t('map.noData')}</span>
     </div>
   );
 }
+
+/** Preset views for the interactive map (centre and zoom) and for the static equal-area map (lon/lat box). */
+export const REGION_VIEWS: Record<string, { lng: number; lat: number; z: number; box: [number, number, number, number] }> = {
+  world: { lng: 15, lat: 18, z: 1.1, box: [-180, -58, 180, 84] },
+  africa: { lng: 19, lat: 2, z: 2.3, box: [-20, -36, 53, 38] },
+  americas: { lng: -80, lat: 8, z: 1.6, box: [-125, -56, -33, 60] },
+  asia: { lng: 95, lat: 28, z: 2.1, box: [44, -11, 150, 55] },
+  europe: { lng: 15, lat: 52, z: 2.7, box: [-25, 34, 45, 71] },
+  oceania: { lng: 150, lat: -20, z: 2.3, box: [110, -48, 180, 5] },
+};

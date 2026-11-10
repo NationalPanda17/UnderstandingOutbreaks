@@ -1,0 +1,54 @@
+name: Build basemap
+# Builds the world basemap (Protomaps PMTiles, from OpenStreetMap data) and uploads it, with label fonts and icons,
+# to the public R2 bucket. Run by hand: the basemap changes slowly, so once every few months is plenty.
+# Data: (c) OpenStreetMap contributors (ODbL). Tiles, style, fonts and sprites: Protomaps (see docs/SOURCES.md).
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom: { description: "Highest zoom level to include (each level roughly triples the size)", default: "7" }
+      build: { description: "Protomaps daily build to extract from, YYYYMMDD (empty: most recent available)", default: "" }
+permissions:
+  contents: read
+env:
+  R2_BUCKET: ${{ vars.R2_BUCKET }}
+  R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: auto
+  PMTILES_VERSION: "1.31.2"
+jobs:
+  basemap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Install the pmtiles CLI
+        run: |
+          curl -fsSL -o pmtiles.tar.gz "https://github.com/protomaps/go-pmtiles/releases/download/v${PMTILES_VERSION}/go-pmtiles_${PMTILES_VERSION}_Linux_x86_64.tar.gz"
+          tar -xzf pmtiles.tar.gz pmtiles && ./pmtiles version
+      - name: Extract the world up to the chosen zoom
+        run: |
+          set -euo pipefail
+          BUILD="${{ inputs.build }}"
+          if [ -z "$BUILD" ]; then
+            for back in 0 1 2 3 4 5; do
+              d=$(date -u -d "-${back} day" +%Y%m%d)
+              if curl -fsS -o /dev/null -r 0-99 "https://build.protomaps.com/${d}.pmtiles"; then BUILD="$d"; break; fi
+            done
+          fi
+          [ -n "$BUILD" ] || { echo "No recent Protomaps build found" >&2; exit 1; }
+          ./pmtiles extract "https://build.protomaps.com/${BUILD}.pmtiles" world.pmtiles --maxzoom="${{ inputs.maxzoom }}"
+          ./pmtiles show world.pmtiles | head -20
+          printf '{"build":"%s","maxzoom":%s,"bytes":%s,"source":"https://build.protomaps.com/%s.pmtiles","attribution":"(c) OpenStreetMap contributors (ODbL); Protomaps"}\n' "$BUILD" "${{ inputs.maxzoom }}" "$(stat -c %s world.pmtiles)" "$BUILD" > manifest.json
+          cat manifest.json
+      - name: Fetch label fonts and map icons (Protomaps basemaps-assets)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/protomaps/basemaps-assets.git assets
+          cd assets && git sparse-checkout set "fonts/Noto Sans Regular" "fonts/Noto Sans Medium" "fonts/Noto Sans Italic" "sprites/v4" && git rev-parse HEAD
+      - name: Upload to the public R2 bucket
+        run: |
+          set -euo pipefail
+          [ -n "$R2_BUCKET" ] && [ -n "$AWS_ACCESS_KEY_ID" ] || { echo "R2 is not configured" >&2; exit 1; }
+          aws s3 cp world.pmtiles "s3://$R2_BUCKET/basemap/world.pmtiles" --endpoint-url "$R2_ENDPOINT" --only-show-errors --content-type application/octet-stream
+          aws s3 cp manifest.json "s3://$R2_BUCKET/basemap/manifest.json" --endpoint-url "$R2_ENDPOINT" --only-show-errors --content-type application/json
+          aws s3 sync assets/fonts "s3://$R2_BUCKET/basemap/fonts" --endpoint-url "$R2_ENDPOINT" --only-show-errors --exclude "*" --include "*.pbf" --content-type application/x-protobuf
+          aws s3 sync assets/sprites/v4 "s3://$R2_BUCKET/basemap/sprites/v4" --endpoint-url "$R2_ENDPOINT" --only-show-errors
