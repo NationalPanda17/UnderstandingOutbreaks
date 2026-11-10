@@ -22,7 +22,8 @@ import { parseRoute, href } from '../src/lib/app';
 
 const ROOT = join(__dirname, '..');
 const DATA = join(ROOT, 'public', 'data', 'v1');
-const PY = join(ROOT, '..', '.venv', 'bin', 'python');
+const VENV_PY = join(ROOT, '..', '.venv', 'bin', 'python');
+const PY = process.env.UO_PYTHON ?? (existsSync(VENV_PY) ? VENV_PY : 'python3'); // CI has no .venv: it uses the runner's Python
 const hasData = existsSync(join(DATA, 'manifest.json'));
 const J = (p: string) => JSON.parse(readFileSync(join(DATA, p), 'utf8'));
 

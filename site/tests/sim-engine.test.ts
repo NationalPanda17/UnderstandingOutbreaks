@@ -13,7 +13,8 @@ import { BASIC_TEMPLATES, DEFAULTS, ROUTE_TEMPLATES, buildModel, type Options } 
 
 const opt = (o: Partial<Options> = {}): Options => ({ ...DEFAULTS, ...o });
 const total = (res: any, i: number, ids: string[]) => ids.reduce((s, c) => s + res.y[c][i], 0);
-const PY = join(__dirname, '..', '..', '.venv', 'bin', 'python');
+const VENV_PY = join(__dirname, '..', '..', '.venv', 'bin', 'python');
+const PY = process.env.UO_PYTHON ?? (existsSync(VENV_PY) ? VENV_PY : 'python3'); // CI has no .venv: it uses the runner's Python
 
 describe('population conservation', () => {
   for (const template of [...BASIC_TEMPLATES, 'asymp', 'age'] as const) {

@@ -39,7 +39,7 @@ jobs:
         run: npm run check:i18n
       - name: Frontend and simulation engine tests (generated Python, SQL and R code is executed)
         working-directory: site
-        env: { UO_RSCRIPT: Rscript }
+        env: { UO_RSCRIPT: Rscript, UO_PYTHON: python }
         run: npm test
       - name: Production build
         working-directory: site
