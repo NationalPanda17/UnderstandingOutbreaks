@@ -30,12 +30,12 @@ header.site { background: var(--card); border-bottom: 1px solid var(--line); pos
 header.site .bar { display: flex; align-items: center; gap: 12px; min-height: 56px; flex-wrap: wrap; padding: 6px 0; }
 .brand { font-weight: 700; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 1.05rem; }
 .brand svg { width: 26px; height: 26px; }
-nav.main { display: flex; gap: 2px; flex-wrap: wrap; flex: 1; }
+nav.main { display: flex; gap: 2px; flex-wrap: wrap; flex: 1 1 420px; } /* a real basis: when the bar is too narrow the menu takes its own row instead of collapsing into a column */
 nav.main a { padding: 6px 10px; border-radius: 8px; text-decoration: none; color: var(--ink-2); font-size: .95rem; }
 nav.main a[aria-current="page"], nav.main a:hover { background: var(--accent-soft); color: var(--accent-ink); }
 nav.main a.learn { border: 1px dashed var(--sim); color: #4b2a73; }
 nav.main a.learn[aria-current="page"], nav.main a.learn:hover { background: var(--sim-soft); color: #4b2a73; }
-.controls { display: flex; align-items: center; gap: 10px; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-inline-start: auto; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: #fff; }
 .seg button { border: 0; background: transparent; padding: 5px 12px; font: inherit; font-size: .88rem; cursor: pointer; color: var(--ink-2); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
@@ -164,7 +164,7 @@ body.embed .wrap { padding: 8px 10px; }
 .staticmap path:hover { stroke: #17272b; stroke-width: 1.4; }
 ul.cols { columns: 220px; padding-inline-start: 18px; margin: 6px 0 0; }
 .search { position: relative; }
-.search input { width: 150px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: .88rem; background: var(--card); color: var(--ink); }
+.search input { width: 130px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: .88rem; background: var(--card); color: var(--ink); }
 .search input:focus { width: 220px; }
 .search ul { position: absolute; inset-inline-end: 0; top: calc(100% + 4px); width: min(360px, 92vw); margin: 0; padding: 4px; list-style: none; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); z-index: 40; max-height: 60vh; overflow: auto; }
 .search li { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
