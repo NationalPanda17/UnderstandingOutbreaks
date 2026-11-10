@@ -254,6 +254,7 @@ def publish_all(ctx: Context, log) -> dict:
         "base_exceptions": {k: int(v) for k, v in base_exc.items()}})
 
     # ---- overview per disease, flags, reconciliation
+    ov_summary: list[dict] = []
     log("computing overview, flags, reconciliation")
     all_flags, movers, disease_out = [], [], []
     for d in ctx.diseases_doc["diseases"]:
@@ -342,6 +343,9 @@ def publish_all(ctx: Context, log) -> dict:
             if any(x is not None for x in row):
                 grid[iso3] = row
         glob = dd.groupby("period").agg(v=("value", "sum"), n=("iso3", "nunique")).sort_index()
+        ov_summary.append({"disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
+                           "snapshot_id": ctx.snapshot_id, "period_type": ptype, "incomplete_from": incf,
+                           "global": {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]]}})
         write_json(out / "overview" / f"{did}.json", {
             "disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
             "snapshot_id": ctx.snapshot_id, "period_type": ptype, "map_metric": entry["map_metric"],
@@ -411,6 +415,12 @@ def publish_all(ctx: Context, log) -> dict:
                     "origin_type": "site-derived", "days_since_last_report": e["days_since_last_report"]})
     idx.sort(key=lambda x: (-x["rank"]["score"], x["event_id"]))
     from .events import RANK_METHOD, GROUP_METHOD, GEOCODE_METHOD, NO_RECENT_UPDATE_DAYS
+    # The home page needs only the events still being reported, and the per-disease world totals: two small files
+    # instead of the full event index and every disease's overview grid.
+    write_json(out / "events" / "active.json", {
+        "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "source_ids": sorted({s for e in idx if e["rank"]["active"] for s in e["source_ids"]}),
+        "methods": {"ranking": RANK_METHOD}, "n_events": len(idx), "events": [e for e in idx if e["rank"]["active"]]})
+    write_json(out / "overview" / "summary.json", {"snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "diseases": ov_summary})
     write_json(out / "events" / "index.json", {
         "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "source_ids": sorted({s for e in idx for s in e["source_ids"]}),
         "methods": {"ranking": RANK_METHOD, "grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD,

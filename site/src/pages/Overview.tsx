@@ -60,9 +60,9 @@ export function Overview() {
   const regions = useMemo(() => Array.from(new Set(Object.values(core.places).map((p) => p.region))).sort(), [core]);
 
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
-  const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
+  const events = useAsync(() => getJSON<{ events: EventIdx[]; n_events: number }>('events/active.json'), []);
   const flags = useAsync(() => getOptional<{ flags: Flag[] }>('flags/recent.json'), []);
-  const sparks = useAsync(() => Promise.all(tsDiseases.map((d) => getJSON<Ov>(`overview/${d.id}.json`))), []);
+  const sparks = useAsync(() => getJSON<{ diseases: Pick<Ov, 'disease' | 'skey' | 'source_ids' | 'snapshot_id' | 'period_type' | 'incomplete_from' | 'global'>[] }>('overview/summary.json').then((x) => x.diseases), []);
 
   const inRegion = (iso3: string) => !region || core.places[iso3]?.region === region;
   const values = useMemo(() => {
@@ -168,7 +168,7 @@ export function Overview() {
             {events.loading && <Loading />}
             <ul class="list">{active.slice(0, 8).map((e) => <EventRow key={e.event_id} e={e} showScore={analyst} />)}</ul>
             {!events.loading && !active.length && <p class="muted">{t('overview.noActive')}</p>}
-            <p><a href={href(route, 'outbreaks')}>{t('overview.allOutbreaks', { n: events.data?.events.length ?? 0 })}</a></p>
+            <p><a href={href(route, 'outbreaks')}>{t('overview.allOutbreaks', { n: events.data?.n_events ?? 0 })}</a></p>
           </section>
           <section class="card">
             <header><h2>{t('overview.flags')}</h2></header>

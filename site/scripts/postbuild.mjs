@@ -27,11 +27,19 @@ const headers = [
   ...block('/', `'none'`), ...block('/index.html', `'none'`), ...locales.flatMap((l) => block(`/${l}/*`, `'none'`)),
   ...block('/embed/*', '*'), ...block('/embed', '*'), ...block('/embed.html', '*'),
   '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
-  '/data/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=300', '',
+  '/data/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=300, stale-while-revalidate=86400', '', // a repeat visit paints from cache at once and refreshes in the background
   '/data/v1/snapshots/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=31536000, immutable', '',
   '/notebooks/*', '  Access-Control-Allow-Origin: *', '',
 ];
 writeFileSync(join(dist, '_headers'), headers.join('\n'));
+
+// ---- warm up the connection to the bucket that serves the basemap, so the first map tile does not wait for DNS and TLS
+if (basemap) {
+  for (const f of ['index.html', 'embed.html']) {
+    const p = join(dist, f); if (!existsSync(p)) continue;
+    writeFileSync(p, readFileSync(p, 'utf8').replace('</head>', `  <link rel="preconnect" href="${basemap}" crossorigin />\n  </head>`));
+  }
+}
 
 // ---- R2: files under /r2 are uploaded to the bucket, not to Pages (unless UO_KEEP_R2=1 for a local preview)
 const r2dir = join(dist, 'r2'); const r2out = join(root, 'dist-r2');

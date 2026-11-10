@@ -17,6 +17,9 @@ WHO_REGION_BY_CONTINENT = {"AF": "Africa", "AS": "Asia", "EU": "Europe", "NA": "
                            "OC": "Oceania", "AN": "Antarctica"}
 
 
+from .subnational import simplify_geometry  # noqa: E402
+
+
 def fetch_reference(registry: dict) -> dict[str, Fetch]:
     out = {}
     for ds in load_yaml(CONFIG / "datasets.yaml")["reference"]:
@@ -118,6 +121,9 @@ def parse_natural_earth(content: bytes, precision: int = 2) -> dict:
         if not coords:
             continue
         g = {"type": geom["type"], "coordinates": coords}
+        # Thin the outlines for the world map (about 1.5 km): the file is downloaded on every first visit, and the
+        # source is 1:50m in any case. A country whose outline would vanish keeps its original shape.
+        g = simplify_geometry(g, tol=0.015, precision=precision, min_area=0) or g
         feats.append({"type": "Feature", "id": iso3, "properties": {"iso3": iso3, "name": rec["NAME"]}, "geometry": g})
     return {"type": "FeatureCollection", "features": feats}
 
