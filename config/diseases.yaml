@@ -113,7 +113,7 @@ diseases:
   - {id: rift_valley_fever, name: Rift Valley fever, icd11: "", mesh: D012295, data_type: events, aliases: [rift valley fever, rvf]}
   - {id: west_nile, name: West Nile virus infection, icd11: "", mesh: D014901, data_type: events, aliases: [west nile, west nile virus, west nile fever, west nile virus infection]}
   - {id: hepatitis, name: Hepatitis (acute, outbreak reports), icd11: "", mesh: "", data_type: events,
-     aliases: [hepatitis e, hepatitis a, acute hepatitis of unknown aetiology, severe acute hepatitis of unknown aetiology in children, acute hepatitis e, hepatitis e virus]}
+     aliases: [hepatitis e, hepatitis a, acute hepatitis of unknown aetiology, severe acute hepatitis of unknown aetiology in children, severe acute hepatitis of unknown origin in children, acute hepatitis e, hepatitis e virus]}
   - {id: oropouche, name: Oropouche virus disease, icd11: "", mesh: "", data_type: events, aliases: [oropouche, oropouche virus disease, oropouche virus, oropouche fever]}
   - {id: hantavirus, name: Hantavirus disease, icd11: "", mesh: D018778, data_type: events, aliases: [hantavirus, hantavirus disease, hantavirus pulmonary syndrome, andes virus, hantavirus cardiopulmonary syndrome]}
   - {id: legionellosis, name: Legionellosis, icd11: "", mesh: D007876, data_type: events, aliases: [legionellosis, legionnaires' disease, legionnaires disease, legionella]}
@@ -127,5 +127,40 @@ diseases:
   - {id: listeriosis, name: Listeriosis, icd11: "", mesh: D008088, data_type: events, aliases: [listeriosis]}
   - {id: shigellosis, name: Shigellosis, icd11: "", mesh: D004405, data_type: events, aliases: [shigellosis, extensively drug-resistant shigella sonnei infections, shigella sonnei]}
   - {id: sars, name: Severe acute respiratory syndrome (SARS), icd11: "", mesh: D045169, data_type: events, aliases: [severe acute respiratory syndrome, severe acute respiratory syndrome coronavirus, sars]}
+  # Added from pipeline issue #1 (names seen in official notices). MeSH/ICD codes left blank pending human review.
+  - {id: chandipura, name: Chandipura virus infection, icd11: "", mesh: "", data_type: events, aliases: [chandipura, chandipura virus, acute encephalitis syndrome due to chandipura virus]}
+  - {id: chapare, name: Chapare haemorrhagic fever, icd11: "", mesh: "", data_type: events, aliases: [chapare haemorrhagic fever, chapare hemorrhagic fever, chapare virus]}
+  - {id: enterovirus, name: Enterovirus infection, icd11: "", mesh: "", data_type: events, aliases: [enterovirus infection, enterovirus, echovirus 11, enterovirus-echovirus 11 infection]}
+  - {id: hiv, name: HIV infection (outbreak reports only), icd11: "", mesh: "", data_type: events, aliases: [hiv, hiv cases, hiv infection]}
+  - {id: group_a_strep, name: Group A streptococcal infection and scarlet fever, icd11: "", mesh: "", data_type: events, aliases: [scarlet fever, group a streptococcus, invasive group a streptococcus, invasive group a streptococcus infection, igas]}
+  - {id: salmonellosis, name: Salmonellosis (non-typhoidal), icd11: "", mesh: "", data_type: events, aliases: [salmonellosis, salmonella typhimurium, non-typhoidal salmonella, salmonella enteritidis]}
+  - {id: paratyphoid, name: Paratyphoid fever, icd11: "", mesh: "", data_type: events, aliases: [paratyphoid, paratyphoid fever]}
+  - {id: psittacosis, name: Psittacosis, icd11: "", mesh: "", data_type: events, aliases: [psittacosis, chlamydia psittaci]}
+  - {id: rmsf, name: Rocky Mountain spotted fever, icd11: "", mesh: "", data_type: events, aliases: [rocky mountain spotted fever, rickettsia rickettsii]}
+  - {id: shamonda, name: Shamonda virus infection, icd11: "", mesh: "", data_type: events, aliases: [shamonda virus, shamonda]}
+  - {id: western_equine_encephalitis, name: Western equine encephalitis, icd11: "", mesh: "", data_type: events, aliases: [western equine encephalitis]}
+  - {id: klebsiella, name: Klebsiella pneumoniae infection (hypervirulent or resistant strains), icd11: "", mesh: "", data_type: events, aliases: [hypervirulent klebsiella pneumoniae, klebsiella pneumoniae]}
+# Notice names a person has reviewed and decided to leave under "Other / unclassified": syndromes with no named
+# disease, undiagnosed illness, mixed-pathogen summaries and non-infectious events. They are matched exactly (after
+# case and accent folding), are never mapped to a disease, and no longer raise an "unmapped disease" issue.
+reviewed_unclassified:
+  - Acute fever and rash syndrome
+  - Acute haemorrhagic fever syndrome
+  - Suspected Acute Haemorrhagic Fever
+  - Suspected acute haemorrhagic fever syndrome
+  - Acute respiratory syndrome
+  - Bloody diarrhoea
+  - Cases of Undiagnosed Febrile Illness
+  - Cluster of community deaths
+  - Epidemic encephalitis
+  - Guillain-Barré Syndrome
+  - Hurricane
+  - "International food safety event: Infant formula and products containing arachidonic acid oil contaminated with cereulide toxin"
+  - Mass Bromide Poisoning
+  - Myocarditis (acute infective)
+  - Pneumonia of undetermined etiology
+  - "Trends of acute respiratory infection, including human metapneumovirus, in the Northern Hemisphere"
+  - Undiagnosed disease
+  - Upsurge of respiratory illnesses among children-Northern China
 # Countries, regions and generic words that are stripped before matching a notice title to a disease.
 title_noise: [update, situation, outbreak, outbreaks, global, multi-country, multi country, the, in, of, and, cases, case, human, infection, with, virus, disease, caused, by, suspected, confirmed, regional, region, "- ", "– "]

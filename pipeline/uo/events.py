@@ -139,6 +139,8 @@ class DiseaseNormalizer:
                 f = fold(a)
                 self.alias.append((f, d["id"], re.compile(r"(?<![a-z0-9])" + re.escape(f) + r"(?![a-z0-9])")))
         self.alias.sort(key=lambda x: -len(x[0]))
+        # Names a person reviewed and left unclassified: exact match only, never mapped, never re-raised as an issue.
+        self.reviewed_unclassified = {fold(n) for n in diseases_doc.get("reviewed_unclassified", [])}
 
     def normalize(self, text: str) -> tuple[str | None, str | None]:
         """Return (disease_id, matched_alias) or (None, None)."""
@@ -295,7 +297,8 @@ def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocod
             did, alias = normalizer.normalize(r["title"])
         if did is None:
             did = "other"
-            unmapped.append(dpart)
+            if fold(dpart) not in normalizer.reviewed_unclassified:
+                unmapped.append(dpart)
         r["disease"], r["disease_alias"], r["disease_name_in_source"] = did, alias, dpart
         countries = geocoder.countries(ppart) if ppart else []
         if not countries and r.get("countries_hint"):

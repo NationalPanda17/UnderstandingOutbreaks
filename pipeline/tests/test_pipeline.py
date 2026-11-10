@@ -490,3 +490,13 @@ def test_raw_archive_respects_redistribution_permission(tmp_path, monkeypatch):
     assert not closed.archive_public and closed.archive_key is None and not (tmp_path / "r2" / "raw" / "who_flunet_weekly").exists()
     assert open_.archive_public and (tmp_path / "r2" / open_.archive_key).read_bytes() == b"a,b"
     assert len(closed.raw_file_hash) == 64 and "raw_path" not in closed.public() and closed.public()["retrieved_at"].endswith("Z")
+
+
+def test_reviewed_unclassified_names_stay_other_without_raising_an_issue():
+    """Names a person reviewed (config: reviewed_unclassified) are never mapped to a disease and are not re-reported."""
+    n = E.DiseaseNormalizer(core.load_diseases())
+    assert n.normalize("Hurricane") == (None, None)
+    ev, unmapped = _events([_rep("a", "Hurricane", "Jamaica", "2026-11-01"), _rep("b", "Mystery illness", "Kenya", "2026-11-01"),
+                            _rep("c", "Psittacosis", "Kenya", "2026-11-01")])
+    assert unmapped == ["Mystery illness"]
+    assert sorted(e["disease"] for e in ev) == ["other", "other", "psittacosis"]
