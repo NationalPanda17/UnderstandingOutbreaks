@@ -808,7 +808,7 @@
  "guard.incomplete-included": "Ce résultat inclut des périodes marquées comme probablement incomplètes. Les valeurs récentes seront probablement révisées à la hausse.",
  "guard.cross-disease": "Ce résultat combine des maladies différentes ({detail}). Leurs nombres proviennent de systèmes de surveillance différents et leur ampleur ne doit pas être comparée.",
  "sql.title": "Console SQL",
- "sql.lead": "Exécute DuckDB dans votre navigateur sur les fichiers Parquet publiés, en ne lisant que les parties de chaque fichier nécessaires à la requête.",
+ "sql.lead": "Exécute DuckDB dans votre navigateur sur les fichiers Parquet publiés. Chaque fichier utilisé par une requête est téléchargé sur votre appareil et lu sur place.",
  "sql.builder": "Constructeur visuel de requêtes",
  "sql.builderHint": "Chaque choix ci-dessous réécrit le SQL dans l’éditeur, afin de voir comment la requête se forme.",
  "sql.dataset": "Jeu de données",

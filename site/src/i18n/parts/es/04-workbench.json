@@ -26,7 +26,7 @@
   "guard.incomplete-included": "Este resultado incluye periodos marcados como probablemente incompletos. Es probable que los valores recientes se revisen al alza.",
   "guard.cross-disease": "Este resultado combina enfermedades distintas ({detail}). Sus recuentos proceden de sistemas de vigilancia diferentes y no debe compararse su magnitud.",
   "sql.title": "Consola SQL",
-  "sql.lead": "Ejecuta DuckDB en su navegador sobre los archivos Parquet publicados, leyendo solo las partes de cada archivo que necesita la consulta.",
+  "sql.lead": "Ejecuta DuckDB en su navegador sobre los archivos Parquet publicados. Cada archivo que usa una consulta se descarga en su dispositivo y se lee allí.",
   "sql.builder": "Constructor visual de consultas",
   "sql.builderHint": "Cada opción de abajo reescribe el SQL del editor, para que vea cómo se forma la consulta.",
   "sql.dataset": "Conjunto de datos",

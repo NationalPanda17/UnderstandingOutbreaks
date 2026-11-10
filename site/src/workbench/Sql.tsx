@@ -29,6 +29,9 @@ export function loadDuckDB(onProgress: (done: number, total: number) => void): P
       const worker = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' })));
       const db = new duckdb.AsyncDuckDB(new duckdb.VoidLogger(), worker);
       await db.instantiate(URL.createObjectURL(new Blob([wasm], { type: 'application/wasm' })));
+      // The site's static host answers Range requests with the whole file and sends no Content-Length on HEAD,
+      // so DuckDB must not rely on either: read each remote file in full (the published files are small).
+      await db.open({ filesystem: { reliableHeadRequests: false, allowFullHTTPReads: true, forceFullHTTPReads: true } });
       const conn = await db.connect();
       return { db, conn };
     })();

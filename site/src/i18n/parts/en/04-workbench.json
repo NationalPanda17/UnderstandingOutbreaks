@@ -26,7 +26,7 @@
   "guard.incomplete-included": "This result includes periods marked likely incomplete. Recent values will probably be revised upward.",
   "guard.cross-disease": "This result combines different diseases ({detail}). Their counts come from different surveillance systems and must not be compared in size.",
   "sql.title": "SQL console",
-  "sql.lead": "Runs DuckDB in your browser against the published Parquet files, reading only the parts of each file a query needs.",
+  "sql.lead": "Runs DuckDB in your browser against the published Parquet files. Each file a query uses is downloaded to your device and read there.",
   "sql.builder": "Visual query builder",
   "sql.builderHint": "Each choice below rewrites the SQL in the editor, so you can see how the query is formed.",
   "sql.dataset": "Dataset",

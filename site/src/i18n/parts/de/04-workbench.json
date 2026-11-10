@@ -26,7 +26,7 @@
   "guard.incomplete-included": "Dieses Ergebnis enthält Zeiträume, die als wahrscheinlich unvollständig markiert sind. Jüngste Werte werden vermutlich nach oben korrigiert.",
   "guard.cross-disease": "Dieses Ergebnis kombiniert verschiedene Krankheiten ({detail}). Ihre Zahlen stammen aus unterschiedlichen Überwachungssystemen und dürfen in ihrer Größenordnung nicht verglichen werden.",
   "sql.title": "SQL-Konsole",
-  "sql.lead": "Führt DuckDB in Ihrem Browser auf den veröffentlichten Parquet-Dateien aus und liest nur die Teile jeder Datei, die eine Abfrage benötigt.",
+  "sql.lead": "Führt DuckDB in Ihrem Browser auf den veröffentlichten Parquet-Dateien aus. Jede Datei, die eine Abfrage verwendet, wird auf Ihr Gerät heruntergeladen und dort gelesen.",
   "sql.builder": "Visueller Abfrage-Baukasten",
   "sql.builderHint": "Jede Auswahl unten schreibt das SQL im Editor neu, sodass Sie sehen, wie die Abfrage entsteht.",
   "sql.dataset": "Datensatz",
