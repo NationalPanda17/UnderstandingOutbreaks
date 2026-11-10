@@ -1,0 +1,18 @@
+{
+  "title": "UnderstandingOutbreaks",
+  "upload_type": "dataset",
+  "creators": [
+    {
+      "name": "UnderstandingOutbreaks contributors"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "access_right": "open",
+  "description": "Dataset snapshot and source code of UnderstandingOutbreaks: aggregated official public reports of infectious disease activity with record-level provenance. Each source keeps its own license (see sources.json). Not a surveillance system; not medical advice.",
+  "keywords": [
+    "infectious diseases",
+    "outbreaks",
+    "open data",
+    "provenance"
+  ]
+}

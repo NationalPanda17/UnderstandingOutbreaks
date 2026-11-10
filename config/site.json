@@ -1,0 +1,27 @@
+{
+  "name": "UnderstandingOutbreaks",
+  "baseUrl": "https://understandingoutbreaks.pages.dev",
+  "shortUrl": "understandingoutbreaks.pages.dev",
+  "dataPath": "/data/v1",
+  "r2BaseUrl": "/r2",
+  "basemapUrl": "",
+  "toolAssetsBaseUrl": "/r2/tools",
+  "repoUrl": "",
+  "defaultLocale": "en",
+  "locales": [
+    {"code": "en", "name": "English", "dir": "ltr", "status": "source"},
+    {"code": "es", "name": "Español", "dir": "ltr", "status": "machine-drafted"},
+    {"code": "fr", "name": "Français", "dir": "ltr", "status": "machine-drafted"},
+    {"code": "de", "name": "Deutsch", "dir": "ltr", "status": "machine-drafted"}
+  ],
+  "identity": {
+    "creator": "UnderstandingOutbreaks contributors",
+    "maintainer": "UnderstandingOutbreaks contributors",
+    "contact": "",
+    "securityContact": "",
+    "orcid": "",
+    "affiliation": "",
+    "doi": ""
+  },
+  "licenses": {"code": "MIT", "content": "CC-BY-4.0"}
+}

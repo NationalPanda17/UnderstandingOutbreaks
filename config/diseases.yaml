@@ -1,0 +1,131 @@
+# Disease vocabulary and per-disease configuration.
+# Adding a disease is a config change. data_type: timeseries | events | both.
+# icd11 / mesh: filled only where a clear one-to-one mapping exists; blank otherwise. All flagged for human review.
+# aliases: lower-case names, spelling variants, and pathogen names that normalize to this disease.
+# lag_default_periods: used until enough snapshots exist to estimate reporting lag from observed revisions.
+vocabulary_version: 1
+diseases:
+  - id: influenza
+    name: Influenza
+    icd11: ""
+    mesh: D007251
+    data_type: both
+    seasonal: true
+    cadence: weekly
+    datasets: [who_flunet_weekly]
+    default_series: {dataset: who_flunet_weekly, metric: detections, case_definition: confirmed, surveillance_system: all_reported}
+    rate_metric: false
+    map_metric: percent_positive
+    aliases: [influenza, seasonal influenza, flu, influenza a, influenza b]
+  - id: covid19
+    name: COVID-19
+    icd11: RA01
+    mesh: D000086382
+    data_type: both
+    seasonal: false
+    cadence: weekly
+    datasets: [who_covid_weekly]
+    default_series: {dataset: who_covid_weekly, metric: cases, case_definition: confirmed, surveillance_system: national_notification}
+    rate_metric: true
+    aliases: [covid-19, covid19, coronavirus disease 2019, coronavirus disease (covid-19), sars-cov-2, novel coronavirus, 2019-ncov]
+  - id: mpox
+    name: Mpox
+    icd11: 1E71
+    mesh: D045908
+    data_type: both
+    seasonal: false
+    cadence: weekly
+    datasets: [who_mpox_daily, owid_mpox]
+    default_series: {dataset: who_mpox_daily, metric: cases, case_definition: confirmed, surveillance_system: national_notification}
+    rate_metric: true
+    aliases: [mpox, monkeypox, monkeypox virus, mpxv, multi-country monkeypox outbreak]
+  - id: measles
+    name: Measles
+    icd11: 1F03
+    mesh: D008457
+    data_type: both
+    seasonal: false
+    cadence: monthly
+    datasets: [who_measles_monthly, who_wiise_measles, owid_measles]
+    default_series: {dataset: who_measles_monthly, metric: cases, case_definition: notified, surveillance_system: case_based_surveillance}
+    rate_metric: true
+    aliases: [measles, rougeole, measles virus]
+  - id: cholera
+    name: Cholera
+    icd11: 1A00
+    mesh: D002771
+    data_type: both
+    seasonal: false
+    cadence: yearly
+    datasets: [owid_cholera, who_gho_cholera]
+    default_series: {dataset: owid_cholera, metric: cases, case_definition: notified, surveillance_system: national_notification}
+    rate_metric: true
+    aliases: [cholera, vibrio cholerae, acute watery diarrhoea, acute watery diarrhea, acute watery diarrhoea/cholera]
+  - id: dengue
+    name: Dengue
+    icd11: ""
+    mesh: D003715
+    data_type: both
+    seasonal: true
+    cadence: yearly
+    datasets: [opendengue_national]
+    default_series: {dataset: opendengue_national, metric: cases, case_definition: mixed, surveillance_system: compiled_public_reports}
+    rate_metric: true
+    aliases: [dengue, dengue fever, severe dengue, dengue haemorrhagic fever, dengue hemorrhagic fever, dengue virus]
+  - id: polio
+    name: Poliomyelitis
+    icd11: 1C81
+    mesh: D011051
+    data_type: both
+    seasonal: false
+    cadence: yearly
+    datasets: [who_wiise_polio, owid_polio]
+    default_series: {dataset: who_wiise_polio, metric: cases, case_definition: notified, surveillance_system: national_notification}
+    rate_metric: true
+    aliases: [polio, poliomyelitis, poliovirus, wild poliovirus, wild poliovirus type 1, wpv1, circulating vaccine-derived poliovirus, circulating vaccine-derived poliovirus type 2, cvdpv2, cvdpv1, cvdpv, vaccine-derived poliovirus]
+  # ---- Event-based diseases (no code needed; mapping only) ----
+  - {id: ebola, name: Ebola disease, icd11: "", mesh: D019142, data_type: events,
+     aliases: [ebola, ebola virus disease, ebola disease, ebola disease caused by sudan virus, ebola disease caused by bundibugyo virus, sudan virus disease, bundibugyo virus disease, ebola haemorrhagic fever, ebola hemorrhagic fever, sudan ebolavirus, zaire ebolavirus, ebola bundibugyo virus disease, ebola sudan virus disease]}
+  - {id: marburg, name: Marburg virus disease, icd11: "", mesh: D008379, data_type: events,
+     aliases: [marburg, marburg virus disease, marburg haemorrhagic fever, marburg hemorrhagic fever, marburg virus]}
+  - {id: nipah, name: Nipah virus infection, icd11: "", mesh: "", data_type: events,
+     aliases: [nipah, nipah virus, nipah virus infection, nipah virus disease]}
+  - {id: mers, name: Middle East respiratory syndrome (MERS), icd11: "", mesh: "", data_type: events,
+     aliases: [mers, mers-cov, middle east respiratory syndrome, middle east respiratory syndrome coronavirus, middle east respiratory syndrome coronavirus (mers-cov), novel coronavirus infection]}
+  - {id: lassa, name: Lassa fever, icd11: "", mesh: D007835, data_type: events,
+     aliases: [lassa, lassa fever, lassa virus]}
+  - {id: avian_influenza, name: Avian and other zoonotic influenza, icd11: "", mesh: "", data_type: events,
+     aliases: [avian influenza, avian influenza a(h5n1), avian influenza a (h5n1), avian influenza a(h5n6), avian influenza a(h7n9), avian influenza a (h7n9), avian influenza a(h9n2), avian influenza a (h9n2), avian influenza a(h5n8), avian influenza a(h3n8), avian influenza a(h10n3), avian influenza a(h5n5), avian influenza a(h5n2), avian influenza a(h5), h5n1, h7n9, h9n2, h5n6, bird flu, influenza a(h5n1), human infection with avian influenza a(h5n1) virus, human infection with avian influenza a(h7n9) virus, human infection with avian influenza a(h5) virus, zoonotic influenza, swine influenza, influenza a(h1n1) variant virus, influenza a(h1n2) variant virus, influenza a(h3n2) variant virus, influenza a (h1n2) variant virus, influenza a (h1n1) variant virus]}
+  - {id: chikungunya, name: Chikungunya, icd11: "", mesh: D065632, data_type: events,
+     aliases: [chikungunya, chikungunya fever, chikungunya virus, chikungunya virus disease]}
+  - {id: zika, name: Zika virus disease, icd11: "", mesh: D000071243, data_type: events,
+     aliases: [zika, zika virus, zika virus infection, zika virus disease, microcephaly]}
+  - {id: yellow_fever, name: Yellow fever, icd11: "", mesh: D015004, data_type: events,
+     aliases: [yellow fever, yellow fever virus]}
+  - {id: meningitis, name: Meningitis (meningococcal and other), icd11: "", mesh: D008581, data_type: events,
+     aliases: [meningitis, meningococcal disease, meningococcal meningitis, invasive meningococcal disease, neisseria meningitidis, bacterial meningitis, pneumococcal meningitis, meningococcal]}
+  - {id: diphtheria, name: Diphtheria, icd11: 1C17, mesh: D004165, data_type: events,
+     aliases: [diphtheria, corynebacterium diphtheriae]}
+  - {id: plague, name: Plague, icd11: "", mesh: D010930, data_type: events, aliases: [plague, pneumonic plague, bubonic plague, yersinia pestis]}
+  - {id: anthrax, name: Anthrax, icd11: "", mesh: D000881, data_type: events, aliases: [anthrax, bacillus anthracis]}
+  - {id: cchf, name: Crimean-Congo haemorrhagic fever, icd11: "", mesh: "", data_type: events,
+     aliases: [crimean-congo haemorrhagic fever, crimean-congo hemorrhagic fever, cchf, crimean congo haemorrhagic fever]}
+  - {id: rift_valley_fever, name: Rift Valley fever, icd11: "", mesh: D012295, data_type: events, aliases: [rift valley fever, rvf]}
+  - {id: west_nile, name: West Nile virus infection, icd11: "", mesh: D014901, data_type: events, aliases: [west nile, west nile virus, west nile fever, west nile virus infection]}
+  - {id: hepatitis, name: Hepatitis (acute, outbreak reports), icd11: "", mesh: "", data_type: events,
+     aliases: [hepatitis e, hepatitis a, acute hepatitis of unknown aetiology, severe acute hepatitis of unknown aetiology in children, acute hepatitis e, hepatitis e virus]}
+  - {id: oropouche, name: Oropouche virus disease, icd11: "", mesh: "", data_type: events, aliases: [oropouche, oropouche virus disease, oropouche virus, oropouche fever]}
+  - {id: hantavirus, name: Hantavirus disease, icd11: "", mesh: D018778, data_type: events, aliases: [hantavirus, hantavirus disease, hantavirus pulmonary syndrome, andes virus, hantavirus cardiopulmonary syndrome]}
+  - {id: legionellosis, name: Legionellosis, icd11: "", mesh: D007876, data_type: events, aliases: [legionellosis, legionnaires' disease, legionnaires disease, legionella]}
+  - {id: typhoid, name: Typhoid fever, icd11: "", mesh: D014435, data_type: events, aliases: [typhoid, typhoid fever, salmonella typhi, extensively drug-resistant typhoid fever]}
+  - {id: pertussis, name: Pertussis (whooping cough), icd11: "", mesh: D014917, data_type: events, aliases: [pertussis, whooping cough, bordetella pertussis]}
+  - {id: rabies, name: Rabies, icd11: "", mesh: D011818, data_type: events, aliases: [rabies]}
+  - {id: malaria, name: Malaria (outbreak reports only), icd11: "", mesh: D008288, data_type: events, aliases: [malaria, plasmodium falciparum]}
+  - {id: japanese_encephalitis, name: Japanese encephalitis, icd11: "", mesh: D004672, data_type: events, aliases: [japanese encephalitis]}
+  - {id: leptospirosis, name: Leptospirosis, icd11: "", mesh: D007922, data_type: events, aliases: [leptospirosis]}
+  - {id: botulism, name: Botulism, icd11: "", mesh: D001906, data_type: events, aliases: [botulism, iatrogenic botulism]}
+  - {id: listeriosis, name: Listeriosis, icd11: "", mesh: D008088, data_type: events, aliases: [listeriosis]}
+  - {id: shigellosis, name: Shigellosis, icd11: "", mesh: D004405, data_type: events, aliases: [shigellosis, extensively drug-resistant shigella sonnei infections, shigella sonnei]}
+  - {id: sars, name: Severe acute respiratory syndrome (SARS), icd11: "", mesh: D045169, data_type: events, aliases: [severe acute respiratory syndrome, severe acute respiratory syndrome coronavirus, sars]}
+# Countries, regions and generic words that are stripped before matching a notice title to a disease.
+title_noise: [update, situation, outbreak, outbreaks, global, multi-country, multi country, the, in, of, and, cases, case, human, infection, with, virus, disease, caused, by, suspected, confirmed, regional, region, "- ", "– "]

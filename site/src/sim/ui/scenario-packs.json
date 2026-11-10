@@ -1,0 +1,17 @@
+{
+  "format": "understandingoutbreaks-scenario-packs",
+  "version": 1,
+  "note": "Illustrative teaching scenarios with invented settings. Not fitted to data. Not forecasts.",
+  "packs": [
+    {"id": "intro", "scenarios": [
+      {"id": "town-outbreak", "options": {"template": "SIR", "N": 10000, "I0": 5, "R0": 2.5, "infectiousDays": 5, "days": 160}},
+      {"id": "school-outbreak", "options": {"template": "SEIR", "N": 800, "I0": 1, "R0": 3, "infectiousDays": 4, "incubationDays": 2, "days": 120}},
+      {"id": "below-threshold", "options": {"template": "SIR", "N": 10000, "I0": 50, "R0": 0.9, "days": 200}}
+    ]},
+    {"id": "control", "scenarios": [
+      {"id": "vaccinate-town", "options": {"template": "SIR", "N": 10000, "I0": 5, "R0": 4, "vaxCoverage": 0.6, "vaxEfficacy": 0.9, "days": 300}},
+      {"id": "flatten", "options": {"template": "SIR", "N": 10000, "I0": 5, "R0": 2.5, "reduce": 0.45, "reduceStart": 20, "reduceEnd": 80, "days": 300}},
+      {"id": "waning", "options": {"template": "SIRS", "N": 10000, "I0": 5, "R0": 2.5, "waningDays": 200, "days": 1000, "dt": 2}}
+    ]}
+  ]
+}

@@ -1,0 +1,12 @@
+name: Data or source issue
+description: A number, source link, license or disease mapping looks wrong
+labels: [data]
+body:
+  - type: markdown
+    attributes: { value: "This site shows what official sources publish. If the source itself is wrong, please also tell the source. We log corrections in CORRECTIONS.md." }
+  - type: input
+    attributes: { label: Page URL or record id, description: "A record id looks like series_id@period; you can copy it from the Trace this panel in Analyst mode." }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: What looks wrong, and what does the original source say? }
+    validations: { required: true }

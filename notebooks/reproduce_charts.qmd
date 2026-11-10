@@ -1,0 +1,48 @@
+---
+title: "Reproduce the site's main chart (R)"
+format: html
+---
+
+This notebook loads UnderstandingOutbreaks data with R, redraws a country chart with likely-incomplete periods
+marked, and loads a specific snapshot. The data aggregates official public reports; it is not a surveillance
+system and not medical advice. Install the pinned packages first: `source("renv-packages.R")`.
+
+```{r}
+library(dplyr); library(tidyr); library(arrow); library(ggplot2); library(jsonlite)
+BASE <- Sys.getenv("UO_BASE", "https://understandingoutbreaks.pages.dev/data/v1")
+DISEASE <- "measles"; ISO3 <- "KEN"
+uo_read <- function(path) {
+  if (grepl("^https?://", path)) { tmp <- tempfile(fileext = ".parquet"); download.file(path, tmp, mode = "wb", quiet = TRUE); path <- tmp }
+  as.data.frame(read_parquet(path))
+}
+manifest <- fromJSON(paste0(BASE, "/manifest.json"))
+ts <- uo_read(paste0(BASE, "/bulk/timeseries/disease=", DISEASE, "/data.parquet"))
+country <- ts |> filter(iso3 == ISO3, is_default_series) |> arrange(period_start)
+tail(country[, c("period_start", "value", "rate_per_100k", "likely_incomplete", "case_definition", "source_id")])
+```
+
+```{r}
+ggplot(country, aes(period_start, value)) +
+  geom_line(data = filter(country, !likely_incomplete), colour = "#0072B2") +
+  geom_line(data = filter(country, likely_incomplete), colour = "#0072B2", linetype = "dotted") +
+  labs(title = paste(DISEASE, "in", ISO3), x = NULL, y = "Reported",
+       caption = paste0("Source: ", country$source_id[1], " via UnderstandingOutbreaks, snapshot ", manifest$snapshot_id,
+                        ". Dotted = likely incomplete."))
+```
+
+## A specific snapshot
+
+```{r}
+SNAPSHOT <- manifest$snapshots$id[1]
+rev <- uo_read(paste0(BASE, "/bulk/revisions/disease=", DISEASE, "/revisions.parquet"))
+as_of <- rev |> filter(snapshot_id <= SNAPSHOT) |> arrange(snapshot_id) |>
+  group_by(series_id, period) |> slice_tail(n = 1) |> ungroup() |> filter(!is.na(value))
+nrow(filter(as_of, series_id == country$series_id[1]))
+```
+
+## Cite what you used
+
+```{r}
+sources <- fromJSON(paste0(BASE, "/sources.json"))$sources
+sources |> filter(id %in% unique(country$source_id)) |> select(citation, license)
+```

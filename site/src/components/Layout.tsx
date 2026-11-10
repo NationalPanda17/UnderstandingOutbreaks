@@ -1,0 +1,177 @@
+/** Site chrome: header with language switcher and Simple / Analyst toggle, persistent data notice, footer disclaimers. */
+import { useEffect, useState } from 'preact/hooks';
+import { LOCALES, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
+import type { Core, Disease } from '../lib/data';
+import { date, t } from '../lib/i18n';
+import { useApp } from './SourceChip';
+
+const NAV: { path: string; key: string; cls?: string }[] = [
+  { path: '', key: 'nav.overview' },
+  { path: 'outbreaks', key: 'nav.outbreaks' },
+  { path: 'map', key: 'nav.map' },
+  { path: 'diseases', key: 'nav.diseases' },
+  { path: 'changes', key: 'nav.changes' },
+  { path: 'learn', key: 'nav.learn', cls: 'learn' },
+  { path: 'researchers', key: 'nav.researchers' },
+  { path: 'about', key: 'nav.about' },
+];
+
+export function switchLocale(route: Route, loc: string): void {
+  storage.set('locale', loc);
+  const rest = route.parts.map(encodeURIComponent).join('/');
+  const s = route.params.toString();
+  navigate(`/${loc}/${rest}${s ? '?' + s : ''}`);
+}
+
+export function Layout({ children }: { children: any }) {
+  const { route, core } = useApp();
+  const first = route.parts[0] ?? '';
+  const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && first === 'outbreak') || (p === 'diseases' && first === 'disease') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
+  const setMode = (m: 'simple' | 'analyst') => { storage.set('mode', m); setParams({ mode: m === 'analyst' ? 'analyst' : null }); };
+  const latest = core.manifest.snapshot_id;
+  const pinned = route.snapshot && route.snapshot !== latest ? core.manifest.snapshots.find((s) => s.id === route.snapshot) : null;
+  const unknownPin = route.snapshot && !core.manifest.snapshots.some((s) => s.id === route.snapshot);
+  return (
+    <>
+      <a class="skip" href="#main">{t('a11y.skip')}</a>
+      <header class="site">
+        <div class="wrap bar">
+          <a class="brand" href={href(route, '')} aria-label={SITE.name}>
+            <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#0b6e75" /><path d="M5 22c4 0 4-12 8-12s4 8 7 8 3-4 7-4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" /></svg>
+            {SITE.name}
+          </a>
+          <nav class="main" aria-label={t('a11y.mainNav')}>
+            {NAV.map((n) => <a key={n.path} class={n.cls} href={href(route, n.path)} aria-current={isCurrent(n.path) ? 'page' : undefined}>{t(n.key)}</a>)}
+          </nav>
+          <div class="controls">
+            <span class="seg" role="group" aria-label={t('mode.label')}>
+              <button type="button" aria-pressed={route.mode === 'simple'} onClick={() => setMode('simple')} title={t('mode.simple.hint')}>{t('mode.simple')}</button>
+              <button type="button" aria-pressed={route.mode === 'analyst'} onClick={() => setMode('analyst')} title={t('mode.analyst.hint')}>{t('mode.analyst')}</button>
+            </span>
+            <label><span class="sr">{t('lang.label')}</span>
+              <select aria-label={t('lang.label')} value={route.locale} onChange={(e) => switchLocale(route, (e.target as HTMLSelectElement).value)} data-testid="lang-switch">
+                {SITE.locales.filter((l) => LOCALES.includes(l.code)).map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>)}
+              </select>
+            </label>
+          </div>
+        </div>
+      </header>
+      {first !== 'learn' && (
+        <div class="persist" role="note"><div class="wrap">{t('persist.notice')} <a href={href(route, 'methodology')}>{t('persist.more')}</a></div></div>
+      )}
+      <main id="main" tabIndex={-1}>
+        <div class="wrap">
+          {pinned && (
+            <div class="notice pin" role="status" data-testid="pinned-banner">
+              {t('pin.banner', { date: date(pinned.created_at, 'long'), id: pinned.id })}{' '}
+              <a href={href(route, route.parts.join('/'), { snapshot: null }, { keepAll: true })}>{t('pin.latest')}</a>
+              <div class="small muted">{t('pin.vintage')}</div>
+            </div>
+          )}
+          {unknownPin && <div class="notice warn" role="alert">{t('pin.unknown', { id: route.snapshot! })}</div>}
+          {route.mode === 'analyst' && first !== 'learn' && <SnapshotPicker />}
+          {children}
+        </div>
+      </main>
+      <footer class="site">
+        <div class="wrap">
+          <p><b>{t('footer.positioning')}</b></p>
+          <p>{t('footer.medical')} <a class="ext" href="https://www.who.int/emergencies" target="_blank" rel="noopener noreferrer">{t('footer.official')}</a></p>
+          <div class="cols">
+            <ul>
+              <li><a href={href(route, 'about')}>{t('nav.about')}</a></li>
+              <li><a href={href(route, 'methodology')}>{t('nav.methodology')}</a></li>
+              <li><a href={href(route, 'sources')}>{t('nav.sources')}</a></li>
+              <li><a href={href(route, 'data-quality')}>{t('nav.quality')}</a></li>
+              <li><a href={href(route, 'changelog')}>{t('nav.changelog')}</a></li>
+            </ul>
+            <ul>
+              <li><a href={href(route, 'glossary')}>{t('nav.glossary')}</a></li>
+              <li><a href={href(route, 'reporters-guide')}>{t('nav.reporters')}</a></li>
+              <li><a href={href(route, 'researchers')}>{t('nav.researchers')}</a></li>
+              <li><a href={href(route, 'cite')}>{t('nav.cite')}</a></li>
+              <li><a href={href(route, 'watchlists')}>{t('nav.watchlists')}</a></li>
+            </ul>
+            <ul>
+              <li>{t('footer.licenseCode')}</li>
+              <li>{t('footer.licenseContent')}</li>
+              <li>{t('footer.licenseData')}</li>
+              <li>{t('footer.privacy')}</li>
+            </ul>
+          </div>
+          <p class="small">{t('footer.snapshot', { id: latest, date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>
+        </div>
+      </footer>
+    </>
+  );
+}
+
+/** Analyst mode: pick a "data as of" snapshot. Pins the whole view (URL parameter), reproducibly. */
+export function SnapshotPicker() {
+  const { core, route } = useApp();
+  const snaps = core.manifest.snapshots;
+  return (
+    <div class="tools" data-testid="snapshot-picker">
+      <label>{t('pin.pick')}{' '}
+        <select value={route.snapshot ?? ''} onChange={(e) => setParams({ snapshot: (e.target as HTMLSelectElement).value || null })}>
+          <option value="">{t('pin.latestOption', { date: date(snaps[snaps.length - 1]?.created_at) })}</option>
+          {snaps.slice(0, -1).reverse().map((s) => <option key={s.id} value={s.id}>{date(s.created_at)} · {s.id}</option>)}
+        </select>
+      </label>
+      <span class="small muted">{t('pin.count', { n: snaps.length })} {t('pin.vintage')}</span>
+    </div>
+  );
+}
+
+export function Loading({ what }: { what?: string }) {
+  return <p class="muted" role="status" aria-live="polite">{what ?? t('state.loading')}</p>;
+}
+export function ErrorBox({ error }: { error: unknown }) {
+  return <div class="notice warn" role="alert">{t('state.error')} <code class="small">{String((error as any)?.message ?? error)}</code></div>;
+}
+
+/** Load data for a view; re-runs when deps change. */
+export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): { data: T | null; error: unknown; loading: boolean } {
+  const [st, setSt] = useState<{ data: T | null; error: unknown; loading: boolean }>({ data: null, error: null, loading: true });
+  useEffect(() => {
+    let live = true;
+    setSt((s) => ({ ...s, loading: true, error: null }));
+    fn().then((data) => { if (live) setSt({ data, error: null, loading: false }); }).catch((error) => { if (live) setSt({ data: null, error, loading: false }); });
+    return () => { live = false; };
+  }, deps);
+  return st;
+}
+
+export function DiseaseBadge({ d }: { d: Disease }) {
+  return <span class={'badge ' + (d.badge === 'timeseries' ? 'ts' : 'ev')}>{t('badge.' + d.badge)}</span>;
+}
+
+export function diseaseName(core: Core, id: string): string {
+  if (id === 'other') return t('disease.other');
+  const k = 'disease.' + id;
+  const tr = t(k);
+  return tr === k ? core.diseaseById[id]?.name ?? id : tr;
+}
+
+/** Glossary term with an accessible tooltip (hover, focus, or tap). */
+export function Term({ id, children }: { id: string; children?: any }) {
+  const [open, setOpen] = useState(false);
+  return <span class="term" tabIndex={0} role="button" aria-label={`${t('glossary.' + id + '.term')}: ${t('glossary.' + id + '.def')}`} data-def={t('glossary.' + id + '.def')} data-open={open} onClick={() => setOpen(!open)} onBlur={() => setOpen(false)}>{children ?? t('glossary.' + id + '.term')}</span>;
+}
+
+/** One-time, dismissible notice ("before you compare", "before you simulate"). Dismissal is remembered if storage works. */
+export function FirstUse({ id, title, children, kind }: { id: string; title: string; children: any; kind?: 'sim' | 'warn' }) {
+  const [hidden, setHidden] = useState(() => storage.get('dismissed.' + id) === '1');
+  if (hidden) return null;
+  return (
+    <div class={'notice ' + (kind ?? 'warn')} role="note" data-testid={'firstuse-' + id}>
+      <b>{title}</b>
+      <div>{children}</div>
+      <button type="button" class="btn small" onClick={() => { storage.set('dismissed.' + id, '1'); setHidden(true); }}>{t('action.gotIt')}</button>
+    </div>
+  );
+}
+
+export function Ext({ url, children }: { url: string; children: any }) {
+  return <a class="ext" href={url} target="_blank" rel="noopener noreferrer">{children}</a>;
+}

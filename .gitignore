@@ -1,0 +1,13 @@
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+state/
+site/dist/
+site/public/data/
+site/public/r2/
+.DS_Store
+*.log
+site/dist-r2/
+notebooks/out/

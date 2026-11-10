@@ -1,0 +1,232 @@
+# Source registry. Every record, chart, map layer, text block, and export references an id from this file.
+# Format documented in docs/PROVENANCE.md. No free-text sources anywhere else.
+#
+# license_verification:
+#   verified-live      = the license statement was read from the publisher's site on the date given
+#   stated-unverified  = the publisher is widely documented as using this license, but the statement
+#                        could not be machine-read on the date given. Flagged for human review.
+# redistribute_raw: whether fetched raw files may be published in the raw archive (R2).
+#   When false, only hash + metadata + link are published and the trace panel says so.
+registry_version: 1
+sources:
+  - id: who_flunet
+    name: WHO FluNet (Global Influenza Surveillance and Response System)
+    short_name: WHO FluNet
+    publisher: World Health Organization
+    landing_url: https://www.who.int/tools/flunet
+    license: WHO terms of use (attribution required)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. FluNet, Global Influenza Surveillance and Response System (GISRS). https://www.who.int/tools/flunet"
+    cadence: weekly
+    kind: timeseries
+  - id: who_covid
+    name: WHO COVID-19 dashboard data
+    short_name: WHO COVID-19
+    publisher: World Health Organization
+    landing_url: https://data.who.int/dashboards/covid19/data
+    license: CC BY 4.0 (as stated on data.who.int)
+    license_url: https://data.who.int/about/data/licensing
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. WHO COVID-19 dashboard: COVID-19 cases and deaths. https://data.who.int/dashboards/covid19"
+    cadence: weekly
+    kind: timeseries
+  - id: who_mpox
+    name: WHO mpox (monkeypox) validated case data
+    short_name: WHO mpox
+    publisher: World Health Organization
+    landing_url: https://worldhealthorg.shinyapps.io/mpx_global/
+    license: WHO terms of use (attribution required)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. Global mpox trends (validated daily data). https://worldhealthorg.shinyapps.io/mpx_global/"
+    cadence: weekly
+    kind: timeseries
+  - id: who_measles_provisional
+    name: WHO provisional monthly measles and rubella data
+    short_name: WHO measles (provisional)
+    publisher: World Health Organization
+    landing_url: https://immunizationdata.who.int/global?topic=Provisional-measles-and-rubella-data
+    license: WHO terms of use (attribution required; provisional data must be cited with its as-of month)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. Provisional monthly measles and rubella data (based on monthly data reported to WHO Geneva). https://immunizationdata.who.int"
+    cadence: monthly
+    kind: timeseries
+  - id: who_wiise
+    name: WHO Immunization Data portal, reported cases of vaccine-preventable diseases
+    short_name: WHO immunization data
+    publisher: World Health Organization
+    landing_url: https://immunizationdata.who.int/global/wiise-detail-page/measles-reported-cases-and-incidence
+    license: WHO terms of use (attribution required)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. Immunization data portal: reported cases and incidence (WHO/UNICEF Joint Reporting Form). https://immunizationdata.who.int"
+    cadence: yearly
+    kind: timeseries
+  - id: who_gho
+    name: WHO Global Health Observatory
+    short_name: WHO GHO
+    publisher: World Health Organization
+    landing_url: https://www.who.int/data/gho
+    license: WHO terms of use (attribution required)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. Global Health Observatory data repository. https://www.who.int/data/gho"
+    cadence: yearly
+    kind: timeseries
+  - id: owid
+    name: Our World in Data
+    short_name: Our World in Data
+    publisher: Global Change Data Lab
+    landing_url: https://ourworldindata.org
+    license: CC BY 4.0 (underlying data keep their providers' terms)
+    license_url: https://ourworldindata.org/faqs
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "Our World in Data (processed from the cited original providers). https://ourworldindata.org"
+    cadence: yearly
+    kind: timeseries
+  - id: opendengue
+    name: OpenDengue global dengue case database
+    short_name: OpenDengue
+    publisher: OpenDengue project
+    landing_url: https://opendengue.org
+    license: CC BY 4.0 (as described by the project; statement not machine-verified)
+    license_url: https://opendengue.org
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "Clarke J, Lim A, Gupte P, Pigott DM, van Panhuis WG, Brady OJ. OpenDengue: data from the OpenDengue database. https://opendengue.org"
+    cadence: yearly
+    kind: timeseries
+  - id: who_don
+    name: WHO Disease Outbreak News
+    short_name: WHO Disease Outbreak News
+    publisher: World Health Organization
+    landing_url: https://www.who.int/emergencies/disease-outbreak-news
+    license: WHO terms of use (text not redistributed; linked and briefly quoted)
+    license_url: https://www.who.int/about/policies/publishing/copyright
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "World Health Organization. Disease Outbreak News. https://www.who.int/emergencies/disease-outbreak-news"
+    cadence: daily
+    kind: events
+  - id: cdc_travel
+    name: US CDC Travelers' Health travel health notices
+    short_name: CDC travel notices
+    publisher: US Centers for Disease Control and Prevention
+    landing_url: https://wwwnc.cdc.gov/travel/notices
+    license: US Government work (public domain in the United States)
+    license_url: https://www.cdc.gov/other/agencymaterials.html
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "US Centers for Disease Control and Prevention. Travel Health Notices. https://wwwnc.cdc.gov/travel/notices"
+    cadence: daily
+    kind: events
+  - id: worldbank
+    name: World Bank, World Development Indicators (total population)
+    short_name: World Bank population
+    publisher: World Bank
+    landing_url: https://data.worldbank.org/indicator/SP.POP.TOTL
+    license: CC BY 4.0
+    license_url: https://datacatalog.worldbank.org/public-licenses
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "World Bank. World Development Indicators: Population, total (SP.POP.TOTL). https://data.worldbank.org/indicator/SP.POP.TOTL"
+    cadence: yearly
+    kind: population
+  - id: naturalearth
+    name: Natural Earth (Admin 0 countries, 1:50m)
+    short_name: Natural Earth
+    publisher: Natural Earth
+    landing_url: https://www.naturalearthdata.com/downloads/50m-cultural-vectors/
+    license: Public domain
+    license_url: https://www.naturalearthdata.com/about/terms-of-use/
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com."
+    cadence: yearly
+    kind: boundaries
+  - id: geonames
+    name: GeoNames geographical database
+    short_name: GeoNames
+    publisher: GeoNames
+    landing_url: https://www.geonames.org/export/
+    license: CC BY 4.0
+    license_url: https://www.geonames.org/export/
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "GeoNames geographical database. https://www.geonames.org"
+    cadence: yearly
+    kind: reference
+  - id: protomaps_osm
+    name: Protomaps basemap built from OpenStreetMap data
+    short_name: Protomaps / OpenStreetMap
+    publisher: Protomaps; OpenStreetMap contributors
+    landing_url: https://protomaps.com
+    license: ODbL 1.0 (OpenStreetMap data); BSD/CC0 (Protomaps styles)
+    license_url: https://www.openstreetmap.org/copyright
+    license_verification: stated-unverified
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "© OpenStreetMap contributors; Protomaps."
+    cadence: yearly
+    kind: basemap
+  - id: uo_site
+    name: UnderstandingOutbreaks (computed by this project)
+    short_name: UnderstandingOutbreaks
+    publisher: UnderstandingOutbreaks contributors
+    landing_url: /methodology
+    license: CC BY 4.0 (methods and text); inputs keep their source licenses
+    license_url: https://creativecommons.org/licenses/by/4.0/
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: true
+    citation: "UnderstandingOutbreaks contributors. UnderstandingOutbreaks (site-derived values; see methodology)."
+    cadence: daily
+    kind: derived
+  - id: literature
+    name: Published scientific literature (individual citations listed per item)
+    short_name: Published literature
+    publisher: Various (see each citation)
+    landing_url: /learn/references
+    license: Citations only; no content redistributed
+    license_url: /learn/references
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "See the individual reference listed with each item."
+    cadence: yearly
+    kind: literature
+  - id: test_data
+    name: TEST DATA (fixtures, not real)
+    short_name: TEST DATA
+    publisher: UnderstandingOutbreaks test suite
+    landing_url: /methodology
+    license: Not for publication
+    license_url: /methodology
+    license_verification: verified-live
+    license_checked: "2026-11-09"
+    redistribute_raw: false
+    citation: "TEST DATA. Not real. Rejected in production builds."
+    cadence: daily
+    kind: test

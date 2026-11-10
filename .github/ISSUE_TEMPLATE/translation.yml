@@ -1,0 +1,12 @@
+name: Translation review
+description: Review or correct machine-drafted text (health wording is the priority)
+labels: [translation]
+body:
+  - type: dropdown
+    attributes: { label: Language, options: [Spanish, French, German, Other] }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: Keys reviewed or corrected, description: "List translation keys (see TRANSLATIONS.md) and the corrected text." }
+    validations: { required: true }
+  - type: input
+    attributes: { label: Your relevant background (optional), description: "For example: native speaker, public health translator." }

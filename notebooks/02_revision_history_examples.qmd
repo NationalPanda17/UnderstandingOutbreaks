@@ -1,0 +1,61 @@
+---
+title: "Example gallery: using the revision history (Python)"
+format: html
+jupyter: python3
+---
+
+# Example gallery: analyses that use the revision history
+
+Three short, reproducible examples. With only one snapshot there are no revisions yet; the code still runs and
+says so. Vintage reflects what this site retrieved and published, not when a source first released a number.
+
+```{python}
+import json, os
+import pandas as pd
+
+BASE = os.environ.get("UO_BASE", "https://understandingoutbreaks.pages.dev/data/v1")
+DISEASE = "covid19"
+rev = pd.read_parquet(f"{BASE}/bulk/revisions/disease={DISEASE}/revisions.parquet")
+snapshots = sorted(rev["snapshot_id"].unique())
+print(len(rev), "stored changes across", len(snapshots), "snapshot(s)")
+```
+
+## Example 1: how often are published values revised, by source?
+
+```{python}
+versions = rev.groupby(["series_id", "period"]).size().rename("versions").reset_index()
+versions["dataset"] = versions["series_id"].str.split(".").str[1]
+summary = versions.groupby("dataset").agg(values=("versions", "size"), revised=("versions", lambda s: int((s > 1).sum())))
+summary["share_revised"] = (summary["revised"] / summary["values"]).round(4)
+print(summary.to_string())
+```
+
+## Example 2: how large are revisions, and how old is a value when it is revised?
+
+```{python}
+r = rev.sort_values("snapshot_id", kind="stable").copy()
+r["previous"] = r.groupby(["series_id", "period"])["value"].shift(1)
+changes = r.dropna(subset=["previous", "value"]).copy()
+if len(changes):
+    changes["age_days"] = (pd.to_datetime(changes["snapshot_id"].str[:8]) - pd.to_datetime(changes["period"])).dt.days
+    changes["relative_change"] = (changes["value"] - changes["previous"]) / changes["previous"].where(changes["previous"] != 0)
+    print(changes[["age_days", "relative_change"]].describe().round(3).to_string())
+else:
+    print("no value has been revised yet: revisions will appear as snapshots accumulate")
+```
+
+## Example 3: one series as it looked at two different snapshots
+
+```{python}
+def as_of(snapshot):
+    return (rev[rev["snapshot_id"] <= snapshot].sort_values("snapshot_id", kind="stable")
+            .drop_duplicates(["series_id", "period"], keep="last").dropna(subset=["value"]))
+
+first, last = as_of(snapshots[0]), as_of(snapshots[-1])
+sid = last["series_id"].value_counts().index[0]
+a = first[first["series_id"] == sid].set_index("period")["value"].rename(snapshots[0])
+b = last[last["series_id"] == sid].set_index("period")["value"].rename(snapshots[-1])
+cmp = pd.concat([a, b], axis=1).sort_index().tail(8)
+print(sid)
+print(cmp.to_string())
+```

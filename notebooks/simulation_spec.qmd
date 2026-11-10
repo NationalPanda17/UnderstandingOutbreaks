@@ -1,0 +1,38 @@
+---
+title: "Run a sandbox model with deSolve (R)"
+format: html
+---
+
+**Illustrative simulation: not a forecast, not fitted to data.**
+
+The sandbox's "Copy as code" button produces R code like the block below for any model. This example is the SEIR
+teaching model with a contact reduction between day 20 and day 60, followed by a one-way sweep. It uses no reported data.
+
+```{r}
+library(deSolve)
+BASE <- list(beta = 0.5, gamma = 0.2, sigma = 1 / 3)
+INTERVENTIONS <- list(list(kind = "scale", name = "beta", value = 0.5, start = 20, end = 60))
+params_at <- function(t, base = BASE) {
+  p <- base
+  for (iv in INTERVENTIONS) if (t >= iv$start && t < iv$end) p[[iv$name]] <- if (iv$kind == "scale") p[[iv$name]] * iv$value else iv$value
+  p
+}
+rhs <- function(t, y, parms) {
+  p <- params_at(t, parms); N <- sum(y)
+  inf <- p$beta * y[1] * y[3] / N; prog <- p$sigma * y[2]; rec <- p$gamma * y[3]
+  list(c(-inf, inf - prog, prog - rec, rec))
+}
+Y0 <- c(S = 9995, E = 0, I = 5, R = 0)
+times <- sort(unique(c(seq(0, 160, by = 1), 20, 60)))
+out <- as.data.frame(ode(y = Y0, times = times, func = rhs, parms = BASE, method = "lsoda", rtol = 1e-10, atol = 1e-10))
+stopifnot(all(abs(rowSums(out[, -1]) - 10000) < 1e-5))   # population is conserved
+out[which.max(out$I), ]
+```
+
+```{r}
+# One-way sweep: the simulated peak for a range of transmission rates. This explores the model; it estimates nothing.
+sapply(seq(0.25, 0.75, by = 0.1), function(b) {
+  o <- as.data.frame(ode(y = Y0, times = times, func = rhs, parms = modifyList(BASE, list(beta = b)), method = "lsoda"))
+  max(o$I)
+})
+```

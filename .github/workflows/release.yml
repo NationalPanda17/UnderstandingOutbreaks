@@ -1,0 +1,31 @@
+name: Release dataset snapshot
+# A tagged release packages the current dataset snapshot as a release asset. If the repository has been linked to
+# Zenodo by a maintainer (see README), Zenodo archives the GitHub release and mints a DOI. This workflow does not
+# publish to Zenodo itself.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install -r pipeline/requirements.txt
+      - name: Check that maintainer metadata was filled in before a DOI can be minted
+        run: python scripts/make_metadata.py --check
+      - name: Build the snapshot
+        working-directory: pipeline
+        run: python -m uo.build && python -m pytest -q tests/test_traceability.py
+      - name: Package the snapshot (bulk files, manifest, sources, dictionary, citation)
+        run: |
+          SNAP=$(python -c "import json;print(json.load(open('site/public/data/v1/manifest.json'))['snapshot_id'])")
+          mkdir -p release && cd site/public/data/v1
+          zip -r -q "../../../../release/understandingoutbreaks-dataset-$SNAP.zip" bulk catalog manifest.json sources.json "snapshots/$SNAP.json"
+          cd - && zip -q "release/understandingoutbreaks-dataset-$SNAP.zip" CITATION.cff LICENSE LICENSE-CONTENT.md docs/SOURCES.md docs/PROVENANCE.md docs/METHODOLOGY.md
+      - name: Create the GitHub release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release create "${{ github.ref_name }}" release/*.zip --title "${{ github.ref_name }}" --notes-file CHANGELOG.md

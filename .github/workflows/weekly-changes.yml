@@ -1,0 +1,14 @@
+name: Weekly "what changed" build and link check
+# Monday run: rebuilds the data (which writes this week's "What changed this week" page) and checks every source link.
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  weekly:
+    uses: ./.github/workflows/update-data.yml
+    with: { linkcheck: true }
+    secrets: inherit

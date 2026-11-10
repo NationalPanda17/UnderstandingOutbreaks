@@ -1,0 +1,43 @@
+{
+ "notebooks": [
+  {
+   "id": "01_reproduce_charts_and_flags",
+   "title": "Reproduce the main chart and signal flags (Python)",
+   "language": "python",
+   "ipynb": "01_reproduce_charts_and_flags.ipynb",
+   "qmd": "01_reproduce_charts_and_flags.qmd",
+   "description": "Loads a disease's data, redraws a country chart with incomplete periods marked, recomputes the signal flags and checks them against the published ones, and loads a specific snapshot."
+  },
+  {
+   "id": "02_revision_history_examples",
+   "title": "Example gallery: using the revision history (Python)",
+   "language": "python",
+   "ipynb": "02_revision_history_examples.ipynb",
+   "qmd": "02_revision_history_examples.qmd",
+   "description": "Three short analyses: how often values are revised by source, how large and how late revisions are, and one series at two snapshots."
+  },
+  {
+   "id": "03_simulation_spec_and_sweeps",
+   "title": "Run a sandbox model specification and a sweep (Python)",
+   "language": "python",
+   "ipynb": "03_simulation_spec_and_sweeps.ipynb",
+   "qmd": "03_simulation_spec_and_sweeps.qmd",
+   "description": "Illustrative simulation, not a forecast. Loads a model spec exported from the sandbox, runs it with scipy, and sweeps one parameter."
+  },
+  {
+   "id": "reproduce_charts_r",
+   "title": "Reproduce the main chart (R, tidyverse)",
+   "language": "r",
+   "qmd": "reproduce_charts.qmd",
+   "script": "starter.R",
+   "description": "Loads the data with arrow and dplyr, redraws a country chart, and loads a specific snapshot. The in-browser console runs a base-R starter script."
+  },
+  {
+   "id": "simulation_spec_r",
+   "title": "Run a sandbox model with deSolve (R)",
+   "language": "r",
+   "qmd": "simulation_spec.qmd",
+   "description": "Illustrative simulation, not a forecast. Runs the SEIR teaching model with deSolve and sweeps one parameter."
+  }
+ ]
+}

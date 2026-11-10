@@ -1,0 +1,81 @@
+name: Update data and deploy
+# Scheduled data update. Sources are checked on their own cadence inside the pipeline (daily and weekly sources every
+# run, monthly sources weekly, yearly sources monthly). On any failure the last good snapshot stays live and a GitHub
+# issue is opened. This workflow never opens pull requests and never changes code or configuration.
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      linkcheck: { description: "Also check source links", type: boolean, default: false }
+  workflow_call:
+    inputs:
+      linkcheck: { type: boolean, default: false }
+    secrets: { CLOUDFLARE_API_TOKEN: { required: false }, CLOUDFLARE_ACCOUNT_ID: { required: false }, R2_ACCESS_KEY_ID: { required: false }, R2_SECRET_ACCESS_KEY: { required: false } }
+permissions:
+  contents: read
+  issues: write
+concurrency: { group: update-data, cancel-in-progress: false }
+env:
+  R2_BUCKET: ${{ vars.R2_BUCKET }}
+  R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: auto
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip, cache-dependency-path: pipeline/requirements.txt }
+      - run: pip install -r pipeline/requirements.txt
+      - name: Restore pipeline state (revision history, raw archive index, last good data) from R2
+        if: env.R2_BUCKET != '' && env.AWS_ACCESS_KEY_ID != ''
+        run: |
+          aws s3 sync "s3://$R2_BUCKET/state/" state/ --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          aws s3 sync "s3://$R2_BUCKET/published/data/" site/public/data/ --endpoint-url "$R2_ENDPOINT" --only-show-errors
+      - name: Restore pipeline state from the Actions cache (when R2 is not configured)
+        if: env.R2_BUCKET == '' || env.AWS_ACCESS_KEY_ID == ''
+        uses: actions/cache@v4
+        with: { path: "state\nsite/public/data", key: "uo-state-${{ github.run_id }}", restore-keys: "uo-state-" }
+      - name: Fetch, archive, validate, record revisions, compute, publish (atomic)
+        id: pipeline
+        working-directory: pipeline
+        run: python -m uo.build
+      - name: Check source links
+        if: inputs.linkcheck || github.event.schedule == '23 6 * * 1'
+        working-directory: pipeline
+        run: python -m uo.linkcheck
+      - name: Source traceability tests (deployment is blocked if these fail)
+        working-directory: pipeline
+        run: python -m pytest -q tests/test_traceability.py
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: site/package-lock.json }
+      - working-directory: site
+        run: npm ci && node scripts/prepare-tools.mjs && npm run check:i18n && npm run build && npm run check:bundles
+      - name: Save pipeline state to R2 and upload R2-hosted files (raw archive, tool runtimes)
+        if: env.R2_BUCKET != '' && env.AWS_ACCESS_KEY_ID != ''
+        run: |
+          aws s3 sync state/ "s3://$R2_BUCKET/state/" --endpoint-url "$R2_ENDPOINT" --only-show-errors --exclude "issues/*"
+          aws s3 sync site/public/data/ "s3://$R2_BUCKET/published/data/" --endpoint-url "$R2_ENDPOINT" --only-show-errors --delete
+          aws s3 sync site/dist-r2/ "s3://$R2_BUCKET/" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+      - name: Deploy to Cloudflare Pages
+        if: env.PAGES_PROJECT != '' && env.CLOUDFLARE_API_TOKEN != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy site/dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
+      - name: Open GitHub issues for anything that needs a person (issues only)
+        if: always()
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: python scripts/open_issues.py
+      - name: Open an issue if the run itself failed
+        if: failure()
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh issue create --title "[pipeline] Scheduled update failed" --label pipeline \
+            --body "The scheduled update failed in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The last good snapshot stays live. Nothing was changed automatically; a person needs to review." || true

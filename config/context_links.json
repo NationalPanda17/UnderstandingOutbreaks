@@ -1,0 +1,23 @@
+{
+  "_comment": "Outbound context links. Shown as clearly labelled external links; never embedded, never fetched by the browser unless clicked. Flagged for human review.",
+  "disease": {
+    "covid19": [{"label": "Nextstrain: SARS-CoV-2", "url": "https://nextstrain.org/ncov"}],
+    "mpox": [{"label": "Nextstrain: mpox", "url": "https://nextstrain.org/mpox"}],
+    "measles": [{"label": "Nextstrain: measles", "url": "https://nextstrain.org/measles"}],
+    "dengue": [{"label": "Nextstrain: dengue", "url": "https://nextstrain.org/dengue"}],
+    "influenza": [{"label": "Nextstrain: seasonal influenza", "url": "https://nextstrain.org/seasonal-flu"}],
+    "zika": [{"label": "Nextstrain: Zika", "url": "https://nextstrain.org/zika"}],
+    "ebola": [{"label": "Nextstrain: Ebola", "url": "https://nextstrain.org/ebola"}],
+    "avian_influenza": [{"label": "Nextstrain: avian influenza", "url": "https://nextstrain.org/avian-flu"}],
+    "lassa": [{"label": "Nextstrain: Lassa", "url": "https://nextstrain.org/lassa"}]
+  },
+  "all_diseases": [
+    {"label": "WHO Disease Outbreak News", "url": "https://www.who.int/emergencies/disease-outbreak-news"},
+    {"label": "WHO health topics", "url": "https://www.who.int/health-topics"}
+  ],
+  "place": [
+    {"label": "WHO country page", "url": "https://www.who.int/countries/{iso3_lower}"},
+    {"label": "US CDC travel health notices", "url": "https://wwwnc.cdc.gov/travel/notices"},
+    {"label": "US CDC destinations list", "url": "https://wwwnc.cdc.gov/travel/destinations/list"}
+  ]
+}

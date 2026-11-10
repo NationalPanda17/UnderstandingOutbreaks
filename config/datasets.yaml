@@ -1,0 +1,241 @@
+# Per-dataset connector configuration. Each dataset belongs to exactly one registry source (source_id).
+# deep_link: the most specific public URL for the dataset (API query, file, or indicator page).
+# link_kind: "deep" or "dataset-level link" (only a landing page exists).
+# chain: ordered transformation steps applied by the connector (operation, method_version, params).
+# ref_template: how a raw_record_ref is built for one normalized record (documented in docs/PROVENANCE.md).
+datasets:
+  - id: who_flunet_weekly
+    lag_default_periods: 2
+    source_id: who_flunet
+    connector: flunet
+    disease: influenza
+    raw_ext: json
+    url: "https://xmart-api-public.who.int/FLUMART/VIW_FNT?$format=json&$filter=ISO_YEAR%20ge%20{start_year}&$select=COUNTRY_CODE,ISO_WEEKSTARTDATE,ORIGIN_SOURCE,SPEC_PROCESSED_NB,INF_A,INF_B,INF_ALL"
+    start_year: 2019
+    deep_link: "https://xmart-api-public.who.int/FLUMART/VIW_FNT?$format=json&$filter=COUNTRY_CODE%20eq%20'{iso3}'%20and%20ISO_YEAR%20ge%202019"
+    link_kind: deep
+    period_type: W
+    surveillance_system_note: "Laboratory detections reported through GISRS; sentinel, non-sentinel and undefined systems are kept as separate series."
+    case_definition_note: "Laboratory-confirmed influenza virus detections (not a count of people ill)."
+    chain:
+      - {op: select_columns, method_version: "1", params: {columns: [INF_ALL, SPEC_PROCESSED_NB]}}
+    ref_template: "COUNTRY_CODE={iso3};ISO_WEEKSTARTDATE={period};ORIGIN_SOURCE={system_raw}"
+    expected_min_rows: 20000
+  - id: who_covid_weekly
+    allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
+    lag_default_periods: 2
+    source_id: who_covid
+    connector: who_covid
+    disease: covid19
+    raw_ext: csv
+    url: "https://srhdpeuwpubsa.blob.core.windows.net/whdh/COVID/WHO-COVID-19-global-data.csv"
+    deep_link: "https://srhdpeuwpubsa.blob.core.windows.net/whdh/COVID/WHO-COVID-19-global-data.csv"
+    link_kind: deep
+    period_type: W
+    surveillance_system_note: "Counts reported to WHO by national authorities."
+    case_definition_note: "Confirmed COVID-19 cases and deaths as reported to WHO. Testing and reporting have fallen sharply since 2023."
+    chain:
+      - {op: iso2_to_iso3, method_version: "1", params: {}}
+      - {op: week_end_to_week_start, method_version: "1", params: {days: -6}}
+    ref_template: "Country_code={iso2};Date_reported={period_end}"
+    expected_min_rows: 50000
+  - id: who_mpox_daily
+    allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
+    lag_default_periods: 4
+    source_id: who_mpox
+    connector: who_mpox
+    disease: mpox
+    raw_ext: json
+    url: "https://xmart-api-public.who.int/MPX/V_MPX_VALIDATED_DAILY?$format=json"
+    deep_link: "https://xmart-api-public.who.int/MPX/V_MPX_VALIDATED_DAILY?$format=json&$filter=ISO3%20eq%20'{iso3}'"
+    link_kind: deep
+    period_type: W
+    derived: true
+    surveillance_system_note: "Validated counts reported to WHO by national authorities."
+    case_definition_note: "Laboratory-confirmed mpox cases; probable cases are a separate series."
+    chain:
+      - {op: sum_daily_to_iso_week, method_version: "1", params: {week_start: monday, drop_partial_last_week: true}}
+    ref_template: "ISO3={iso3};DATE in [{period}, {period}+6d]"
+    expected_min_rows: 2000
+  - id: owid_mpox
+    allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
+    lag_default_periods: 4
+    source_id: owid
+    connector: owid_mpox
+    disease: mpox
+    raw_ext: csv
+    url: "https://catalog.ourworldindata.org/explorers/who/latest/monkeypox/monkeypox.csv"
+    deep_link: "https://ourworldindata.org/explorers/monkeypox"
+    link_kind: deep
+    period_type: W
+    derived: true
+    surveillance_system_note: "Our World in Data's processing of WHO mpox data. Not updated since February 2025 when last checked."
+    case_definition_note: "Confirmed mpox cases as processed by Our World in Data."
+    chain:
+      - {op: sum_daily_to_iso_week, method_version: "1", params: {week_start: monday, drop_partial_last_week: true}}
+    ref_template: "iso_code={iso3};date in [{period}, {period}+6d]"
+    expected_min_rows: 2000
+  - id: who_measles_monthly
+    allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
+    lag_default_periods: 2
+    source_id: who_measles_provisional
+    connector: who_measles
+    disease: measles
+    raw_ext: xlsx
+    url: "https://immunizationdata.who.int/docs/librariesprovider21/measles-and-rubella/404-table-web-epi-curve-data.xlsx"
+    deep_link: "https://immunizationdata.who.int/docs/librariesprovider21/measles-and-rubella/404-table-web-epi-curve-data.xlsx"
+    link_kind: deep
+    period_type: M
+    surveillance_system_note: "Case-based measles surveillance reported monthly to WHO. Provisional."
+    case_definition_note: "WHO final classification. 'Notified' here is WHO's measles total (laboratory-confirmed + epidemiologically linked + clinically compatible). Suspected and laboratory-confirmed are separate series."
+    chain:
+      - {op: select_columns, method_version: "1", params: {sheet: WEB}}
+    ref_template: "sheet=WEB;ISO3={iso3};Year={year};Month={month}"
+    expected_min_rows: 20000
+  - id: who_wiise_measles
+    source_id: who_wiise
+    connector: who_wiise
+    disease: measles
+    wiise_disease: MEASLES
+    raw_ext: json
+    url: "https://xmart-api-public.who.int/WIISE/MT_AD_INC_LONG?$format=json&$filter=DISEASE%20eq%20'MEASLES'%20and%20GROUP%20eq%20'COUNTRIES'&$select=CODE,YEAR,DISEASE,CASES"
+    deep_link: "https://immunizationdata.who.int/global/wiise-detail-page/measles-reported-cases-and-incidence?CODE={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Official annual counts from the WHO/UNICEF Joint Reporting Form."
+    case_definition_note: "Annual reported (notified) cases as officially submitted by each country."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "CODE={iso3};YEAR={year};DISEASE=MEASLES"
+    expected_min_rows: 5000
+  - id: who_wiise_polio
+    source_id: who_wiise
+    connector: who_wiise
+    disease: polio
+    wiise_disease: POLIO
+    raw_ext: json
+    url: "https://xmart-api-public.who.int/WIISE/MT_AD_INC_LONG?$format=json&$filter=DISEASE%20eq%20'POLIO'%20and%20GROUP%20eq%20'COUNTRIES'&$select=CODE,YEAR,DISEASE,CASES"
+    deep_link: "https://immunizationdata.who.int/global/wiise-detail-page/poliomyelitis-reported-cases-and-incidence?CODE={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Official annual counts from the WHO/UNICEF Joint Reporting Form."
+    case_definition_note: "Annual reported (notified) poliomyelitis cases as officially submitted by each country."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "CODE={iso3};YEAR={year};DISEASE=POLIO"
+    expected_min_rows: 5000
+  - id: owid_measles
+    source_id: owid
+    connector: owid_grapher
+    disease: measles
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/reported-cases-of-measles.csv?v=1&csvType=full&useColumnShortNames=true"
+    value_column: measles__number_of_reported_cases
+    deep_link: "https://ourworldindata.org/grapher/reported-cases-of-measles?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO Global Health Observatory data."
+    case_definition_note: "Annual reported (notified) cases."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 3000
+  - id: owid_polio
+    source_id: owid
+    connector: owid_grapher
+    disease: polio
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/the-number-of-reported-paralytic-polio-cases.csv?csvType=full&useColumnShortNames=true"
+    value_column: total_cases
+    deep_link: "https://ourworldindata.org/grapher/the-number-of-reported-paralytic-polio-cases?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO and Global Polio Eradication Initiative data."
+    case_definition_note: "Annual reported paralytic polio cases (wild and vaccine-derived)."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 3000
+  - id: owid_cholera
+    source_id: owid
+    connector: owid_grapher
+    disease: cholera
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/number-reported-cases-of-cholera.csv?csvType=full&useColumnShortNames=true"
+    value_column: cholera_reported_cases
+    deep_link: "https://ourworldindata.org/grapher/number-reported-cases-of-cholera?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO annual cholera reports."
+    case_definition_note: "Annual reported (notified) cholera cases. Many countries under-report or do not report."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 1000
+  - id: who_gho_cholera
+    source_id: who_gho
+    connector: who_gho
+    disease: cholera
+    raw_ext: json
+    url: "https://ghoapi.azureedge.net/api/CHOLERA_0000000001?$filter=SpatialDimType%20eq%20'COUNTRY'"
+    deep_link: "https://ghoapi.azureedge.net/api/CHOLERA_0000000001?$filter=SpatialDim%20eq%20'{iso3}'"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "WHO Global Health Observatory indicator 'Number of reported cases of cholera'. Ends in 2016 when last checked."
+    case_definition_note: "Annual reported (notified) cholera cases."
+    chain: [{op: select_columns, method_version: "1", params: {}}]
+    ref_template: "IndicatorCode=CHOLERA_0000000001;SpatialDim={iso3};TimeDim={year}"
+    expected_min_rows: 1000
+  - id: opendengue_national
+    source_id: opendengue
+    connector: opendengue
+    disease: dengue
+    raw_ext: zip
+    url: "https://raw.githubusercontent.com/OpenDengue/master-repo/main/data/releases/V1.3.1/National_extract_V1_3_1.zip"
+    release: "V1.3.1"
+    deep_link: "https://opendengue.org/data.html"
+    link_kind: dataset-level link
+    period_type: Y
+    surveillance_system_note: "Compiled by OpenDengue from public ministry, WHO regional and literature reports. Temporal resolution and definitions differ by country."
+    case_definition_note: "Case definition as standardised by OpenDengue for each record (suspected, probable, confirmed, or a combination). Never summed across definitions here."
+    chain: [{op: select_columns, method_version: "1", params: {S_res: Admin0}}]
+    ref_template: "UUID={uuid};ISO_A0={iso3};calendar_start_date={period}"
+    expected_min_rows: 5000
+reference:
+  - id: worldbank_population
+    source_id: worldbank
+    raw_ext: json
+    url: "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&mrnev=1"
+    deep_link: "https://data.worldbank.org/indicator/SP.POP.TOTL?locations={iso2}"
+  - id: ne_admin0_50m
+    source_id: naturalearth
+    raw_ext: zip
+    url: "https://naciscdn.org/naturalearth/50m/cultural/ne_50m_admin_0_countries.zip"
+    deep_link: "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/"
+  - id: geonames_cities15000
+    source_id: geonames
+    raw_ext: zip
+    url: "https://download.geonames.org/export/dump/cities15000.zip"
+    deep_link: "https://download.geonames.org/export/dump/"
+  - id: geonames_admin1
+    source_id: geonames
+    raw_ext: txt
+    url: "https://download.geonames.org/export/dump/admin1CodesASCII.txt"
+    deep_link: "https://download.geonames.org/export/dump/"
+  - id: geonames_countryinfo
+    source_id: geonames
+    raw_ext: txt
+    url: "https://download.geonames.org/export/dump/countryInfo.txt"
+    deep_link: "https://download.geonames.org/export/dump/"
+events:
+  - id: who_don_api
+    source_id: who_don
+    connector: who_don
+    raw_ext: json
+    url: "https://www.who.int/api/news/diseaseoutbreaknews?$orderby=PublicationDate%20desc&$select=Id,DonId,Title,OverrideTitle,UseOverrideTitle,PublicationDate,LastModified,UrlName,ItemDefaultUrl,Summary,Overview&$filter=PublicationDate%20ge%20{start}T00:00:00Z"
+    start: "2022-01-01"
+    item_url: "https://www.who.int/emergencies/disease-outbreak-news/item/{UrlName}"
+    link_kind: deep
+    source_type_weight: 1.0
+  - id: cdc_travel_rss
+    source_id: cdc_travel
+    connector: cdc_travel
+    raw_ext: xml
+    url: "https://wwwnc.cdc.gov/travel/rss/notices.xml"
+    link_kind: deep
+    source_type_weight: 0.6

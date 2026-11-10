@@ -1,0 +1,195 @@
+/** Global overview: choropleth for time-series diseases, ranked active outbreaks, trend sparklines, recent flags. */
+import { useMemo, useRef, useState } from 'preact/hooks';
+import { absoluteUrl, href, navigate, setParams } from '../lib/app';
+import { getJSON, getOptional, type Core, type EventIdx, type Flag, type Overview as Ov } from '../lib/data';
+import { caption, copyText, exportImage, imageMeta } from '../lib/exporters';
+import { date, num, periodLabel, smart, t } from '../lib/i18n';
+import { provBlock, type Prov } from '../lib/prov';
+import { mapMetricLabel, placeName } from '../lib/series';
+import { Sparkline } from '../components/Chart';
+import { EventRow } from '../components/Events';
+import { DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
+import { LazyMap } from '../components/LazyMap';
+import { MapLegend, quantileBreaks } from '../components/mapUtil';
+import { Dialog, SourceChip, useApp } from '../components/SourceChip';
+
+export function overviewProv(core: Core, ov: Ov, snapshot: string | null): Prov {
+  const meta = core.seriesByKey[ov.skey];
+  return {
+    title: `${diseaseName(core, ov.disease)}: ${mapMetricLabel(core, ov.disease, ov.method.window_periods, ov.period_type)}`,
+    origin: 'site-derived', sourceIds: Array.from(new Set([...ov.source_ids, 'naturalearth'])), asOf: meta?.retrieved_at?.slice(0, 10) ?? null,
+    snapshotId: snapshot ?? ov.snapshot_id, series: [{ skey: ov.skey }], method: { name: ov.method.name, version: ov.method.version, params: { window_periods: ov.method.window_periods, anchor: ov.anchor } },
+    caseDefinitions: meta ? [meta.case_definition] : [],
+  };
+}
+
+export function FlagList({ flags, limit }: { flags: Flag[]; limit: number }) {
+  const { core, route } = useApp();
+  const analyst = route.mode === 'analyst';
+  // one entry per series: the most recent flagged period, plus how many recent periods were flagged
+  const bySeries = new Map<string, { f: Flag; n: number }>();
+  for (const f of flags) { const e = bySeries.get(f.series_id); if (!e) bySeries.set(f.series_id, { f, n: 1 }); else e.n += 1; }
+  const items = Array.from(bySeries.values()).slice(0, limit);
+  if (!items.length) return <p class="muted small">{t('flags.none')}</p>;
+  return (
+    <ul class="list small">
+      {items.map(({ f, n }) => {
+        const meta = core.seriesByKey[f.skey];
+        return (
+          <li key={f.series_id} data-flag>
+            <a href={href(route, 'place/' + f.iso3, { d: f.disease })}>{placeName(core, f.iso3)}</a> · {diseaseName(core, f.disease)} · {periodLabel(f.period, meta?.period_type ?? 'W')}
+            <div class="muted">{t('flags.text', { method: f.method })}{n > 1 && <> {t('flags.more', { n })}</>}</div>
+            {analyst && <div class="muted">{t('flags.detail', { value: num(f.value), mean: num(f.baseline_mean), threshold: num(f.threshold), from: date(f.baseline_periods[0]), to: date(f.baseline_periods[1]) })}</div>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function Overview() {
+  const { core, route } = useApp();
+  const analyst = route.mode === 'analyst';
+  const tsDiseases = core.diseases.filter((d) => d.has_timeseries);
+  const disease = route.params.get('d') && core.diseaseById[route.params.get('d')!]?.has_timeseries ? route.params.get('d')! : 'measles';
+  const region = route.params.get('region') ?? '';
+  const type = route.params.get('type') ?? '';
+  const [table, setTable] = useState(false);
+  const [embed, setEmbed] = useState(false);
+  const mapApi = useRef<any>(null);
+  const regions = useMemo(() => Array.from(new Set(Object.values(core.places).map((p) => p.region))).sort(), [core]);
+
+  const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
+  const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
+  const flags = useAsync(() => getOptional<{ flags: Flag[] }>('flags/recent.json'), []);
+  const sparks = useAsync(() => Promise.all(tsDiseases.map((d) => getJSON<Ov>(`overview/${d.id}.json`))), []);
+
+  const inRegion = (iso3: string) => !region || core.places[iso3]?.region === region;
+  const values = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    if (ov.data) for (const [iso3, r] of Object.entries(ov.data.latest)) if (inRegion(iso3)) out[iso3] = r.metric_value;
+    return out;
+  }, [ov.data, region]);
+  const breaks = useMemo(() => quantileBreaks(Object.values(values).filter((x): x is number => x !== null)), [values]);
+  const ranked = useMemo(() => Object.entries(values).filter(([, v]) => v !== null).sort((a, b) => (b[1] as number) - (a[1] as number)), [values]);
+  const names = useMemo(() => { const n: Record<string, string> = {}; for (const k of Object.keys(core.places)) n[k] = placeName(core, k); for (const s of Object.values(core.sources)) n['src:' + s.id] = s.short_name; return n; }, [core, route.locale]);
+
+  const active = (events.data?.events ?? []).filter((e) => e.rank.active
+    && (!region || e.countries.some(inRegion)) && (!type || (type === 'ts') === !!core.diseaseById[e.disease]?.has_timeseries)
+    && (!route.params.get('ed') || e.disease === route.params.get('ed')));
+
+  if (ov.error) return <ErrorBox error={ov.error} />;
+  const d = core.diseaseById[disease];
+  const prov = ov.data ? overviewProv(core, ov.data, route.snapshot) : null;
+  const metricLabel = ov.data ? mapMetricLabel(core, disease, ov.data.method.window_periods, ov.data.period_type) : '';
+  const windowText = ov.data ? `${periodLabel(ov.data.latest[Object.keys(ov.data.latest)[0]]?.window[0] ?? ov.data.anchor, ov.data.period_type)} – ${periodLabel(ov.data.anchor, ov.data.period_type)}` : '';
+  const meta = ov.data ? core.seriesByKey[ov.data.skey] : null;
+  const title = `${diseaseName(core, disease)}: ${metricLabel}`;
+  const embedUrl = absoluteUrl(`/embed/${route.locale}/map?d=${disease}${region ? '&region=' + encodeURIComponent(region) : ''}&snapshot=${core.manifest.snapshot_id}`);
+
+  const exportMap = async (kind: 'png' | 'svg') => {
+    if (!mapApi.current || !prov) return;
+    const size = mapApi.current.size();
+    const legend = `${metricLabel} · ${windowText}`;
+    await exportImage(kind, { imageHref: mapApi.current.image(), width: size.width, height: size.height }, imageMeta(core, prov, title, legend), title, provBlock(core, prov), caption(core, prov, title, legend),
+      `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
+  };
+
+  return (
+    <>
+      <h1>{t('overview.title')}</h1>
+      <p class="lead">{t('overview.lead')}</p>
+      <div class="tools" role="group" aria-label={t('overview.filters')}>
+        <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value })} data-testid="disease-select">
+          {tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}
+        </select></label>
+        <label>{t('filter.region')} <select value={region} onChange={(e) => setParams({ region: (e.target as HTMLSelectElement).value || null })}>
+          <option value="">{t('filter.allRegions')}</option>{regions.map((r) => <option key={r} value={r}>{t('region.' + r)}</option>)}
+        </select></label>
+        <label>{t('filter.dataType')} <select value={type} onChange={(e) => setParams({ type: (e.target as HTMLSelectElement).value || null })}>
+          <option value="">{t('filter.allTypes')}</option><option value="ts">{t('badge.timeseries')}</option><option value="ev">{t('badge.events-only')}</option>
+        </select></label>
+      </div>
+
+      <div class="grid side">
+        <section class="card" id="overview-map">
+          <header>
+            <div><h2>{title}</h2><p class="sub">{windowText}{meta && <> · {t('def.' + meta.case_definition)}</>} <DiseaseBadge d={d} />{meta?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p></div>
+            {prov && <SourceChip prov={prov} />}
+          </header>
+          {ov.loading && <Loading />}
+          {ov.data && !table && (
+            <LazyMap values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
+              onSelect={(iso3) => navigate(href(route, 'place/' + iso3, { d: disease }))} ariaLabel={t('map.aria', { title })} apiRef={mapApi} />
+          )}
+          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} />}
+          {ov.data && table && (
+            <div class="tablewrap" tabIndex={0}><table class="data">
+              <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metricLabel}</th><th scope="col" class="n">{t('table.count')}</th><th scope="col">{t('table.lastPeriod')}</th></tr></thead>
+              <tbody>
+                {ranked.map(([k, v]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: disease })}>{names[k]}</a></th><td class="n">{smart(v as number)}</td><td class="n">{num(ov.data!.latest[k].value)}</td><td>{ov.data!.latest[k].last_period ? periodLabel(ov.data!.latest[k].last_period!, ov.data!.period_type) : '–'}</td></tr>)}
+                {Object.entries(values).filter(([, v]) => v === null).map(([k]) => <tr key={k} class="inc"><th scope="row">{names[k]}</th><td class="n" colSpan={3}>{t('map.noDataWindow')}</td></tr>)}
+              </tbody>
+            </table></div>
+          )}
+          <p class="means">{t(d.map_metric === 'percent_positive' ? 'overview.means.pct' : 'overview.means.rate', { window: windowText })} {t('overview.means.caveat')}</p>
+          {meta && meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
+          <div class="btnrow">
+            <button type="button" class="btn small" onClick={() => setTable(!table)}>{table ? t('action.viewMap') : t('action.viewData')}</button>
+            <button type="button" class="btn small" disabled={table} onClick={() => exportMap('png')}>{t('action.png')}</button>
+            <button type="button" class="btn small" disabled={table} onClick={() => exportMap('svg')}>{t('action.svg')}</button>
+            <button type="button" class="btn small" onClick={() => setEmbed(true)}>{t('action.embed')}</button>
+            <a class="btn small" href={href(route, 'map', { d: disease })}>{t('overview.openMap')}</a>
+            <a class="btn small" href={href(route, 'disease/' + disease)}>{t('overview.openDisease', { disease: diseaseName(core, disease) })}</a>
+          </div>
+          {embed && (
+            <Dialog title={t('embed.title')} onClose={() => setEmbed(false)} modal>
+              <p>{t('embed.intro')}</p>
+              <pre data-testid="embed-snippet">{`<iframe src="${embedUrl}" title="${title}" width="100%" height="560" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`}</pre>
+              <button type="button" class="btn" onClick={() => copyText(`<iframe src="${embedUrl}" title="${title}" width="100%" height="560" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`)}>{t('action.copy')}</button>
+              <p class="small muted">{t('embed.privacy')}</p>
+            </Dialog>
+          )}
+        </section>
+
+        <div class="grid">
+          <section class="card">
+            <header><h2>{t('overview.active')}</h2></header>
+            <p class="sub">{t('overview.activeSub')}</p>
+            {events.loading && <Loading />}
+            <ul class="list">{active.slice(0, 8).map((e) => <EventRow key={e.event_id} e={e} showScore={analyst} />)}</ul>
+            {!events.loading && !active.length && <p class="muted">{t('overview.noActive')}</p>}
+            <p><a href={href(route, 'outbreaks')}>{t('overview.allOutbreaks', { n: events.data?.events.length ?? 0 })}</a></p>
+          </section>
+          <section class="card">
+            <header><h2>{t('overview.flags')}</h2></header>
+            <p class="sub">{t('flags.neutral')}</p>
+            {analyst
+              ? <FlagList flags={flags.data?.flags ?? []} limit={8} />
+              : <details class="more"><summary>{t('flags.show', { n: new Set((flags.data?.flags ?? []).map((f) => f.series_id)).size })}</summary><FlagList flags={flags.data?.flags ?? []} limit={5} /></details>}
+            <p class="small"><a href={href(route, 'changes')}>{t('nav.changes')}</a> · <a href={href(route, 'methodology')}>{t('flags.method')}</a></p>
+          </section>
+        </div>
+      </div>
+
+      <h2>{t('overview.trends')}</h2>
+      <p class="muted small">{t('overview.trendsSub')}</p>
+      <div class="grid three">
+        {(sparks.data ?? []).map((o) => {
+          const cut = o.global.p.length - (o.period_type === 'Y' ? 30 : o.period_type === 'M' ? 60 : 104);
+          const p = o.global.p.slice(Math.max(0, cut)); const v = o.global.v.slice(Math.max(0, cut));
+          const comp = p.map((x, i) => [x, v[i]] as const).filter(([x]) => x < o.incomplete_from);
+          const last = comp[comp.length - 1];
+          const m = core.seriesByKey[o.skey];
+          return (
+            <section class="card" key={o.disease}>
+              <div class="row"><h3 style={{ margin: 0 }}><a href={href(route, 'disease/' + o.disease)}>{diseaseName(core, o.disease)}</a></h3><Sparkline p={p} v={v} incompleteFrom={o.incomplete_from} label={t('overview.sparkAria', { disease: diseaseName(core, o.disease) })} /></div>
+              <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
+              <SourceChip compact prov={{ title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived', sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } }} />
+            </section>
+          );
+        })}
+      </div>
+    </>
+  );
+}
