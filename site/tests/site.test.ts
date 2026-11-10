@@ -365,3 +365,31 @@ describe('positioning and neutral wording', () => {
     expect(en['flags.neutral']).toMatch(/not alerts/); expect(en['status.no_recent_update.explain']).toMatch(/not a judgment/);
   });
 });
+
+describe('site search', async () => {
+  const { entry, search, fold } = await import('../src/lib/search');
+  const entries = [
+    entry('disease', 'cholera', 'Cholera', 'disease/cholera', ['vibrio cholerae']),
+    entry('disease', 'measles', 'Measles', 'disease/measles', ['rubeola']),
+    entry('place', 'YEM', 'Yemen', 'place/YEM', ['YEM']),
+    entry('place', 'CIV', 'Côte d’Ivoire', 'place/CIV', ['Ivory Coast', 'CIV']),
+    entry('event', 'e1', 'Cholera · Yemen', 'outbreak/e1', ['Cholera']),
+    entry('page', 'map', 'Map', 'map'),
+  ];
+  const run = (q: string) => search(q, entries, (d, p) => `${d} in ${p}`);
+  it('a disease and a country together lead with the combined page', () => {
+    const r = run('cholera yemen');
+    expect(r[0]).toMatchObject({ kind: 'combo', label: 'Cholera in Yemen', path: 'place/YEM', params: { d: 'cholera' } });
+    expect(run('yem chol')[0].kind).toBe('combo');
+  });
+  it('matches word starts, aliases and accents; every word must match', () => {
+    expect(run('chol')[0]).toMatchObject({ kind: 'disease', path: 'disease/cholera' });
+    expect(run('rubeola')[0].path).toBe('disease/measles');
+    expect(run('cote')[0].path).toBe('place/CIV');
+    expect(run('ivory')[0].path).toBe('place/CIV');
+    expect(run('olera')).toEqual([]);            // not a word start
+    expect(run('measles yemen zzz')).toEqual([]);
+    expect(run('   ')).toEqual([]);
+    expect(fold('Côte d’Ivoire')).toBe('cote d ivoire');
+  });
+});

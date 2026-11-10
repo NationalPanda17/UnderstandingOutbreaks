@@ -163,3 +163,10 @@ body.embed .wrap { padding: 8px 10px; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--link, #0b6e75); text-decoration: underline; cursor: pointer; }
 .staticmap path:hover { stroke: #17272b; stroke-width: 1.4; }
 ul.cols { columns: 220px; padding-inline-start: 18px; margin: 6px 0 0; }
+.search { position: relative; }
+.search input { width: 150px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: .88rem; background: var(--card); color: var(--ink); }
+.search input:focus { width: 220px; }
+.search ul { position: absolute; inset-inline-end: 0; top: calc(100% + 4px); width: min(360px, 92vw); margin: 0; padding: 4px; list-style: none; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); z-index: 40; max-height: 60vh; overflow: auto; }
+.search li { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.search li.on { background: #e6f1f2; }
+@media (prefers-reduced-motion: no-preference) { .search input { transition: width .15s; } }

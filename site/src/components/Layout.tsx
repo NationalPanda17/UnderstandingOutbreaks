@@ -1,5 +1,6 @@
 /** Site chrome: header with language switcher and Simple / Analyst toggle, persistent data notice, footer disclaimers. */
 import { useEffect, useState } from 'preact/hooks';
+import { Search } from './Search';
 import { LOCALES, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
 import type { Core, Disease } from '../lib/data';
 import { date, t } from '../lib/i18n';
@@ -44,6 +45,7 @@ export function Layout({ children }: { children: any }) {
             {NAV.map((n) => <a key={n.path} class={n.cls} href={href(route, n.path)} aria-current={isCurrent(n.path) ? 'page' : undefined}>{t(n.key)}</a>)}
           </nav>
           <div class="controls">
+            <Search />
             <span class="seg" role="group" aria-label={t('mode.label')}>
               <button type="button" aria-pressed={route.mode === 'simple'} onClick={() => setMode('simple')} title={t('mode.simple.hint')}>{t('mode.simple')}</button>
               <button type="button" aria-pressed={route.mode === 'analyst'} onClick={() => setMode('analyst')} title={t('mode.analyst.hint')}>{t('mode.analyst')}</button>

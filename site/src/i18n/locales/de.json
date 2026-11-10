@@ -1632,5 +1632,16 @@
  "method.dengue_admin1_annual": "Für jede Region und jedes Jahr wurde ein Jahreswert verwendet, wenn die Quelle einen hat; andernfalls wurden 12 Monats- oder mindestens 52 Wochenwerte addiert. Gibt es mehrere Falldefinitionen, wurde die weiteste verwendet. Regionsnamen wurden den Grenzen von Natural Earth nur zugeordnet, wenn sie nach Entfernen von Groß-/Kleinschreibung, Akzenten und Satzzeichen identisch waren.",
  "disease.regionsTitle": "Länder mit Daten nach Region",
  "disease.regionsLead": "Für diese Länder meldet die Quelle auch nach Regionen der ersten Ebene. Öffnen Sie ein Land, um die Regionalkarte zu sehen.",
- "regions.col.definition": "Falldefinition"
+ "regions.col.definition": "Falldefinition",
+ "search.label": "Krankheiten, Länder und Ausbrüche suchen",
+ "search.placeholder": "Suchen…",
+ "search.results": "Suchergebnisse",
+ "search.none": "Keine Treffer. Versuchen Sie es mit einer Krankheit oder einem Land.",
+ "search.count": "{n, plural, =0 {Keine Ergebnisse} one {# Ergebnis} other {# Ergebnisse}}",
+ "search.combo": "{disease} in {place}",
+ "search.kind.disease": "Krankheit",
+ "search.kind.place": "Land",
+ "search.kind.page": "Seite",
+ "search.kind.event": "Gemeldetes Ereignis · letzte Meldung {date}",
+ "search.page.explorer": "Daten-Explorer"
 }

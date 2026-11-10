@@ -51,5 +51,16 @@
   "method.dengue_admin1_annual": "For each region and year, an annual record was used if the source has one; otherwise 12 monthly or at least 52 weekly records were added up. Where several case definitions exist, the broadest was used. Region names were matched to Natural Earth boundaries only when identical after removing case, accents and punctuation.",
   "disease.regionsTitle": "Countries with data by region",
   "disease.regionsLead": "For these countries the source also reports by first-level region. Open a country to see the regional map.",
-  "regions.col.definition": "Case definition"
+  "regions.col.definition": "Case definition",
+  "search.label": "Search diseases, countries and outbreaks",
+  "search.placeholder": "Search…",
+  "search.results": "Search results",
+  "search.none": "Nothing matches. Try a disease or a country name.",
+  "search.count": "{n, plural, =0 {No results} one {# result} other {# results}}",
+  "search.combo": "{disease} in {place}",
+  "search.kind.disease": "Disease",
+  "search.kind.place": "Country",
+  "search.kind.page": "Page",
+  "search.kind.event": "Reported event · last notice {date}",
+  "search.page.explorer": "Data explorer"
 }
