@@ -78,7 +78,7 @@ export function Layout({ children }: { children: any }) {
       <footer class="site">
         <div class="wrap">
           <p><b>{t('footer.positioning')}</b></p>
-          <p>{t('footer.medical')} <a class="ext" href="https://www.who.int/emergencies" target="_blank" rel="noopener noreferrer">{t('footer.official')}</a></p>
+          <p><a class="ext" href="https://www.who.int/emergencies" target="_blank" rel="noopener noreferrer">{t('footer.official')}</a></p>
           <div class="cols">
             <ul>
               <li><a href={href(route, 'about')}>{t('nav.about')}</a></li>

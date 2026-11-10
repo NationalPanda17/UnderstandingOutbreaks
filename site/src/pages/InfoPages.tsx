@@ -28,7 +28,7 @@ function useDatasetJsonLd() {
     return () => { el?.remove(); };
   }, []);
 }
-function Positioning() { return <div class="notice" role="note"><b>{t('footer.positioning')}</b> {t('footer.medical')}</div>; }
+function Positioning() { return <div class="notice" role="note"><b>{t('footer.positioning')}</b></div>; }
 
 export function Changes() {
   const { core, route } = useApp();

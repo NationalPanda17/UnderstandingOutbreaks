@@ -355,9 +355,9 @@ describe('simulation boundaries are enforced in code', () => {
 
 describe('positioning and neutral wording', () => {
   const en = JSON.parse(readFileSync(join(ROOT, 'src', 'i18n', 'locales', 'en.json'), 'utf8')) as Record<string, string>;
-  it('states plainly what the site is not, in the footer, About and methodology', () => {
-    for (const k of ['footer.positioning', 'about.not.p1', 'methodology.scope.p1']) { expect(en[k]).toMatch(/not a surveillance system|does not run surveillance/i); expect(en[k]).toMatch(/medical advice/i); }
-    expect(en['footer.positioning']).toMatch(/not an early-warning service, not a forecasting service/);
+  // The footer carried this statement too until the site owner removed it (2026-11-10); About and methodology still must.
+  it('states plainly what the site is not, in About and methodology', () => {
+    for (const k of ['about.not.p1', 'methodology.scope.p1']) { expect(en[k]).toMatch(/not a surveillance system|does not run surveillance/i); expect(en[k]).toMatch(/medical advice/i); }
   });
   it('signal flags and rankings use neutral language', () => {
     for (const [k, v] of Object.entries(en)) if (/^(flags|flagstatus|rank|status|overview|changes|event|outbreak)\./.test(k)) expect(v, k).not.toMatch(/\b(surge|outbreak detected|severe|dangerous|alarming)\b/i);
