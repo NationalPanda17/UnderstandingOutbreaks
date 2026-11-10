@@ -3,9 +3,9 @@
   "baseUrl": "https://understandingoutbreaks.pages.dev",
   "shortUrl": "understandingoutbreaks.pages.dev",
   "dataPath": "/data/v1",
-  "r2BaseUrl": "/r2",
+  "r2BaseUrl": "https://pub-0880fb9a33bf44f0a501dc5adaf75d2b.r2.dev",
   "basemapUrl": "",
-  "toolAssetsBaseUrl": "/r2/tools",
+  "toolAssetsBaseUrl": "https://pub-0880fb9a33bf44f0a501dc5adaf75d2b.r2.dev/tools",
   "repoUrl": "",
   "defaultLocale": "en",
   "locales": [
