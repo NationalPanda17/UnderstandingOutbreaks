@@ -2,6 +2,7 @@
 import datetime as dt
 import io
 import json
+import shutil
 import zipfile
 
 import numpy as np
@@ -500,3 +501,25 @@ def test_reviewed_unclassified_names_stay_other_without_raising_an_issue():
                             _rep("c", "Psittacosis", "Kenya", "2026-11-01")])
     assert unmapped == ["Mystery illness"]
     assert sorted(e["disease"] for e in ev) == ["other", "other", "psittacosis"]
+
+
+def test_reused_fetch_restores_public_raw_copy_and_local_path(tmp_path, monkeypatch):
+    """CI restores state on a fresh machine: a reused fetch must find its raw file locally and re-create the public copy."""
+    from uo import build as B
+    state, r2 = tmp_path / "state", tmp_path / "r2"
+    monkeypatch.setattr(B, "STATE", state); monkeypatch.setattr(B, "R2_OUT", r2)
+    h = "ab" * 32
+    (state / "raw" / "ds_ok").mkdir(parents=True); (state / "raw" / "ds_ok" / f"{h}.csv").write_bytes(b"x,y\n1,2\n")
+    (state / "last_fetch").mkdir()
+    rec = dict(fetch_id="ds_ok@abababababab", dataset_id="ds_ok", source_id="s", url="https://example.org/a.csv", retrieved_at="2026-01-01T00:00:00Z",
+               raw_file_hash=h, bytes=8, raw_path="/somewhere/else/that/does/not/exist.csv", archive_public=True, archive_key=f"raw/ds_ok/{h}.csv",
+               http_last_modified=None, link_kind="deep")
+    (state / "last_fetch" / "ds_ok.json").write_text(json.dumps([rec]))
+    (f,) = B._load_fetches("ds_ok")
+    assert open(f.raw_path, "rb").read() == b"x,y\n1,2\n" and (r2 / "raw" / "ds_ok" / f"{h}.csv").read_bytes() == b"x,y\n1,2\n"
+    private = dict(rec, archive_public=False, archive_key=None)
+    (state / "last_fetch" / "ds_ok.json").write_text(json.dumps([private]))
+    shutil.rmtree(r2); B._load_fetches("ds_ok")
+    assert not r2.exists()  # non-redistributable raw files are never copied to the public folder
+    (state / "raw" / "ds_ok" / f"{h}.csv").unlink()
+    assert B._load_fetches("ds_ok") is None  # no raw bytes behind the record: fetch again

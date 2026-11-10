@@ -19,7 +19,7 @@ import traceback
 import pandas as pd
 
 from . import connectors, events as ev, publish, reference, signals, timeseries as ts
-from .core import (CADENCE_DAYS, CONFIG, DATA_OUT, STATE, Fetch, PipelineError, SchemaChange, iso, load_datasets,
+from .core import (CADENCE_DAYS, CONFIG, DATA_OUT, R2_OUT, STATE, Fetch, PipelineError, SchemaChange, iso, load_datasets,
                    load_diseases, load_registry, load_site, load_yaml, read_json, record_issue, utcnow, write_json)
 
 CHECK_EVERY_DAYS = {"daily": 1, "weekly": 1, "monthly": 7, "yearly": 30}
@@ -34,7 +34,24 @@ def _load_fetches(name: str) -> list[Fetch] | None:
     recs = read_json(STATE / "last_fetch" / f"{name}.json")
     if not recs:
         return None
-    return [Fetch(**r) for r in recs]
+    out = []
+    for r in recs:
+        f = Fetch(**r)
+        # State may have been restored on another machine (CI restores it from the private bucket), so stored
+        # absolute paths are not trusted: find the raw file by dataset and hash inside this machine's state.
+        local = next(iter(sorted((STATE / "raw" / f.dataset_id).glob(f.raw_file_hash + ".*"))), None)
+        if local is None:
+            return None  # raw bytes are gone: fetch again rather than reuse a record with nothing behind it
+        f.raw_path = str(local)
+        # The public archive folder is rebuilt on every run and is not part of state. A reused fetch must put
+        # its redistributable raw file back, or the snapshot would list a public file that was never uploaded.
+        if f.archive_public and f.archive_key:
+            pub = R2_OUT / f.archive_key
+            if not pub.exists():
+                pub.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(local, pub)
+        out.append(f)
+    return out
 
 
 def _issue_for_failure(ds_id: str, source: dict, err: Exception, status: dict) -> None:
