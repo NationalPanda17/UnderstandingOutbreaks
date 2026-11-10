@@ -62,7 +62,7 @@ function RConsole({ size, script }: { size: number; script?: string }) {
       if (!webr.current) {
         setState('loading');
         const base = new URL(SITE.toolAssetsBaseUrl + '/webr/', window.location.href).href;
-        const mod = await import(/* @vite-ignore */ base + 'webr.mjs');
+        const mod = await import(/* @vite-ignore */ base + 'webr.js'); // the browser build; webr.mjs is for Node and imports "module"
         const w = new mod.WebR({ baseUrl: base, channelType: mod.ChannelType.PostMessage });
         await w.init();
         webr.current = w;
