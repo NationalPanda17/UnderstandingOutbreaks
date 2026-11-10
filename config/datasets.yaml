@@ -239,3 +239,25 @@ events:
     url: "https://wwwnc.cdc.gov/travel/rss/notices.xml"
     link_kind: deep
     source_type_weight: 0.6
+
+# Subnational products (first-level regions). Large downloads, refreshed at most every refresh_days; see
+# pipeline/uo/subnational.py for what is and is not done with them.
+subnational:
+  dengue_admin1:
+    id: opendengue_admin1
+    source_id: opendengue
+    disease: dengue
+    raw_ext: zip
+    url: "https://raw.githubusercontent.com/OpenDengue/master-repo/main/data/releases/V1.3.1/Spatial_extract_V1_3_1.zip"
+    release: "V1.3.1"
+    deep_link: "https://opendengue.org/data.html"
+    link_kind: dataset-level link
+    refresh_days: 30
+    expected_min_rows: 2000
+  boundaries_admin1:
+    id: ne_admin1_10m
+    source_id: naturalearth
+    raw_ext: zip
+    url: "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_1_states_provinces.zip"
+    deep_link: "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-1-states-provinces/"
+    refresh_days: 90

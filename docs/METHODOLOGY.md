@@ -116,6 +116,41 @@ Region, State, …); a city of 100,000 or more when written as "city of X" or "X
 population-weighted centre of GeoNames cities in the region. Every location carries its precision (country, admin1,
 admin2, point); admin2 is not produced because no district gazetteer is bundled.
 
+## Subnational data (first-level regions)
+
+Method `dengue_admin1_annual` v1 (`pipeline/uo/subnational.py`). One product so far: annual dengue counts by
+first-level region, for the countries where OpenDengue reports at that level.
+
+- **Annual values.** For each region and year: an annual record if the source has one; otherwise the sum of 12
+  monthly records; otherwise the sum of at least 52 weekly records. Where several case definitions exist the
+  broadest is used, and the definition is published with every value. The current year is left out.
+- **Matching names to boundaries.** A source name is matched to a Natural Earth admin-1 region of the same country
+  only when the two are identical after removing case, accents, punctuation and generic words such as "province"
+  (spacing is also ignored, so "Chonburi" matches "Chon Buri"). A name that fits two regions is ambiguous and not
+  matched. Nothing is matched by similarity. A person can add a reviewed mapping in `config/admin1_aliases.yaml`.
+- **Unmatched names** stay in the published table, marked as not on the map, and are listed in a GitHub issue.
+- **Two names for one region.** If two source names match the same region and both report the same year, the
+  region is left off the map for that year and the table says so; the values are never added together.
+- **Counts, not rates.** No population figures are available at this level from the sources this site reads, so no
+  rate is computed. The page says that a darker region is not necessarily at higher risk.
+- **Not done.** Second-level (district, municipality) records are not added up into regions.
+- **Boundaries** are simplified (outline thinning at 0.01 degrees, three decimal places, islets below about 4 km²
+  dropped unless they are a region's only polygon). They are approximate and imply no position on any territory.
+
+## Maps
+
+- **Why a place has no value.** For a given period a place is either "not yet reported" (it has reported to this
+  source before, and this period is later than its last report; dotted) or "no report for this period" (hatched).
+  The tooltip and the table also say when a place has never reported to the source. None of these means no disease.
+- **Projections.** The interactive map offers Web Mercator and a globe. Mercator inflates areas far from the
+  equator. The equal-area view and the small multiples use the Equal Earth projection, drawn as plain SVG.
+- **Small multiples** by period share one colour scale; by disease each panel has its own scale and its own latest
+  complete period, and the page says so.
+- **Event points** are sized by how recent the latest notice is. A faint ring marks a notice that names only a
+  country or a first-level region: the wider the ring, the vaguer the location.
+- **Basemap.** OpenStreetMap data as Protomaps PMTiles, built by `.github/workflows/build-basemap.yml` and served
+  from the project's own bucket. Shaded areas are drawn beneath the basemap's place labels.
+
 ## List order of outbreaks
 
 `active_rank` v1: `0.45 × exp(−days/30) + 0.25 × min(1, log10(1+cases)/5) + 0.10 × min(1, log10(1+deaths)/4) +

@@ -523,3 +523,47 @@ def test_reused_fetch_restores_public_raw_copy_and_local_path(tmp_path, monkeypa
     assert not r2.exists()  # non-redistributable raw files are never copied to the public folder
     (state / "raw" / "ds_ok" / f"{h}.csv").unlink()
     assert B._load_fetches("ds_ok") is None  # no raw bytes behind the record: fetch again
+
+
+# ----------------------------------------------------------------------------- subnational (first-level regions)
+
+def _shape(code, iso3, name, names=None, box=(0, 0, 1, 1)):
+    x0, y0, x1, y1 = box
+    return {"code": code, "iso3": iso3, "name": name, "names": names or [name],
+            "geom": {"type": "Polygon", "coordinates": [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]}}
+
+
+def test_region_names_match_only_exactly_and_never_across_countries():
+    from uo import subnational as S
+    shapes = [_shape("THA-1", "THA", "Chon Buri"), _shape("THA-2", "THA", "Bangkok Metropolis", ["Bangkok Metropolis", "Krung Thep|Bangkok"]),
+              _shape("AUS-1", "AUS", "New South Wales", ["New South Wales", "NSW"]), _shape("X-1", "XXA", "Springfield"), _shape("X-2", "XXA", "Springfield")]
+    idx = S.name_index(shapes)
+    assert S.match_name("THA", "CHONBURI", idx, {}) == "THA-1"            # spacing differs: same folded name
+    assert S.match_name("THA", "BANGKOK", idx, {}) == "THA-2"             # an alternative name listed by the boundary source
+    assert S.match_name("AUS", "NSW", idx, {}) == "AUS-1"
+    assert S.match_name("THA", "CHON BURY", idx, {}) is None              # a near miss is not a match
+    assert S.match_name("AUS", "CHONBURI", idx, {}) is None               # never across countries
+    assert S.match_name("XXA", "Springfield", idx, {}) is None            # two regions share the name: ambiguous
+    assert S.match_name("THA", "EASTERN SEABOARD", idx, {"THA": {"EASTERN SEABOARD": "Chon Buri"}}) == "THA-1"   # reviewed alias
+
+
+def test_region_product_keeps_unmatched_names_and_flags_conflicts():
+    from uo import subnational as S
+    rec = pd.DataFrame([("THA", "CHONBURI", 2020, 10.0, "Y", "confirmed"), ("THA", "CHON BURI", 2020, 12.0, "Y", "confirmed"),
+                        ("THA", "CHON BURI", 2021, 7.0, "M", "suspected"), ("THA", "NOWHERE", 2021, 3.0, "Y", "confirmed"),
+                        ("ZZZ", "UNKNOWN", 2021, 1.0, "Y", "confirmed")], columns=["iso3", "name", "year", "value", "ptype", "detail"])
+    p = S.build_dengue_product(rec, [_shape("THA-1", "THA", "Chon Buri"), _shape("THA-2", "THA", "Rayong", box=(1, 0, 2, 1))], {})
+    assert list(p["countries"]) == ["THA"]                                 # a country with nothing matched is not published
+    c = p["countries"]["THA"]
+    assert c["years"] == [2020, 2021] and c["n_units"] == 3 and c["n_matched"] == 2 and c["conflicts"] == ["Chon Buri 2020"]
+    assert p["unmatched"] == ["THA: NOWHERE", "ZZZ: UNKNOWN"]
+    assert {u["name_in_source"]: u["id"] for u in c["units"]} == {"CHON BURI": "THA-1", "CHONBURI": "THA-1", "NOWHERE": None}
+    assert len(p["boundaries"]["THA"]["features"]) == 2                    # regions without data are still drawn
+
+
+def test_geometry_simplification_keeps_rings_closed_and_drops_islets():
+    from uo import subnational as S
+    big = [[0, 0], [5, 0.001], [10, 0], [10, 10], [0, 10], [0, 0]]
+    islet = [[20, 20], [20.001, 20], [20.001, 20.001], [20, 20.001], [20, 20]]
+    g = S.simplify_geometry({"type": "MultiPolygon", "coordinates": [[big], [islet]]})
+    assert g["type"] == "Polygon" and g["coordinates"][0][0] == g["coordinates"][0][-1] and [5, 0.001] not in g["coordinates"][0]

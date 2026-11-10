@@ -46,6 +46,7 @@ class Context:
     events: list
     event_history: dict
     unmapped: list
+    subnational: dict | None
     now: dt.datetime
     changes: pd.DataFrame
 
@@ -145,6 +146,33 @@ def assert_no_test_data(ctx: Context) -> None:
         raise PipelineError(f"TEST DATA must never be published: origin={bad_origin} datasets={bad_source} events={bad_events[:3]}")
 
 
+def write_subnational(ctx: Context, out: Path) -> None:
+    """subnational/<disease>/index.json, subnational/<disease>/<ISO3>.json and subnational/boundaries/<ISO3>.geojson."""
+    sub = ctx.subnational
+    if sub is None:
+        prev = DATA_OUT / "subnational"
+        if prev.exists():
+            shutil.copytree(prev, out / "subnational")
+        return
+    for disease, prod in sub.items():
+        common = {"disease": disease, "level": "admin1", "origin_type": "site-derived", "source_ids": prod["source_ids"],
+                  "method": prod["method"], "fetches": prod["fetches"], "release": prod["release"], "deep_link": prod["deep_link"],
+                  "generated_at": prod["generated_at"]}
+        index = {}
+        for iso3, c in prod["countries"].items():
+            latest = max((c["years"][i] for u in c["units"] if u["id"] for i, v in enumerate(u["values"]) if v is not None), default=None)
+            index[iso3] = {"years": [c["years"][0], c["years"][-1]], "latest_year": latest, "n_units": c["n_units"], "n_matched": c["n_matched"]}
+            write_json(out / "subnational" / disease / f"{iso3}.json", {**common, "iso3": iso3, **c,
+                       "unmatched_names": [u["name_in_source"] for u in c["units"] if not u["id"]],
+                       "notes": {"values": "Reported counts, not rates: the sources read by this site publish no population figures at this level.",
+                                 "definitions": "The case definition differs between regions and years; it is listed for every value.",
+                                 "boundaries": "Natural Earth admin-1 (public domain), simplified by this site. Approximate; no position on any territory is implied."}})
+            b = dict(prod["boundaries"][iso3])
+            b.update({"source_id": "naturalearth", "origin_type": "source-reported", "attribution": ctx.registry["naturalearth"]["citation"]})
+            write_json(out / "subnational" / "boundaries" / f"{iso3}.geojson", b)
+        write_json(out / "subnational" / disease / "index.json", {**common, "countries": index, "n_unmatched_names": len(prod["unmatched"])})
+
+
 def publish_all(ctx: Context, log) -> dict:
     assert_no_test_data(ctx)
     out = DATA_OUT.parent / (DATA_OUT.name + ".staging")
@@ -177,6 +205,9 @@ def publish_all(ctx: Context, log) -> dict:
     chains = {r.chain_id: r.chain for r in meta.itertuples()}
     write_json(out / "chains.json", {"chains": chains})
     write_json(out / "fetches.json", {"snapshot_id": ctx.snapshot_id, "fetches": ctx.fetches})
+
+    # ---- subnational products. If this run could not build them, the last published files are carried forward.
+    write_subnational(ctx, out)
 
     # ---- per-country time series, lineage
     log("writing time series")

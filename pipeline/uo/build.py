@@ -18,7 +18,7 @@ import traceback
 
 import pandas as pd
 
-from . import connectors, events as ev, publish, reference, signals, timeseries as ts
+from . import connectors, events as ev, publish, reference, signals, subnational, timeseries as ts
 from .core import (CADENCE_DAYS, CONFIG, DATA_OUT, R2_OUT, STATE, Fetch, PipelineError, SchemaChange, iso, load_datasets,
                    load_diseases, load_registry, load_site, load_yaml, read_json, record_issue, utcnow, write_json)
 
@@ -163,6 +163,9 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
     ev_out = build_events(registry, diseases_doc, places, gazetteer, offline, now, status, all_fetches, log)
     ev_changed = ev_out["changed"]
 
+    # ---- subnational products (their own cadence; a failure keeps the last published files)
+    sub = subnational.run(registry, offline, now, _load_fetches, _save_fetches, log)
+
     is_new_snapshot = (len(changes) > 0) or ev_changed or not snapshots
     if is_new_snapshot:
         new_history.to_parquet(hist_path, index=False)
@@ -185,9 +188,9 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
 
     ctx = publish.Context(site=site, registry=registry, diseases_doc=diseases_doc, datasets=ds_by_id, places=places,
                           boundaries=boundaries, df=df, history=history, snapshots=snapshots, snapshot_id=snapshot_id,
-                          fetches=all_fetches, ref_fetches={k: f.public() for k, f in ref_fetches.items()},
+                          fetches=all_fetches, ref_fetches={**{k: f.public() for k, f in ref_fetches.items()}, **({} if not sub else {v['dataset_id']: v for v in sub['dengue']['fetches'].values()})},
                           status=status, events=ev_out["events"], event_history=ev_out["history"],
-                          unmapped=ev_out["unmapped"], now=now, changes=changes if is_new_snapshot else changes.iloc[0:0])
+                          unmapped=ev_out["unmapped"], subnational=sub, now=now, changes=changes if is_new_snapshot else changes.iloc[0:0])
     summary = publish.publish_all(ctx, log)
     log("done", json.dumps(summary))
     return summary

@@ -1,0 +1,8 @@
+# Reviewed mappings from a source's first-level region name to a Natural Earth admin-1 region name, per country.
+# Only a person adds entries here, after checking that the two names mean the same region. The pipeline matches
+# names automatically only when they are identical after case/accent/punctuation folding; anything else waits here.
+#
+# aliases:
+#   IDN:
+#     "DKI JAKARTA": "Jakarta Raya"
+aliases: {}

@@ -7,6 +7,7 @@ import { seriesProv } from '../lib/prov';
 import { comparableKeys, placeName, seriesLabel, toSeries } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
+import { Regions } from '../components/Regions';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
@@ -110,6 +111,8 @@ export function Place({ iso3 }: { iso3: string }) {
             tours={['epicurve', 'recentlow', 'percapita', 'trace']}
             onBrush={analyst ? (a, b) => setParams({ from: a, to: b }) : undefined}
             onRestrictComparable={() => setParams({ s: null, def: null, src: null })} />
+
+          <Regions disease={disease} iso3={iso3} />
 
           {(myFlags.length > 0 || analyst) && (
             <section class="card" style={{ marginTop: '16px' }} id="place-flags">

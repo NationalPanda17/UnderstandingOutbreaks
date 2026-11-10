@@ -44,6 +44,7 @@ export function DiseasePage({ id }: { id: string }) {
   const d = core.diseaseById[id];
   const ov = useAsync(() => (d?.has_timeseries ? getOptional<Ov>(`overview/${id}.json`) : Promise.resolve(null)), [id]);
   const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
+  const regions = useAsync(() => getOptional<{ countries: Record<string, { years: [number, number]; latest_year: number | null; n_matched: number }> }>(`subnational/${id}/index.json`), [id]);
   if (!d) return <ErrorBox error={t('disease.unknown', { id })} />;
   const name = diseaseName(core, id);
   const mine = (events.data?.events ?? []).filter((e) => e.disease === id).sort((a, b) => (a.last_report < b.last_report ? 1 : -1));
@@ -106,6 +107,14 @@ export function DiseasePage({ id }: { id: string }) {
         <p class="small muted">{t('disease.idsNote')}</p>
       </section>
       <ContextLinks disease={id} />
+      {regions.data && Object.keys(regions.data.countries).length > 0 && (
+        <section class="card" style={{ marginTop: '16px' }}>
+          <h2>{t('disease.regionsTitle')}</h2>
+          <p class="small muted">{t('disease.regionsLead')}</p>
+          <ul class="cols">{Object.entries(regions.data.countries).map(([k, v]) => [placeName(core, k), k, v] as const).sort((a, b) => a[0].localeCompare(b[0])).map(([nm, k, v]) =>
+            <li key={k}><a href={href(route, 'place/' + k, { d: id }) + '#place-regions'}>{nm}</a> <span class="small muted">{v.years[0] === v.years[1] ? v.years[0] : `${v.years[0]}–${v.latest_year ?? v.years[1]}`}</span></li>)}</ul>
+        </section>
+      )}
     </>
   );
 }

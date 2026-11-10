@@ -97,6 +97,40 @@ export function StaticMap(props: StaticMapProps) {
   );
 }
 
+/** One country's first-level regions, fitted to the frame. Regions without a value are hatched. */
+export function RegionMap({ iso3, values, breaks, labels, title, height = 440, svgRef }: { iso3: string; values: Record<string, number | null | undefined>; breaks: number[]; labels: Record<string, string>; title: string; height?: number; svgRef?: { current: SVGSVGElement | null } }) {
+  const [fc, setFc] = useState<any>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let live = true; setFc(null);
+    fetch(dataUrl(`subnational/boundaries/${iso3}.geojson`), { credentials: 'omit' }).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then((x) => { x.features.forEach(fixWinding); if (live) setFc(x); }).catch(() => setErr(true));
+    return () => { live = false; };
+  }, [iso3]);
+  const w = 760;
+  const list = useMemo(() => {
+    if (!fc) return [];
+    // centre on the country (its bounds can cross the antimeridian only for a few island states; the fit copes)
+    let lo = 180, hi = -180;
+    const scan = (c: any) => { if (typeof c[0] === 'number') { lo = Math.min(lo, c[0]); hi = Math.max(hi, c[0]); } else c.forEach(scan); };
+    fc.features.forEach((f: any) => scan(f.geometry.coordinates));
+    const proj = geoEqualEarth().rotate([-(lo + hi) / 2, 0]).fitExtent([[6, 6], [w - 6, height - 6]], fc);
+    const path = geoPath(proj).digits(1);
+    return fc.features.map((f: any) => ({ id: f.properties.id as string, name: f.properties.name as string, d: path(f) ?? '' }));
+  }, [fc, height]);
+  if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;
+  if (!fc) return <div role="status" class="small muted">{t('state.loadingMap')}</div>;
+  return (
+    <svg ref={svgRef as any} viewBox={`0 0 ${w} ${height}`} width="100%" role="img" aria-label={title} class="staticmap" style={{ display: 'block', background: '#eef3f4', borderRadius: '8px', maxHeight: '70vh' }}>
+      <defs><pattern id="rm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f4f4f4" /><rect width="2.2" height="6" fill="#d2d2d2" /></pattern></defs>
+      {list.map((s: { id: string; name: string; d: string }) => {
+        const c = colorFor(values[s.id], breaks, RAMP);
+        return <path key={s.id} d={s.d} fill={c ?? 'url(#rm-hatch)'} stroke="#8fa1a5" stroke-width={0.7} vector-effect="non-scaling-stroke"><title>{s.name}: {labels[s.id] ?? t('chart.noData')}</title></path>;
+      })}
+    </svg>
+  );
+}
+
 export interface Panel { key: string; title: string; note?: string; values: Record<string, number | null | undefined>; missing?: Record<string, Missing>; breaks?: number[] }
 
 /** Small multiples: the same map repeated, one panel per period or per disease, for comparison at a glance. */
