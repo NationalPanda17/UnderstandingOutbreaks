@@ -33,6 +33,8 @@ export function loadDuckDB(onProgress: (done: number, total: number) => void): P
       // so DuckDB must not rely on either: read each remote file in full (the published files are small).
       await db.open({ filesystem: { reliableHeadRequests: false, allowFullHTTPReads: true, forceFullHTTPReads: true } });
       const conn = await db.connect();
+      // Load DuckDB extensions (the Parquet reader) from this site's own copy, never from extensions.duckdb.org.
+      await conn.query(`SET custom_extension_repository = '${new URL(base + '/extensions', window.location.href).href}'`);
       return { db, conn };
     })();
     dbPromise.catch(() => { dbPromise = null; });
