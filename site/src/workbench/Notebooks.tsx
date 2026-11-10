@@ -61,7 +61,8 @@ function RConsole({ size, script }: { size: number; script?: string }) {
     try {
       if (!webr.current) {
         setState('loading');
-        const base = new URL(SITE.toolAssetsBaseUrl + '/webr/', window.location.href).href;
+        // Same origin on purpose (see scripts/postbuild.mjs): the dev server has it under /r2/tools, production under /tools.
+        const base = new URL(import.meta.env.DEV ? '/r2/tools/webr/' : '/tools/webr/', window.location.href).href;
         const mod = await import(/* @vite-ignore */ base + 'webr.js'); // the browser build; webr.mjs is for Node and imports "module"
         const w = new mod.WebR({ baseUrl: base, channelType: mod.ChannelType.PostMessage });
         await w.init();

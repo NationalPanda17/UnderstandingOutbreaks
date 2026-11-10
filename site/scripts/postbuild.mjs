@@ -35,6 +35,12 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
 
 // ---- R2: files under /r2 are uploaded to the bucket, not to Pages (unless UO_KEEP_R2=1 for a local preview)
 const r2dir = join(dist, 'r2'); const r2out = join(root, 'dist-r2');
+// webR is the exception: every file is under the Pages size limit, and loading it from another origin fails (its
+// worker reads lazily loaded files with cross-origin XHR). So it is served by Pages itself, at /tools/webr/.
+{
+  const webr = join(r2dir, 'tools', 'webr');
+  if (existsSync(webr)) { mkdirSync(join(dist, 'tools'), { recursive: true }); rmSync(join(dist, 'tools', 'webr'), { recursive: true, force: true }); renameSync(webr, join(dist, 'tools', 'webr')); }
+}
 if (existsSync(r2dir)) {
   rmSync(r2out, { recursive: true, force: true });
   if (process.env.UO_KEEP_R2 === '1') cpSync(r2dir, r2out, { recursive: true }); else renameSync(r2dir, r2out);

@@ -81,7 +81,8 @@ build fails if any Pages file exceeds 25 MB or the file count exceeds 20,000.
 |---|---|---|
 | Pages `/data/v1/` | Static JSON API, per-country time series and lineage files, bulk Parquet/CSV partitioned by disease, catalog metadata, snapshot manifests | Small, cacheable, same-origin |
 | R2 `raw/{dataset}/{sha256}.{ext}` | Raw source archive, only where the license permits redistribution | Grows without bound; permanent URLs |
-| R2 `tools/duckdb`, `tools/webr`, `tools/jupyterlite` | Self-hosted runtimes | Over the 25 MB Pages file limit or many thousands of files |
+| R2 `tools/duckdb` (engine and its Parquet extension), `tools/jupyterlite` | Self-hosted runtimes | Over the 25 MB Pages file limit or many thousands of files |
+| Pages `/tools/webr` | webR (R in the browser) | Every file is under the Pages limit, and webR fails when loaded from another origin |
 | R2 `basemap/*.pmtiles` | Protomaps basemap | Far over the Pages file limit; needs range requests |
 | R2 `state/` | Pipeline state: revision history (`revisions.parquet`), last good normalized data, snapshot list, event ids | Persists between scheduled runs |
 | R2 `published/data/` | Copy of the last published `/data/` tree | Lets a failed run keep the last good snapshot |
