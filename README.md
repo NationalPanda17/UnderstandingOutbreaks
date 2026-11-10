@@ -66,7 +66,9 @@ The site launches on a free `pages.dev` address. **The base URL is one config va
 3. In `config/site.json` set `r2BaseUrl` and `toolAssetsBaseUrl` (for example `https://assets.example.org` and
    `https://assets.example.org/tools`), and `basemapUrl` once a basemap is uploaded.
 4. In the GitHub repository add secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-   `R2_SECRET_ACCESS_KEY`, and variables `R2_BUCKET` and `PAGES_PROJECT`.
+   `R2_SECRET_ACCESS_KEY`, and variables `R2_BUCKET` (public bucket), `R2_STATE_BUCKET` (a second, private bucket)
+   and `PAGES_PROJECT`. Pipeline state includes raw source files that may not be redistributed, so it is only ever
+   written to the private bucket; never make that bucket public.
 5. The scheduled workflow `.github/workflows/update-data.yml` then fetches, validates, builds, uploads R2 files and
    deploys Pages every day. Without the secrets it still runs the pipeline and tests but skips upload and deploy.
 
