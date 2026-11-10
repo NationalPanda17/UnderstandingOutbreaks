@@ -18,6 +18,13 @@ def gh(*args: str) -> str:
     return subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout
 
 
+def ensure_labels(names: set[str]) -> None:
+    """Create any missing labels: `gh issue create --label` fails outright on a label the repository does not have."""
+    have = {x["name"] for x in json.loads(gh("label", "list", "--limit", "200", "--json", "name"))}
+    for n in sorted(names - have):
+        gh("label", "create", n, "--color", "6b7280", "--description", "Opened by the data pipeline; needs a person")
+
+
 def main() -> int:
     dry = "--dry-run" in sys.argv
     d = ROOT / "state" / "issues"
@@ -28,6 +35,7 @@ def main() -> int:
         if dry:
             print(f"--- {title}\n{rec['body']}\n")
             continue
+        ensure_labels({"pipeline", rec["kind"]})
         existing = json.loads(gh("issue", "list", "--state", "open", "--search", f'"{title}" in:title', "--json", "number,title"))
         match = next((i for i in existing if i["title"] == title), None)
         if match:

@@ -77,5 +77,6 @@ jobs:
         if: failure()
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
+          gh label create pipeline --color 6b7280 2>/dev/null || true
           gh issue create --title "[pipeline] Scheduled update failed" --label pipeline \
             --body "The scheduled update failed in run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The last good snapshot stays live. Nothing was changed automatically; a person needs to review." || true
