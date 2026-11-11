@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { href, navigate } from '../lib/app';
 import { getJSON, type EventIdx } from '../lib/data';
-import { date, t } from '../lib/i18n';
+import { date, periodLabel, t } from '../lib/i18n';
 import { entry, search, type Entry } from '../lib/search';
 import { placeName } from '../lib/series';
 import { diseaseName } from './Layout';
@@ -23,7 +23,14 @@ export function Search() {
   const loadEvents = () => { if (wanted.current) return; wanted.current = true; getJSON<{ events: EventIdx[] }>('events/index.json').then((x) => setEvents(x.events)).catch(() => undefined); };
   const entries = useMemo(() => {
     const out: Entry[] = [];
-    for (const d of core.diseases) out.push(entry('disease', d.id, diseaseName(core, d.id), 'disease/' + d.id, [d.name, ...(d.aliases ?? [])], t('search.kind.disease')));
+    for (const d of core.diseases) {
+      // how recent the default series is, so a searcher can tell an annual 2024 series from a weekly one at a glance
+      const def = d.series.find((x) => x.skey === d.default_skey);
+      const latest = def?.lag?.data_edge ? t('search.latest', { period: periodLabel(def.lag.data_edge, def.period_type) }) : d.has_timeseries ? '' : t('search.eventsOnly');
+      const e = entry('disease', d.id, diseaseName(core, d.id), 'disease/' + d.id, [d.name, ...(d.aliases ?? [])], [t('search.kind.disease'), latest].filter(Boolean).join(' · '));
+      e.note = latest || undefined;
+      out.push(e);
+    }
     for (const p of Object.values(core.places)) out.push(entry('place', p.iso3, placeName(core, p.iso3), 'place/' + p.iso3, [p.name, p.iso3], t('search.kind.place')));
     for (const [path, key] of PAGES) out.push(entry('page', path, t(key), path, [], t('search.kind.page')));
     for (const e of events ?? []) {

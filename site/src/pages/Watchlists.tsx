@@ -1,10 +1,11 @@
 /** Watchlists: saved combinations of diseases, places and filters. Shareable URL + local JSON file. No accounts, no server. */
 import { useState } from 'preact/hooks';
-import { absoluteUrl, href, navigate, storage } from '../lib/app';
+import { absoluteUrl, dataUrl, href, navigate, storage } from '../lib/app';
+import { getOptional } from '../lib/data';
 import { copyText, download } from '../lib/exporters';
 import { t } from '../lib/i18n';
 import { placeName } from '../lib/series';
-import { diseaseName } from '../components/Layout';
+import { diseaseName, useAsync } from '../components/Layout';
 import { useApp } from '../components/SourceChip';
 
 export interface WatchItem { kind: 'place' | 'disease' | 'event'; iso3?: string; disease?: string; event?: string; mode?: string }
@@ -51,6 +52,9 @@ export function Watchlists() {
   const [msg, setMsg] = useState('');
   const update = (next: WatchItem[]) => { setItems(next); if (!shared) saveWatch(next); };
   const link = absoluteUrl(href(route, 'watchlists', { w: encodeWatch(items) }));
+  const feeds = useAsync(() => getOptional<{ diseases: string[]; places: string[] }>('feeds/index.json'), []);
+  // A feed exists for a disease or a country once at least one official notice names it.
+  const feedOf = (i: WatchItem) => (i.kind === 'place' && feeds.data?.places.includes(i.iso3!) ? dataUrl(`feeds/place/${i.iso3}.xml`) : i.kind === 'disease' && feeds.data?.diseases.includes(i.disease!) ? dataUrl(`feeds/disease/${i.disease}.xml`) : null);
   const label = (i: WatchItem) => (i.kind === 'place' ? `${placeName(core, i.iso3!)}${i.disease ? ' · ' + diseaseName(core, i.disease) : ''}` : i.kind === 'disease' ? diseaseName(core, i.disease!) : i.event!);
   const to = (i: WatchItem) => (i.kind === 'place' ? href(route, 'place/' + i.iso3, { d: i.disease }) : i.kind === 'disease' ? href(route, 'disease/' + i.disease) : href(route, 'outbreak/' + i.event));
   return (
@@ -60,7 +64,8 @@ export function Watchlists() {
       {shared && <div class="notice pin">{t('watch.shared')} <button type="button" class="btn small" onClick={() => { saveWatch(items); navigate(href(route, 'watchlists')); }}>{t('watch.saveLocal')}</button></div>}
       <section class="card">
         {!items.length && <p class="muted">{t('watch.empty')}</p>}
-        <ul class="list">{items.map((i) => <li key={encodeWatch([i])} class="row"><a href={to(i)}>{label(i)}</a><button type="button" class="btn small" onClick={() => update(items.filter((x) => !same(x, i)))}>{t('watch.remove')}</button></li>)}</ul>
+        {items.length > 0 && <p class="small muted">{t('watch.feedNote')} <a href={dataUrl('feeds/all.xml')}>{t('watch.feedAll')}</a></p>}
+        <ul class="list">{items.map((i) => <li key={encodeWatch([i])} class="row"><a href={to(i)}>{label(i)}</a>{feedOf(i) && <a class="small" href={feedOf(i)!} data-testid="watch-feed">{t('watch.feed')}</a>}<button type="button" class="btn small" onClick={() => update(items.filter((x) => !same(x, i)))}>{t('watch.remove')}</button></li>)}</ul>
         <div class="btnrow" style={{ marginTop: '10px' }}>
           <button type="button" class="btn" disabled={!items.length} onClick={async () => { await copyText(link); setMsg(t('action.copied')); }}>{t('watch.copyLink')}</button>
           <button type="button" class="btn" disabled={!items.length} onClick={() => download('watchlist.json', JSON.stringify({ format: 'understandingoutbreaks-watchlist', version: WATCH_VERSION, items }, null, 2), 'application/json')}>{t('watch.export')}</button>

@@ -8,6 +8,7 @@ import { num, t } from '../lib/i18n';
 import { provBlock, type Prov } from '../lib/prov';
 import { placeName } from '../lib/series';
 import { diseaseName, useAsync } from './Layout';
+import { CiteButton } from './Cite';
 import { MapLegend, quantileBreaks } from './mapUtil';
 import { SourceChip, useApp } from './SourceChip';
 
@@ -74,6 +75,7 @@ export function Regions({ disease, iso3 }: { disease: string; iso3: string }) {
         <button type="button" class="btn small" onClick={() => setTable(!table)}>{table ? t('action.viewMap') : t('action.viewData')}</button>
         <button type="button" class="btn small" disabled={table} onClick={() => doExport('png')}>{t('action.png')}</button>
         <button type="button" class="btn small" disabled={table} onClick={() => doExport('svg')}>{t('action.svg')}</button>
+        <CiteButton prov={prov} title={title} subtitle={t('regions.metric')} />
       </div>
     </section>
   );

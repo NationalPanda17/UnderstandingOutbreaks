@@ -34,6 +34,8 @@ export function switchLocale(route: Route, loc: string): void {
 
 export function Layout({ children }: { children: any }) {
   const { route, core } = useApp();
+  const [menu, setMenu] = useState(false);
+  useEffect(() => { setMenu(false); }, [route.parts.join('/')]);
   const first = route.parts[0] ?? '';
   const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && first === 'outbreak') || (p === 'diseases' && first === 'disease') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
   const setMode = (m: 'simple' | 'analyst') => { storage.set('mode', m); setParams({ mode: m === 'analyst' ? 'analyst' : null }); };
@@ -49,7 +51,8 @@ export function Layout({ children }: { children: any }) {
             <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#0b6e75" /><path d="M5 22c4 0 4-12 8-12s4 8 7 8 3-4 7-4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" /></svg>
             {SITE.name}
           </a>
-          <nav class="main" aria-label={t('a11y.mainNav')}>
+          <button type="button" class="menubtn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu(!menu)} data-testid="menu-button">{t('nav.menu')}</button>
+          <nav class={'main' + (menu ? ' open' : '')} id="main-nav" aria-label={t('a11y.mainNav')}>
             {NAV.map((n) => <a key={n.path} class={n.cls} href={href(route, n.path)} aria-current={isCurrent(n.path) ? 'page' : undefined}>{t(n.key)}</a>)}
           </nav>
           <div class="controls">
@@ -64,6 +67,10 @@ export function Layout({ children }: { children: any }) {
               </select>
             </label>
           </div>
+        </div>
+        <div class="wrap strip">
+          <span class="modehint">{t(route.mode === 'analyst' ? 'mode.hintAnalyst' : 'mode.hintSimple')}</span>
+          <span class="asof" data-testid="data-asof">{t('asof.chip', { date: date(core.manifest.generated_at) })}</span>
         </div>
       </header>
       {first !== 'learn' && (

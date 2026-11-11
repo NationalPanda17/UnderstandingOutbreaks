@@ -2,14 +2,15 @@
  *  Map state, layers, period, mode, language and snapshot are all encoded in the URL. */
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { href, navigate, setParams } from '../lib/app';
-import { getJSON, type EventIdx, type Overview as Ov } from '../lib/data';
+import { getJSON, getOptional, type EventIdx, type Overview as Ov } from '../lib/data';
 import { caption, exportImage, imageMeta, serializeSvg } from '../lib/exporters';
 import { periodLabel, smart, t } from '../lib/i18n';
 import { provBlock, type Prov } from '../lib/prov';
 import { placeName } from '../lib/series';
 import { ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
+import { CiteButton } from '../components/Cite';
 import { LazyMap } from '../components/LazyMap';
-import { CountryPopover, DENSITY_RAMP, MapLegend, REGION_VIEWS, classifyMissing, quantileBreaks, type MapPoint, type Missing } from '../components/mapUtil';
+import { CountryPopover, DENSITY_RAMP, MapLegend, REPORT_RAMP, REGION_VIEWS, classifyMissing, quantileBreaks, type MapPoint, type Missing } from '../components/mapUtil';
 import { SourceChip, useApp } from '../components/SourceChip';
 
 export function MapPage() {
@@ -18,7 +19,7 @@ export function MapPage() {
   const tsDiseases = core.diseases.filter((d) => d.has_timeseries);
   const q = route.params;
   const disease = q.get('d') && core.diseaseById[q.get('d')!]?.has_timeseries ? q.get('d')! : 'measles';
-  const layer = q.get('layer') === 'density' ? 'density' : q.get('layer') === 'none' ? 'none' : 'disease';
+  const layer = (['density', 'none', 'reporting'].includes(q.get('layer') ?? '') ? q.get('layer') : 'disease') as 'disease' | 'density' | 'none' | 'reporting';
   const pm = (['markers', 'clusters', 'heat', 'off'].includes(q.get('pm') ?? '') ? q.get('pm') : 'clusters') as 'markers' | 'clusters' | 'heat' | 'off';
   const evDisease = q.get('ed') ?? '';
   const recentDays = parseInt(q.get('days') ?? '180', 10);
@@ -35,6 +36,8 @@ export function MapPage() {
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
   const allOv = useAsync(() => (view === 'grid' && gridBy === 'diseases' ? Promise.all(tsDiseases.map((d) => getJSON<Ov>(`overview/${d.id}.json`))) : Promise.resolve(null)), [view, gridBy]);
   const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
+  // Reporting health: how complete each country's recent reporting has been for this disease's default series.
+  const reporting = useAsync(() => (layer === 'reporting' ? getOptional<{ window: [string, string]; period_type: string; places: Record<string, { present: number; expected: number; completeness: number; last_period: string; periods_behind: number }> }>(`reporting/${disease}.json`) : Promise.resolve(null)), [layer, disease]);
   const [playing, setPlaying] = useState(false);
   const [table, setTable] = useState(false);
   const mapApi = useRef<any>(null);
@@ -60,9 +63,10 @@ export function MapPage() {
   const values = useMemo(() => {
     const out: Record<string, number | null> = {};
     if (layer === 'density') { for (const p of Object.values(core.places)) if (p.population && p.area_km2) out[p.iso3] = p.population / p.area_km2; }
+    else if (layer === 'reporting') { for (const [iso3, r] of Object.entries(reporting.data?.places ?? {})) out[iso3] = Math.round(r.completeness * 100); }
     else if (layer === 'disease' && ov.data) for (const [iso3, row] of Object.entries(ov.data.grid.values)) out[iso3] = row[ti] ?? null;
     return out;
-  }, [layer, ov.data, ti]);
+  }, [layer, ov.data, ti, reporting.data]);
   // Why a place has no value this period: it matters, because an empty area is easily read as "no disease".
   const miss = useMemo(() => (layer === 'disease' && ov.data ? classifyMissing(ov.data.grid.values, ti) : {}), [layer, ov.data, ti]);
   const missing = useMemo(() => Object.fromEntries(Object.entries(miss).map(([k, m]) => [k, m.kind])) as Record<string, Missing>, [miss]);
@@ -79,6 +83,7 @@ export function MapPage() {
   // one stable scale across the whole slider, so colours are comparable between periods
   const breaks = useMemo(() => {
     if (layer === 'density') return [10, 50, 100, 250, 500];
+    if (layer === 'reporting') return [25, 50, 75, 90];
     if (!ov.data) return [];
     return quantileBreaks(Object.values(ov.data.grid.values).flat().filter((x): x is number => x !== null && x > 0));
   }, [layer, ov.data]);
@@ -110,9 +115,12 @@ export function MapPage() {
   }, [view, layer, gridBy, ov.data, allOv.data, step, route.locale]);
   if (ov.error) return <ErrorBox error={ov.error} />;
   const meta = ov.data ? core.seriesByKey[ov.data.skey] : null;
-  const metric = layer === 'density' ? t('map.density') : ov.data ? (ov.data.map_metric === 'percent_positive' ? t('map.metric.pctPeriod') : t('map.metric.ratePeriod')) : '';
-  const title = layer === 'density' ? t('map.density') : `${diseaseName(core, disease)}: ${metric}${period ? ' · ' + periodLabel(period, ov.data!.period_type) : ''}`;
-  const prov: Prov = layer === 'density'
+  const layerRamp = layer === 'density' ? DENSITY_RAMP : layer === 'reporting' ? REPORT_RAMP : undefined;
+  const metric = layer === 'reporting' ? t('map.reporting') : layer === 'density' ? t('map.density') : ov.data ? (ov.data.map_metric === 'percent_positive' ? t('map.metric.pctPeriod') : t('map.metric.ratePeriod')) : '';
+  const title = layer === 'reporting' ? `${diseaseName(core, disease)}: ${t('map.reporting')}` : layer === 'density' ? t('map.density') : `${diseaseName(core, disease)}: ${metric}${period ? ' · ' + periodLabel(period, ov.data!.period_type) : ''}`;
+  const prov: Prov = layer === 'reporting'
+    ? { title, origin: 'site-derived', sourceIds: [...(ov.data?.source_ids ?? []).filter((x) => x !== 'worldbank'), 'naturalearth'], asOf: meta?.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? core.manifest.snapshot_id, series: ov.data ? [{ skey: ov.data.skey }] : [], method: { name: 'reporting_health', version: '1' } }
+    : layer === 'density'
     ? { title, origin: 'site-derived', sourceIds: ['worldbank', 'geonames', 'naturalearth'], asOf: null, snapshotId: route.snapshot ?? core.manifest.snapshot_id, method: { name: 'population_density', version: '1' } }
     : { title, origin: 'site-derived', sourceIds: Array.from(new Set([...(ov.data?.source_ids ?? []), 'naturalearth', ...(points.length ? [...new Set(evs.flatMap((e) => e.source_ids)), 'geonames'] : [])])), asOf: meta?.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? core.manifest.snapshot_id, series: ov.data ? [{ skey: ov.data.skey }] : [], method: { name: 'period_rate', version: '1' }, caseDefinitions: meta ? [meta.case_definition] : [] };
   const ranked = Object.entries(values).filter(([, v]) => v !== null).sort((a, b) => (b[1] as number) - (a[1] as number));
@@ -129,7 +137,7 @@ export function MapPage() {
       `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
   };
 
-  const mapContext = layer === 'disease' && period ? `${diseaseName(core, disease)} · ${periodLabel(period, ov.data!.period_type)}` : layer === 'density' ? t('map.density') : '';
+  const mapContext = layer === 'reporting' && reporting.data ? `${diseaseName(core, disease)} · ${periodLabel(reporting.data.window[0], reporting.data.period_type)} – ${periodLabel(reporting.data.window[1], reporting.data.period_type)}` : layer === 'disease' && period ? `${diseaseName(core, disease)} · ${periodLabel(period, ov.data!.period_type)}` : layer === 'density' ? t('map.density') : '';
   const popover = picked ? (
     <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
       lines={[values[picked] !== null && values[picked] !== undefined ? `${metric}: ${smart(values[picked] as number)}` : (missingLabel[picked] ?? t('chart.noData'))]} />
@@ -155,8 +163,8 @@ export function MapPage() {
         </div>
         <div class="tools" role="group" aria-label={t('mappage.layers')}>
           <label>{t('mappage.layer')} <select value={layer} onChange={(e) => setParams({ layer: (e.target as HTMLSelectElement).value === 'disease' ? null : (e.target as HTMLSelectElement).value })}>
-            <option value="disease">{t('mappage.layer.disease')}</option><option value="density">{t('map.density')}</option><option value="none">{t('mappage.layer.none')}</option></select></label>
-          {layer === 'disease' && <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value, t: null })}>{tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}</select></label>}
+            <option value="disease">{t('mappage.layer.disease')}</option><option value="reporting">{t('map.reporting')}</option><option value="density">{t('map.density')}</option><option value="none">{t('mappage.layer.none')}</option></select></label>
+          {(layer === 'disease' || layer === 'reporting') && <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value, t: null })}>{tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}</select></label>}
           {view === 'map' && <label>{t('mappage.events')} <select value={pm} onChange={(e) => setParams({ pm: (e.target as HTMLSelectElement).value })}>
             <option value="clusters">{t('mappage.pm.clusters')}</option><option value="markers">{t('mappage.pm.markers')}</option><option value="heat">{t('mappage.pm.heat')}</option><option value="off">{t('mappage.pm.off')}</option></select></label>}
           {view === 'map' && pm !== 'off' && <label>{t('mappage.window')} <select value={String(recentDays)} onChange={(e) => setParams({ days: (e.target as HTMLSelectElement).value })}>{[30, 90, 180, 365, 2000].map((n) => <option key={n} value={String(n)}>{n >= 2000 ? t('mappage.allTime') : t('mappage.days', { n })}</option>)}</select></label>}
@@ -175,7 +183,7 @@ export function MapPage() {
         )}
         {ov.loading && <Loading />}
         {!table && view === 'map' && (
-          <div style={{ position: 'relative' }}>{popover}<LazyMap tall projection={proj} missing={missing} missingLabel={missingLabel} context={mapContext} values={layer === 'none' ? {} : values} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
+          <div style={{ position: 'relative' }}>{popover}<LazyMap tall projection={proj} missing={missing} missingLabel={missingLabel} context={mapContext} values={layer === 'none' ? {} : values} breaks={breaks} ramp={layerRamp} names={names} valueLabel={metric}
             sourceLabel={prov.sourceIds.filter((s) => s !== 'naturalearth' && s !== 'geonames').map((s) => core.sources[s]?.short_name).join(', ')}
             points={points} pointMode={pm === 'off' ? 'markers' : pm} selected={selected}
             onSelect={(iso3) => setPicked(iso3)} onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
@@ -183,15 +191,15 @@ export function MapPage() {
             onMove={(v) => setParams({ lng: String(v.lng), lat: String(v.lat), z: String(v.z) })} ariaLabel={t('map.aria', { title })} apiRef={mapApi} /></div>
         )}
         {!table && view === 'flat' && stat && (
-          <div style={{ position: 'relative' }}>{popover}<stat.StaticMap svgRef={svgRef} context={mapContext} values={layer === 'none' ? {} : values} missing={missing} missingLabel={missingLabel} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
+          <div style={{ position: 'relative' }}>{popover}<stat.StaticMap svgRef={svgRef} context={mapContext} values={layer === 'none' ? {} : values} missing={missing} missingLabel={missingLabel} breaks={breaks} ramp={layerRamp} names={names} valueLabel={metric}
             region={rg} height={rg === 'world' ? 500 : 620} title={t('map.aria', { title })} onSelect={(iso3: string) => setPicked(iso3)} /></div>
         )}
         {!table && view === 'grid' && stat && layer !== 'none' && (
-          <stat.MapGrid panels={panels} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} region={rg}
+          <stat.MapGrid panels={panels} breaks={breaks} ramp={layerRamp} region={rg}
             onPanel={gridBy === 'time' ? (k: string) => setParams({ t: k, v: null }) : (k: string) => setParams({ d: k, g: null, v: null, t: null })} />
         )}
         {!table && view !== 'map' && !stat && <Loading />}
-        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} title={metric} pending={layer === 'disease'} scale={layer === 'disease' ? 'fixed' : undefined} />}
+        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layerRamp} title={metric} pending={layer === 'disease'} scale={layer === 'disease' ? 'fixed' : undefined} zero={layer === 'disease' ? undefined : '0'} />}
         {table && (
           <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metric}</th></tr></thead>
             <tbody>{ranked.map(([k, v]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: disease })}>{names[k]}</a></th><td class="n">{smart(v as number)}</td></tr>)}</tbody></table>
@@ -200,11 +208,12 @@ export function MapPage() {
           </div>
         )}
         {incomplete && <p class="small muted"><span class="badge inc">{t('chart.incompleteShort')}</span> {t('chart.incompleteNote')}</p>}
-        <p class="means">{layer === 'density' ? t('mappage.means.density') : t('mappage.means.disease')} {layer === 'disease' && t('mappage.means.missing')} {view === 'map' && pm !== 'off' && t('mappage.means.points')} {view === 'map' ? t('mappage.means.proj') : view === 'flat' ? t('mappage.means.flat') : gridBy === 'diseases' ? t('mappage.grid.ownScale') : t('mappage.grid.sharedScale')}</p>
+        <p class="means">{layer === 'reporting' ? t('mappage.means.reporting') : layer === 'density' ? t('mappage.means.density') : t('mappage.means.disease')} {layer === 'disease' && t('mappage.means.missing')} {view === 'map' && pm !== 'off' && t('mappage.means.points')} {view === 'map' ? t('mappage.means.proj') : view === 'flat' ? t('mappage.means.flat') : gridBy === 'diseases' ? t('mappage.grid.ownScale') : t('mappage.grid.sharedScale')}</p>
         <div class="btnrow">
           <button type="button" class="btn small" onClick={() => setTable(!table)}>{table ? t('action.viewMap') : t('action.viewData')}</button>
           <button type="button" class="btn small" disabled={table || view === 'grid'} onClick={() => doExport('png')}>{t('action.png')}</button>
           <button type="button" class="btn small" disabled={table || view === 'grid'} onClick={() => doExport('svg')}>{t('action.svg')}</button>
+          <CiteButton prov={prov} title={title} />
           {analyst && <a class="btn small" href={href(route, 'workbench/map-select', { d: disease })}>{t('mappage.select')}</a>}
         </div>
       </section>

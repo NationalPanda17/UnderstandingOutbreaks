@@ -174,6 +174,47 @@ def write_subnational(ctx: Context, out: Path) -> None:
         write_json(out / "subnational" / disease / "index.json", {**common, "countries": index, "n_unmatched_names": len(prod["unmatched"])})
 
 
+REPORTING_WINDOW = {"W": 26, "M": 12, "Y": 5}
+
+
+def write_feeds(ctx: Context, out: Path, limit: int = 40) -> None:
+    from xml.sax.saxutils import escape
+    base = ctx.site["baseUrl"].rstrip("/")
+    names = {d["id"]: d["name"] for d in ctx.diseases_doc["diseases"]}
+    rows = []
+    for e in ctx.events:
+        for r in e["reports"]:
+            rows.append((r["published"], r["report_id"], r["title"], r["url"], e["event_id"], e["disease"], r["countries"] or e["countries"], r["source_id"]))
+    rows.sort(reverse=True)
+
+    def feed(path: Path, title: str, items: list) -> None:
+        if not items:
+            return
+        ents = []
+        for pub, rid, rtitle, url, eid, dis, _c, src in items[:limit]:
+            sname = ctx.registry[src]["short_name"]
+            ents.append(f"<entry><id>urn:uo:notice:{escape(rid)}</id><title>{escape(rtitle)}</title><updated>{pub}T00:00:00Z</updated>"
+                        f"<link rel=\"alternate\" href=\"{escape(url)}\"/><link rel=\"related\" href=\"{base}/en/outbreak/{escape(eid)}\"/>"
+                        f"<author><name>{escape(sname)}</name></author>"
+                        f"<summary>{escape(sname)} notice about {escape(names.get(dis, dis))}. The link opens the original notice; this site groups it at {base}/en/outbreak/{escape(eid)}.</summary></entry>")
+        rel = path.relative_to(out).as_posix()
+        xml = (f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>{escape(title)}</title>"
+               f"<id>{base}{ctx.site['dataPath']}/{rel}</id><link rel=\"self\" href=\"{base}{ctx.site['dataPath']}/{rel}\"/><link href=\"{base}/\"/>"
+               f"<updated>{items[0][0]}T00:00:00Z</updated><subtitle>Official notices as published by their sources, listed by {escape(ctx.site['name'])}. Not an alerting service: entries appear when the site next updates.</subtitle>"
+               + "".join(ents) + "</feed>\n")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(xml, encoding="utf-8")
+
+    feed(out / "feeds" / "all.xml", f"{ctx.site['name']}: recent official notices", rows)
+    write_json(out / "feeds" / "index.json", {"snapshot_id": ctx.snapshot_id, "origin_type": "site-derived",
+               "diseases": sorted({r[5] for r in rows}), "places": sorted({c for r in rows for c in r[6]}), "all": "feeds/all.xml"})
+    for dis in sorted({r[5] for r in rows}):
+        feed(out / "feeds" / "disease" / f"{dis}.xml", f"{ctx.site['name']}: {names.get(dis, dis)} notices", [r for r in rows if r[5] == dis])
+    for iso3 in sorted({c for r in rows for c in r[6]}):
+        pname = ctx.places.get(iso3, {}).get("name", iso3)
+        feed(out / "feeds" / "place" / f"{iso3}.xml", f"{ctx.site['name']}: notices naming {pname}", [r for r in rows if iso3 in r[6]])
+
+
 def publish_all(ctx: Context, log) -> dict:
     assert_no_test_data(ctx)
     out = DATA_OUT.parent / (DATA_OUT.name + ".staging")
@@ -353,6 +394,28 @@ def publish_all(ctx: Context, log) -> dict:
         panel_cols = [c for c in piv.columns if pw and sum(1 for p in pw if p in piv.index and not np.isnan(piv.at[p, c])) >= 0.9 * len(pw)]
         panel = {"p": pw, "v": [ts.safe(float(np.nansum([piv.at[p, c] for c in panel_cols if p in piv.index]))) if panel_cols else None for p in pw],
                  "n_panel": len(panel_cols), "min_coverage": 0.9, "method": {"name": "constant_panel_total", "version": "1"}}
+        # Reporting health per country for this series: how many of the recent complete periods have a report, and
+        # how far behind the newest complete period the country's latest report is. A map of rates is also a map
+        # of who reports; this file lets the site say so country by country.
+        rw = [ts.period_add(anchor, ptype, -i) for i in range(REPORTING_WINDOW[ptype])][::-1]
+        rh = {}
+        for iso3 in piv.columns:
+            col = piv[iso3].dropna()
+            if not len(col):
+                continue
+            present = sum(1 for p in rw if p in col.index)
+            last_p = col.index.max()
+            behind = 0
+            if last_p < anchor:
+                q = anchor
+                while q > last_p and behind < 600:
+                    q = ts.period_add(q, ptype, -1)
+                    behind += 1
+            rh[iso3] = {"present": present, "expected": len(rw), "completeness": round(present / len(rw), 3), "last_period": last_p, "periods_behind": behind}
+        write_json(out / "reporting" / f"{did}.json", {
+            "disease": did, "skey": dk, "period_type": ptype, "window": [rw[0], rw[-1]], "origin_type": "site-derived",
+            "source_ids": [mrow["source_id"]], "snapshot_id": ctx.snapshot_id, "typical_lag_periods": lg.get("lag_periods"),
+            "method": {"name": "reporting_health", "version": "1", "window_periods": len(rw)}, "places": rh})
         glob_out = {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]], "n_total": n_total}
         ov_summary.append({"disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
                            "snapshot_id": ctx.snapshot_id, "period_type": ptype, "incomplete_from": incf, "anchor": anchor, "global": glob_out})
@@ -449,6 +512,10 @@ def publish_all(ctx: Context, log) -> dict:
         "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "source_ids": sorted({s for e in idx for s in e["source_ids"]}),
         "methods": {"ranking": RANK_METHOD, "grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD,
                     "no_recent_update_days": NO_RECENT_UPDATE_DAYS}, "unmapped_names": ctx.unmapped, "events": idx})
+
+    # ---- feeds: recent official notices per disease and per country, as Atom files. Static files, no accounts:
+    # a feed reader fetches them like any other file. Entries are the notices' own titles and links.
+    write_feeds(ctx, out)
 
     # ---- quality, sources, weekly, changelog
     quality = build_quality(ctx, meta, lags)

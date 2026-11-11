@@ -128,6 +128,30 @@ export function caption(core: Core, prov: Prov, title: string, subtitle?: string
   return `${title}${subtitle ? ' (' + subtitle + ')' : ''}. ${kind}${sim} ${prov.origin === 'simulated' ? 'References' : 'Source'}: ${src}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''} ${lic ? 'License: ' + lic + '. ' : ''}Via ${SITE.name} (${SITE.shortUrl}), snapshot ${prov.snapshotId}.`;
 }
 
+/** The one caveat that should travel with every chart of reported numbers, including when it is screenshotted. */
+export const CAVEAT = 'Reported numbers arrive late, miss cases that were never tested or reported, and use definitions that differ between sources.';
+
+/** Address of exactly this view, pinned to the snapshot it was drawn from, so the numbers cannot change under a citation. */
+export function pinnedUrl(snapshotId: string): string {
+  const u = new URL(window.location.href);
+  u.searchParams.set('snapshot', snapshotId);
+  u.hash = '';
+  return u.toString();
+}
+
+/** Everything a reporter needs to cite a view, in one paste: plain caption with the as-of date, attribution line, caveat, pinned link. */
+export function citeText(core: Core, prov: Prov, title: string, subtitle?: string): string {
+  const src = prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', ');
+  const lic = Array.from(new Set(prov.sourceIds.map((s) => core.sources[s]?.license).filter(Boolean))).join('; ');
+  const sim = prov.origin === 'simulated';
+  return [
+    `${title}${subtitle ? ' (' + subtitle + ')' : ''}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''}`,
+    `${sim ? 'Illustrative simulation: not a forecast, not fitted to data. References' : 'Source'}: ${src}${prov.origin === 'site-derived' ? `; calculated by ${SITE.name}` : ''}. Via ${SITE.name} (${SITE.shortUrl}).${lic ? ' License: ' + lic + '.' : ''}`,
+    sim ? '' : CAVEAT,
+    `Link to exactly this view (snapshot ${prov.snapshotId}): ${pinnedUrl(prov.snapshotId)}`,
+  ].filter(Boolean).join('\n');
+}
+
 export function altText(series: SeriesData[], title: string): string {
   const parts = series.slice(0, 6).map((s) => {
     const vals = s.v.filter((x): x is number => x !== null);
@@ -147,7 +171,7 @@ function wrap(text: string, max: number): string[] {
   return lines;
 }
 
-export interface ImageMeta { title: string; subtitle?: string; sourceLine: string; licenseLine: string; asOf: string | null; shortUrl: string; watermark?: string; simLine?: string }
+export interface ImageMeta { title: string; subtitle?: string; sourceLine: string; licenseLine: string; asOf: string | null; shortUrl: string; watermark?: string; simLine?: string; caveatLine?: string }
 
 export function imageMeta(core: Core, prov: Prov, title: string, subtitle?: string): ImageMeta {
   return {
@@ -155,6 +179,7 @@ export function imageMeta(core: Core, prov: Prov, title: string, subtitle?: stri
     sourceLine: (prov.origin === 'simulated' ? 'Simulated. References: ' : prov.origin === 'site-derived' ? 'Computed by Understanding Outbreaks from: ' : 'Source: ') + prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', '),
     licenseLine: 'License: ' + (Array.from(new Set(prov.sourceIds.map((s) => core.sources[s]?.license).filter(Boolean))).join('; ') || 'see sources'),
     asOf: prov.asOf, shortUrl: SITE.shortUrl,
+    caveatLine: prov.origin === 'simulated' ? undefined : CAVEAT,
     watermark: prov.origin === 'simulated' ? 'ILLUSTRATIVE SIMULATION · NOT A FORECAST · NOT FITTED TO DATA' : undefined,
     simLine: prov.sim ? `Engine ${prov.sim.engineVersion} · ${prov.sim.solver}${prov.sim.seed !== null ? ' · seed ' + prov.sim.seed : ''}` : undefined,
   };
@@ -164,7 +189,7 @@ export function imageMeta(core: Core, prov: Prov, title: string, subtitle?: stri
 export function composeExportSVG(inner: { svg?: string; imageHref?: string; width: number; height: number }, meta: ImageMeta): string {
   const W = Math.max(640, inner.width + 32);
   const titleLines = wrap(meta.title, Math.floor(W / 9));
-  const foot = [meta.sourceLine, meta.licenseLine + (meta.asOf ? ` · Data as of ${meta.asOf}` : ''), ...(meta.simLine ? [meta.simLine] : []), meta.shortUrl].flatMap((l) => wrap(l, Math.floor(W / 6.2)));
+  const foot = [meta.sourceLine, meta.licenseLine + (meta.asOf ? ` · Data as of ${meta.asOf}` : ''), ...(meta.simLine ? [meta.simLine] : []), ...(meta.caveatLine ? [meta.caveatLine] : []), meta.shortUrl].flatMap((l) => wrap(l, Math.floor(W / 6.2)));
   const top = 20 + titleLines.length * 24 + (meta.subtitle ? 20 : 0) + (meta.watermark ? 22 : 0);
   const H = top + inner.height + 16 + foot.length * 16 + 12;
   const font = 'font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"';
@@ -216,6 +241,21 @@ export async function exportImage(kind: 'svg' | 'png', inner: { svg?: string; im
     const png = new Uint8Array(await (await svgToPngBlob(svg)).arrayBuffer());
     download(`${base}.zip`, zip([{ name: `${base}.png`, data: png }, { name: `${base}.provenance.json`, data: side }, { name: `${base}.caption.txt`, data: captionText + '\n\nAlt text: ' + alt + '\n' }]), 'application/zip');
   }
+}
+
+/** Chart pack for newsrooms: the image as PNG and SVG, a CSV of exactly the plotted values, the caption and the provenance record. */
+export async function exportChartPack(inner: { svg?: string; imageHref?: string; width: number; height: number }, meta: ImageMeta, name: string, sidecar: Record<string, unknown>, captionText: string, alt: string, csv: string): Promise<void> {
+  const svg = composeExportSVG(inner, meta);
+  const base = slugify(name);
+  const side = JSON.stringify({ ...sidecar, caption: captionText, alt_text: alt }, null, 2);
+  const png = new Uint8Array(await (await svgToPngBlob(svg)).arrayBuffer());
+  download(`${base}-chart-pack.zip`, zip([
+    { name: `${base}.png`, data: png },
+    { name: `${base}.svg`, data: svg.replace('</svg>', `<metadata>${esc(side)}</metadata></svg>`) },
+    { name: `${base}.values.csv`, data: csv },
+    { name: `${base}.caption.txt`, data: captionText + '\n\n' + (meta.caveatLine ? meta.caveatLine + '\n\n' : '') + 'Alt text: ' + alt + '\n' },
+    { name: `${base}.provenance.json`, data: side },
+  ]), 'application/zip');
 }
 
 export async function copyText(text: string): Promise<boolean> {

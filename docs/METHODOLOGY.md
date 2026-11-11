@@ -148,6 +148,14 @@ first-level region, for the countries where OpenDengue reports at that level.
   complete period, and the page says so.
 - **Event points** are sized by how recent the latest notice is. A faint ring marks a notice that names only a
   country or a first-level region: the wider the ring, the vaguer the location.
+- **Colour-vision check (2026-11-11).** The colour scales and the event markers were run through a simulation of
+  protanopia, deuteranopia and tritanopia (Machado et al. 2009 matrices, full severity). The rate scale keeps a
+  strictly decreasing lightness in all four conditions, with a smallest step between neighbouring classes of
+  CIE76 ΔE 9 (protan, the two palest classes) and ΔE 11 or more elsewhere. The reporting-completeness scale was
+  redrawn after the check: its two palest steps were ΔE 5.6 and 8.2 even for typical vision; they are now 9.7 or
+  more in every condition. Event markers were darkened from `#7a5c00` to `#4d3900`: against every class of the
+  rate scale either the marker or its white ring now has a luminance contrast of at least 3.4:1 (the old colour
+  fell to 2.6:1 on the middle class). This is a computed check, not a test with colour-blind readers.
 - **Basemap.** OpenStreetMap data as Protomaps PMTiles, built by `.github/workflows/build-basemap.yml` and served
   from the project's own bucket. Shaded areas are drawn beneath the basemap's place labels.
 

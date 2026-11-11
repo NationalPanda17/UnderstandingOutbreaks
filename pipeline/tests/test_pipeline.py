@@ -622,3 +622,14 @@ def test_every_dataset_states_its_date_basis():
     for ds in core.load_datasets():
         assert ds.get("date_basis") in {"report_date", "source_period", "calendar_year"}, ds["id"]
         assert ds.get("date_basis_field"), ds["id"]
+
+
+def test_quoted_sentences_are_verbatim_and_limited():
+    text = ("On 5 October 2026, WHO was informed about an imported case in Kenya with travel history from the affected area. "
+            "Response activities continue. The patient was medically evacuated on 7 October. Symptom onset was on 1 October 2026.")
+    route = E.quoted_sentences(text, E.ROUTE_RX)
+    assert route == ["On 5 October 2026, WHO was informed about an imported case in Kenya with travel history from the affected area.",
+                     "The patient was medically evacuated on 7 October."]
+    assert E.quoted_sentences(text, E.ONSET_RX) == ["Symptom onset was on 1 October 2026."]
+    assert E.quoted_sentences("Nothing relevant here.", E.ROUTE_RX) == []
+    assert all(q in text for q in route)   # quotes are the notice's own words, never rewritten

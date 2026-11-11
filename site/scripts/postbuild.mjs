@@ -27,6 +27,7 @@ const headers = [
   ...block('/', `'none'`), ...block('/index.html', `'none'`), ...locales.flatMap((l) => block(`/${l}/*`, `'none'`)),
   ...block('/embed/*', '*'), ...block('/embed', '*'), ...block('/embed.html', '*'),
   '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
+  '/data/v1/feeds/*.xml', '  Content-Type: application/atom+xml; charset=utf-8', '',
   '/data/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=300, stale-while-revalidate=86400', '', // a repeat visit paints from cache at once and refreshes in the background
   '/data/v1/snapshots/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=31536000, immutable', '',
   '/notebooks/*', '  Access-Control-Allow-Origin: *', '',

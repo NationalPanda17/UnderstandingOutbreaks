@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { SITE, absoluteUrl, href, setParams } from '../lib/app';
 import { codeFor, type ViewSpec } from '../lib/codegen';
-import { altText, caption, copyText, exportBundle, exportImage, imageMeta, seriesRows, serializeSvg } from '../lib/exporters';
+import { altText, caption, copyText, exportBundle, exportChartPack, exportImage, imageMeta, seriesRows, serializeSvg } from '../lib/exporters';
+import { CiteButton } from './Cite';
 import { date, num, periodLabel, smart, t } from '../lib/i18n';
 import { provBlock, suggestedCitation, type Prov } from '../lib/prov';
 import { activeTransformKeys, applyTransforms, transformsFromParam, transformsToParam, yearOverYear, type SeriesData, type TransformState } from '../lib/transforms';
@@ -62,6 +63,9 @@ export function ChartCard(props: ChartCardProps) {
   const ptype = props.series[0]?.ptype ?? 'W';
   const canPerCapita = props.series.some((s) => s.population);
   const first = shown[0];
+  // Annual series can be a year or two behind. People read titles, and screenshots drop captions, so the year goes in the title.
+  const lastP = ptype === 'Y' ? props.series.flatMap((x) => x.p).sort().pop() : undefined;
+  const title = lastP ? t('age.titleLatest', { title: props.title, year: lastP.slice(0, 4) }) : props.title;
 
   const spec = (): ViewSpec | null => {
     if (!props.disease) return null;
@@ -81,15 +85,23 @@ export function ChartCard(props: ChartCardProps) {
   const doImage = async (kind: 'svg' | 'png') => {
     if (!svgRef.current) { setView('line'); return; }
     const inner = serializeSvg(svgRef.current);
-    const cap = caption(core, prov, props.title, subtitle);
-    await exportImage(kind, inner, imageMeta(core, prov, props.title, subtitle), props.title, provBlock(core, prov), cap, altText(shown, props.title));
+    const cap = caption(core, prov, title, subtitle);
+    await exportImage(kind, inner, imageMeta(core, prov, title, subtitle), title, provBlock(core, prov), cap, altText(shown, title));
+  };
+
+  const doPack = async () => {
+    if (!svgRef.current) { setView('line'); return; }
+    const esc = (x: string) => (/[",\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x);
+    const rows = ['series,period,value,likely_incomplete,sources,data_as_of,snapshot_id'];
+    for (const s of shown) s.p.forEach((p, i) => rows.push([esc(s.label), p, s.v[i] === null ? '' : String(s.v[i]), s.incompleteFrom && p >= s.incompleteFrom ? 'yes' : 'no', esc(prov.sourceIds.join(';')), prov.asOf ?? '', prov.snapshotId].join(',')));
+    await exportChartPack(serializeSvg(svgRef.current), imageMeta(core, prov, title, subtitle), title, provBlock(core, prov), caption(core, prov, title, subtitle), altText(shown, title), rows.join('\n') + '\n');
   };
 
   return (
     <section class="card" id={props.id} data-chart-card>
       <header>
         <div>
-          <H>{props.title}</H>
+          <H>{title}</H>
           <p class="sub" data-testid="chart-subtitle">{subtitle}</p>
         </div>
         <SourceChip prov={prov} />
@@ -126,10 +138,10 @@ export function ChartCard(props: ChartCardProps) {
 
       {(view === 'line' || view === 'bars') && (
         <Chart series={shown} xMode={tr.align ? 'index' : 'time'} log={tr.log} yLabel={props.yLabel} xLabel={tr.align ? t('chart.sinceFirst') : undefined}
-          ariaLabel={altText(shown, props.title)} svgRef={svgRef} marks={tr.align ? undefined : props.marks} onBrush={tr.align ? undefined : props.onBrush} bars={view === 'bars'} />
+          ariaLabel={altText(shown, title)} svgRef={svgRef} marks={tr.align ? undefined : props.marks} onBrush={tr.align ? undefined : props.onBrush} bars={view === 'bars'} />
       )}
-      {view === 'yoy' && first && <YearOverYear s={first} title={props.title} />}
-      {view === 'heat' && first && <CalendarHeat s={first} title={props.title} />}
+      {view === 'yoy' && first && <YearOverYear s={first} title={title} />}
+      {view === 'heat' && first && <CalendarHeat s={first} title={title} />}
       {view === 'table' && <SeriesTable series={shown} />}
 
       {issues.incomplete && !tr.excludeIncomplete && (
@@ -142,12 +154,13 @@ export function ChartCard(props: ChartCardProps) {
         <button type="button" class="btn small" onClick={() => setView(view === 'table' ? 'line' : 'table')}>{view === 'table' ? t('action.viewChart') : t('action.viewData')}</button>
         <button type="button" class="btn small" onClick={() => doImage('png')}>{t('action.png')}</button>
         <button type="button" class="btn small" onClick={() => doImage('svg')}>{t('action.svg')}</button>
-        <button type="button" class="btn small" onClick={async () => { await copyText(caption(core, prov, props.title, subtitle)); flash('caption'); }}>{copied === 'caption' ? t('action.copied') : t('action.copyCaption')}</button>
+        <CiteButton prov={prov} title={title} subtitle={subtitle} />
+        <button type="button" class="btn small" onClick={doPack} data-testid="chart-pack">{t('action.chartPack')}</button>
         {props.embed && <button type="button" class="btn small" onClick={() => setDialog('embed')}>{t('action.embed')}</button>}
         {analyst && (
           <>
-            <button type="button" class="btn small" onClick={() => exportBundle(core, prov, seriesRows(core, shown.filter((s) => !s.userSupplied), prov), 'csv', props.title)}>{t('action.downloadCsv')}</button>
-            <button type="button" class="btn small" onClick={() => exportBundle(core, prov, seriesRows(core, shown.filter((s) => !s.userSupplied), prov), 'json', props.title)}>{t('action.downloadJson')}</button>
+            <button type="button" class="btn small" onClick={() => exportBundle(core, prov, seriesRows(core, shown.filter((s) => !s.userSupplied), prov), 'csv', title)}>{t('action.downloadCsv')}</button>
+            <button type="button" class="btn small" onClick={() => exportBundle(core, prov, seriesRows(core, shown.filter((s) => !s.userSupplied), prov), 'json', title)}>{t('action.downloadJson')}</button>
             <button type="button" class="btn small" onClick={async () => { await copyText(suggestedCitation(core, prov)); flash('cite'); }}>{copied === 'cite' ? t('action.copied') : t('action.copyCitation')}</button>
             <button type="button" class="btn small" onClick={() => setDialog('api')}>{t('action.apiLink')}</button>
             {spec() && <button type="button" class="btn small" onClick={() => setDialog('code')}>{t('action.copyCode')}</button>}
@@ -160,8 +173,8 @@ export function ChartCard(props: ChartCardProps) {
       {dialog === 'embed' && (
         <Dialog title={t('embed.title')} onClose={() => setDialog(null)} modal>
           <p>{t('embed.intro')}</p>
-          <pre data-testid="embed-snippet">{`<iframe src="${embedUrl()}" title="${props.title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`}</pre>
-          <button type="button" class="btn" onClick={async () => { await copyText(`<iframe src="${embedUrl()}" title="${props.title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`); flash('embed'); }}>{copied === 'embed' ? t('action.copied') : t('action.copy')}</button>
+          <pre data-testid="embed-snippet">{`<iframe src="${embedUrl()}" title="${title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`}</pre>
+          <button type="button" class="btn" onClick={async () => { await copyText(`<iframe src="${embedUrl()}" title="${title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`); flash('embed'); }}>{copied === 'embed' ? t('action.copied') : t('action.copy')}</button>
           <p class="small muted">{t('embed.pinned', { snapshot: prov.snapshotId })}</p>
           <p class="small muted">{t('embed.privacy')}</p>
         </Dialog>

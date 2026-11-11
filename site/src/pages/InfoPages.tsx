@@ -42,6 +42,7 @@ export function Changes() {
   return (
     <>
       <h1>{t('changes.title')}</h1>
+      <p><a class="btn" href={href(route, 'compare')}>{t('datecompare.open')}</a></p>
       <p class="lead">{t('changes.lead', { from: date(d.from, 'long'), to: date(d.to, 'long') })}</p>
       <p><SourceChip prov={prov} /> {(idx.data?.weeks.length ?? 0) > 1 && <label class="small">{t('changes.week')} <select value={d.week} onChange={(e) => (window.location.href = href(route, 'changes', { week: (e.target as HTMLSelectElement).value }))}>{idx.data!.weeks.slice().reverse().map((x) => <option key={x} value={x}>{x}</option>)}</select></label>}</p>
       <div class="grid two">

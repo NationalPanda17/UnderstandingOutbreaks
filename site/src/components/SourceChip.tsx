@@ -98,6 +98,14 @@ export function TracePanel({ prov, onClose }: { prov: Prov; onClose: () => void 
       <p><b>{prov.title}</b></p>
       <p class="chipline"><span class="badge" data-origin={prov.origin}>{originIcon(prov.origin)} {t('origin.' + prov.origin)}</span></p>
       <p class="muted">{t('origin.' + prov.origin + '.explain')}</p>
+      <div class="plain" data-testid="plain-trace">
+        <b>{t('plain.title')}</b>
+        <ol>
+          <li>{t(prov.origin === 'simulated' ? 'plain.simulated' : prov.origin === 'user-supplied' ? 'plain.user' : 'plain.published', { sources: sourceNames(core, prov) })}</li>
+          {prov.origin !== 'simulated' && prov.origin !== 'user-supplied' && <li>{prov.asOf ? t('plain.retrieved', { date: date(prov.asOf, 'long'), snapshot: prov.snapshotId }) : t('plain.snapshotOnly', { snapshot: prov.snapshotId })}</li>}
+          <li>{prov.method ? <>{t('plain.calculated')} {t('method.' + prov.method.name)}</> : (prov.transforms?.length ? t('plain.transformed') : t('plain.asReported'))}{prov.method && !!prov.transforms?.length && <> {t('plain.transformed')}</>}</li>
+        </ol>
+      </div>
       <dl>
         <dt>{t('trace.asOf')}</dt><dd>{prov.asOf ? date(prov.asOf, 'long') : t('trace.notApplicable')}</dd>
         <dt>{t('trace.snapshot')}</dt><dd><code>{prov.snapshotId}</code></dd>

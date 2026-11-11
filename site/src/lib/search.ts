@@ -2,7 +2,7 @@
  *  nothing typed leaves the browser. Pure functions, so the ranking can be tested. */
 
 export interface SearchItem { kind: 'disease' | 'place' | 'combo' | 'event' | 'page'; label: string; sub?: string; path: string; params?: Record<string, string>; rank: number }
-export interface Entry { kind: SearchItem['kind']; label: string; sub?: string; path: string; params?: Record<string, string>; words: string[]; id: string }
+export interface Entry { kind: SearchItem['kind']; label: string; sub?: string; path: string; params?: Record<string, string>; words: string[]; id: string; note?: string }
 
 export function fold(s: string): string {
   return s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -37,7 +37,7 @@ export function search(query: string, entries: Entry[], comboLabel: (disease: st
       const rest = tokens.filter((_, i) => !hd[i]);
       for (const p of places) {
         if (!hits(rest, p).every(Boolean)) continue;
-        out.push({ kind: 'combo', label: comboLabel(d.label, p.label), path: p.path, params: { d: d.id }, rank: KIND_ORDER.combo + score(tokens.filter((_, i) => hd[i]), d) + score(rest, p) });
+        out.push({ kind: 'combo', label: comboLabel(d.label, p.label), sub: d.note, path: p.path, params: { d: d.id }, rank: KIND_ORDER.combo + score(tokens.filter((_, i) => hd[i]), d) + score(rest, p) });
       }
     }
   }

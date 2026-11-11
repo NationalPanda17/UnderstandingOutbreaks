@@ -176,3 +176,19 @@ ul.cols { columns: 220px; padding-inline-start: 18px; margin: 6px 0 0; }
 .maplegend .legendnote { flex-basis: 100%; font-size: .76rem; color: var(--ink-3); }
 .mappop { position: absolute; top: 10px; inset-inline-start: 10px; z-index: 6; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 10px 12px; max-width: min(300px, 80%); display: flex; flex-direction: column; gap: 3px; }
 .mappop .row { justify-content: space-between; gap: 12px; }
+.plain { background: var(--note); border: 1px solid var(--note-line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; } .plain ol { margin: 4px 0 0; padding-inline-start: 20px; }
+.healthchip { font-size: .86rem; color: var(--ink-2); margin: 8px 0; }
+.noticedots svg { display: block; background: #fbfcfc; border: 1px solid var(--line-2); border-radius: 8px; } .noticedots g:focus circle { stroke: #17272b; stroke-width: 3; }
+header.site .strip { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: .76rem; color: var(--ink-3); padding-top: 2px; padding-bottom: 4px; border-top: 1px solid var(--line-2); }
+header.site .strip .asof { white-space: nowrap; font-weight: 600; color: var(--ink-2); }
+.menubtn { display: none; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: .9rem; cursor: pointer; }
+@media (max-width: 760px) {
+  .menubtn { display: inline-block; margin-inline-start: auto; }
+  nav.main { display: none; flex: 1 1 100%; order: 5; flex-direction: column; gap: 0; }
+  nav.main.open { display: flex; }
+  nav.main a { padding: 10px 8px; border-bottom: 1px solid var(--line-2); border-radius: 0; }
+  .controls { flex: 1 1 100%; justify-content: space-between; margin-inline-start: 0; }
+  .search { flex: 1 1 120px; } .search input, .search input:focus { width: 100%; }
+  header.site .strip .modehint { display: none; }
+  header.site .strip { justify-content: flex-end; }
+}

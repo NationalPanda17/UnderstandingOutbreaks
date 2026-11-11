@@ -317,6 +317,32 @@ def extract_counts(text: str) -> dict:
     return out
 
 
+ROUTE_RX = re.compile(r"\b(imported|importation|medical(?:ly)? evacuat\w*|evacuat\w*|repatriat\w*|travel history|history of travel|travell?ed (?:to|from)|returned from|returning from|arrived from)\b", re.I)
+ONSET_RX = re.compile(r"\b(symptom onset|onset of symptoms|date of onset|onset date|developed symptoms on|became symptomatic on|onset on)\b", re.I)
+
+
+def quoted_sentences(text: str, rx: re.Pattern, limit: int = 3, max_len: int = 260) -> list[str]:
+    """Sentences from the notice that contain one of the given phrases, verbatim (clipped if long).
+
+    Used to show a notice's own wording about travel, importation or symptom onset. Nothing is interpreted:
+    the site quotes the sentence and links the notice; it never turns it into a route or a date of its own.
+    """
+    out: list[str] = []
+    for sent in re.split(r"(?<=[.!?])\s+(?=[A-Z(])", text or ""):
+        sent = sent.strip()
+        if not sent or not rx.search(sent):
+            continue
+        if len(sent) > max_len:
+            m = rx.search(sent)
+            a = max(0, m.start() - max_len // 2)
+            sent = ("… " if a else "") + sent[a:a + max_len].strip() + " …"
+        if sent not in out:
+            out.append(sent)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def status_from_text(text: str) -> tuple[str, str | None]:
     m = OVER_RX.search(text)
     if m:
@@ -350,6 +376,8 @@ def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocod
         r["locations"] = geocoder.locate(countries, r["text"])
         r["counts"] = extract_counts(r["text"])
         r["status_stated"], r["status_quote"] = status_from_text(r["text"])
+        r["route_quotes"] = quoted_sentences(r["text"], ROUTE_RX)
+        r["onset_quotes"] = quoted_sentences(r["text"], ONSET_RX)
     return reports, sorted(set(unmapped))
 
 
@@ -491,7 +519,7 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
         "methods": {"grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD, "summary": SUMMARY_METHOD, "counts": COUNT_METHOD},
         "reports": [{k: r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
                                        "fetch_id", "raw_record_ref", "countries", "counts", "status_stated", "status_quote",
-                                       "disease_name_in_source")} | {"origin_type": "source-reported"} for r in reps],
+                                       "disease_name_in_source", "route_quotes", "onset_quotes")} | {"origin_type": "source-reported"} for r in reps],
         "source_weight": max(r["source_weight"] for r in reps),
     }
     ev["rank"] = rank_event(ev)

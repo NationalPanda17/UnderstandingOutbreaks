@@ -9,6 +9,7 @@ import { mapMetricLabel, placeName } from '../lib/series';
 import { Sparkline } from '../components/Chart';
 import { EventRow } from '../components/Events';
 import { AgeBadge, DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
+import { CiteButton } from '../components/Cite';
 import { LazyMap } from '../components/LazyMap';
 import { CountryPopover, MapLegend, quantileBreaks, type MapPoint } from '../components/mapUtil';
 import { Dialog, SourceChip, useApp } from '../components/SourceChip';
@@ -100,7 +101,8 @@ export function Overview() {
   const metricLabel = ov.data ? mapMetricLabel(core, disease, ov.data.method.window_periods, ov.data.period_type) : '';
   const windowText = ov.data ? `${periodLabel(ov.data.latest[Object.keys(ov.data.latest)[0]]?.window[0] ?? ov.data.anchor, ov.data.period_type)} – ${periodLabel(ov.data.anchor, ov.data.period_type)}` : '';
   const meta = ov.data ? core.seriesByKey[ov.data.skey] : null;
-  const title = `${diseaseName(core, disease)}: ${metricLabel}`;
+  const baseTitle = `${diseaseName(core, disease)}: ${metricLabel}`;
+  const title = ov.data?.period_type === 'Y' ? t('age.titleLatest', { title: baseTitle, year: ov.data.anchor.slice(0, 4) }) : baseTitle;
   const embedUrl = absoluteUrl(`/embed/${route.locale}/map?d=${disease}${region ? '&region=' + encodeURIComponent(region) : ''}&snapshot=${core.manifest.snapshot_id}`);
 
   const exportMap = async (kind: 'png' | 'svg') => {
@@ -183,6 +185,7 @@ export function Overview() {
             <button type="button" class="btn small" onClick={() => setTable(!table)}>{table ? t('action.viewMap') : t('action.viewData')}</button>
             <button type="button" class="btn small" disabled={table} onClick={() => exportMap('png')}>{t('action.png')}</button>
             <button type="button" class="btn small" disabled={table} onClick={() => exportMap('svg')}>{t('action.svg')}</button>
+            {prov && <CiteButton prov={prov} title={title} subtitle={windowText} />}
             <button type="button" class="btn small" onClick={() => setEmbed(true)}>{t('action.embed')}</button>
             <a class="btn small" href={href(route, 'map', { d: disease })}>{t('overview.openMap')}</a>
             <a class="btn small" href={href(route, 'disease/' + disease)}>{t('overview.openDisease', { disease: diseaseName(core, disease) })}</a>
@@ -202,7 +205,7 @@ export function Overview() {
             <header><h2>{t('overview.active')}</h2></header>
             <p class="sub">{t('overview.activeSub')}</p>
             {events.loading && <Loading />}
-            <ul class="list">{active.slice(0, 8).map((e) => <EventRow key={e.event_id} e={e} showScore={analyst} />)}</ul>
+            <ul class="list">{active.slice(0, analyst ? 8 : 5).map((e) => <EventRow key={e.event_id} e={e} showScore={analyst} />)}</ul>
             {!events.loading && !active.length && <p class="muted">{t('overview.noActive')}</p>}
             <p><a href={href(route, 'outbreaks')}>{t('overview.allOutbreaks', { n: events.data?.n_events ?? 0 })}</a></p>
           </section>
@@ -219,6 +222,8 @@ export function Overview() {
 
       <h2>{t('overview.trends')}</h2>
       <p class="muted small">{t('overview.trendsSub')}</p>
+      {/* Simple mode keeps the page short: the trend cards open on request. */}
+      <details class="more" open={analyst} data-testid="trends"><summary>{t('overview.trendsShow', { n: sparks.data?.length ?? 0 })}</summary>
       <div class="grid three">
         {(sparks.data ?? []).map((o) => {
           const cut = o.global.p.length - (o.period_type === 'Y' ? 30 : o.period_type === 'M' ? 60 : 104);
@@ -236,6 +241,7 @@ export function Overview() {
           );
         })}
       </div>
+      </details>
     </>
   );
 }

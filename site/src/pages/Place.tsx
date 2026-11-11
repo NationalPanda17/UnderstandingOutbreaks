@@ -8,6 +8,7 @@ import { comparableKeys, placeName, seriesLabel, toSeries } from '../lib/series'
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { Regions } from '../components/Regions';
+import { ReportingChip } from '../components/ReportingHealth';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
@@ -79,6 +80,7 @@ export function Place({ iso3 }: { iso3: string }) {
 
       {model && d && disease && (
         <>
+          <ReportingChip disease={disease} iso3={iso3} />
           {analyst && (
             <section class="card" style={{ marginBottom: '16px' }}>
               <h2>{t('place.series')}</h2>

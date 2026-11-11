@@ -47,6 +47,7 @@ function Page({ parts }: { parts: string[] }) {
     case 'cite': return <Cite />;
     case 'researchers': return <Researchers />;
     case 'watchlists': return <Watchlists />;
+    case 'compare': return <Lazy key="cmp" load={() => import('./workbench/ComparePlain')} parts={parts.slice(1)} />;
     case 'workbench': return <Lazy key="wb" load={() => import('./workbench/index')} parts={parts.slice(1)} />;
     case 'learn': return <Lazy key="learn" load={() => import('./sim/ui/index')} parts={parts.slice(1)} />;
     default: return <div class="notice warn" role="alert">{t('state.notFound')}</div>;

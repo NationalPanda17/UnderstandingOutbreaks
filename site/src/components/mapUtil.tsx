@@ -2,6 +2,8 @@
 import { smart, t } from '../lib/i18n';
 
 export const RAMP = ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8', '#0c2c84'];
+/** Reporting completeness: a different hue from disease rates, so the two layers are never mistaken for each other. */
+export const REPORT_RAMP = ['#ffffff', '#e6e1f0', '#c3bbdd', '#9b8fc7', '#7059aa', '#451c7e'];
 export const DENSITY_RAMP = ['#f7f7f7', '#d9d9d9', '#bdbdbd', '#969696', '#636363', '#252525'];
 
 export interface MapPoint { id: string; lon: number; lat: number; label: string; precision?: string; sources: string[]; weight?: number; color?: string; radius?: number; sub?: string }
@@ -70,12 +72,12 @@ export function classifyMissing(grid: Record<string, (number | null)[]>, ti: num
   return out;
 }
 
-export function MapLegend({ breaks, ramp = RAMP, title, pending, scale }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean; scale?: 'view' | 'fixed' | 'own' }) {
+export function MapLegend({ breaks, ramp = RAMP, title, pending, scale, zero }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean; scale?: 'view' | 'fixed' | 'own'; zero?: string }) {
   const stops = [0, ...breaks];
   return (
     <div class="maplegend" aria-label={title}>
       <span>{title}:</span>
-      <span><span class="sw" style={{ background: ramp[0] }} /> {t('map.zero')}</span>
+      <span><span class="sw" style={{ background: ramp[0] }} /> {zero ?? t('map.zero')}</span>
       {stops.slice(1).map((b, i) => <span key={b}><span class="sw" style={{ background: ramp[Math.min(ramp.length - 1, i + 1)] }} /> {i === 0 ? '<' : '≥'} {smart(i === 0 ? b : stops[i])}</span>)}
       {stops.length > 1 && <span><span class="sw" style={{ background: ramp[Math.min(ramp.length - 1, stops.length)] }} /> ≥ {smart(stops[stops.length - 1])}</span>}
       {pending && <span><span class="sw pending" /> {t('map.pending')}</span>}

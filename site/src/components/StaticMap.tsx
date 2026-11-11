@@ -79,6 +79,7 @@ export function StaticMap(props: StaticMapProps) {
   const box = (REGION_VIEWS[props.region ?? 'world'] ?? REGION_VIEWS.world).box;
   const { list, project } = useMemo(() => (fc ? shapes(fc, box, w, h) : { list: [] as Shape[], project: (() => null) as Project }), [fc, box, w, h]);
   const ramp = props.ramp ?? RAMP;
+  const [focus, setFocus] = useState<number | null>(null);
   if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;
   if (!fc) return <div role="status" class="small muted">{t('state.loadingMap')}</div>;
   return (
@@ -103,9 +104,13 @@ export function StaticMap(props: StaticMapProps) {
         const xy = project([p.lon, p.lat]); if (!xy || xy[0] < 0 || xy[0] > w || xy[1] < 0 || xy[1] > h) return null;
         const vague = p.precision === 'country' || p.precision === 'admin1';
         return (
-          <g key={p.id + i} style={props.onPoint ? { cursor: 'pointer' } : undefined} onClick={props.onPoint ? () => props.onPoint!(p.id) : undefined}>
-            {vague && <circle cx={xy[0]} cy={xy[1]} r={(p.radius ?? 5) + 5} fill="#7a5c00" fill-opacity="0.07" stroke="#7a5c00" stroke-opacity="0.35" stroke-width="0.8" />}
-            <circle cx={xy[0]} cy={xy[1]} r={p.radius ?? 5} fill="#7a5c00" fill-opacity="0.88" stroke="#fff" stroke-width="1.5"><title>{p.label}{p.sub ? ' · ' + p.sub : ''}</title></circle>
+          <g key={p.id + i} style={props.onPoint ? { cursor: 'pointer', outline: 'none' } : undefined} onClick={props.onPoint ? () => props.onPoint!(p.id) : undefined}
+            tabIndex={props.onPoint ? 0 : undefined} role={props.onPoint ? 'link' : undefined} aria-label={p.label + (p.sub ? '. ' + p.sub : '')}
+            onKeyDown={props.onPoint ? (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); props.onPoint!(p.id); } } : undefined}
+            onFocus={() => setFocus(i)} onBlur={() => setFocus(null)} onMouseEnter={() => setFocus(i)} onMouseLeave={() => setFocus(null)}>
+            {vague && <circle cx={xy[0]} cy={xy[1]} r={(p.radius ?? 5) + 5} fill="#4d3900" fill-opacity="0.07" stroke="#4d3900" stroke-opacity="0.35" stroke-width="0.8" />}
+            <circle cx={xy[0]} cy={xy[1]} r={(p.radius ?? 5) + (focus === i ? 2 : 0)} fill="#4d3900" fill-opacity="0.92" stroke={focus === i ? '#17272b' : '#fff'} stroke-width={focus === i ? 2.5 : 1.5} />
+            {focus === i && (() => { const tx = Math.min(Math.max(xy[0], 150), w - 150); const ty = xy[1] > 60 ? xy[1] - 16 : xy[1] + 30; const txt = p.label + (p.sub ? ' · ' + p.sub : ''); return (<g pointer-events="none"><rect x={tx - 146} y={ty - 15} width="292" height="22" rx="5" fill="#fff" stroke="#8fa1a5" /><text x={tx} y={ty} text-anchor="middle" font-size="11.5" fill="#17272b">{txt.length > 52 ? txt.slice(0, 51) + '…' : txt}</text></g>); })()}
           </g>
         );
       })}

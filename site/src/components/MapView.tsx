@@ -68,7 +68,9 @@ export default function MapView(props: MapProps) {
       const style = await buildStyle();
       if (dead || !el.current) return;
       const v = props.view ?? { lng: 15, lat: 18, z: 1.1 };
-      const map = new maplibregl.Map({ container: el.current, style, center: [v.lng, v.lat], zoom: v.z, minZoom: 0.5, maxZoom: 9, attributionControl: false, dragRotate: false, pitchWithRotate: false, canvasContextAttributes: { preserveDrawingBuffer: true }, preserveDrawingBuffer: true } as any);
+      const map = new maplibregl.Map({ container: el.current, style, center: [v.lng, v.lat], zoom: v.z, minZoom: 0.5, maxZoom: 9, attributionControl: false, dragRotate: false, pitchWithRotate: false,
+        // On phones and other touch screens a one-finger drag scrolls the page; two fingers move the map.
+        cooperativeGestures: window.matchMedia?.('(max-width: 760px), (pointer: coarse)').matches ?? false, canvasContextAttributes: { preserveDrawingBuffer: true }, preserveDrawingBuffer: true } as any);
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.keyboard.enable();
       mapRef.current = map;
@@ -167,12 +169,12 @@ export default function MapView(props: MapProps) {
     srcIds.forEach((s) => { clusterProperties['s_' + s] = ['+', ['case', ['in', s, ['get', 'src']], 1, 0]]; });
     map.addSource('points', {
       type: 'geojson', cluster: mode === 'clusters', clusterRadius: 40, clusterMaxZoom: 6, clusterProperties,
-      data: { type: 'FeatureCollection', features: pts.map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { id: p.id, label: p.label, precision: p.precision ?? '', src: p.sources.join(','), w: p.weight ?? 1, color: p.color ?? '#7a5c00', r: p.radius ?? 6, sub: p.sub ?? '' } })) },
+      data: { type: 'FeatureCollection', features: pts.map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { id: p.id, label: p.label, precision: p.precision ?? '', src: p.sources.join(','), w: p.weight ?? 1, color: p.color ?? '#4d3900', r: p.radius ?? 6, sub: p.sub ?? '' } })) },
     } as any);
     if (mode === 'heat') {
       map.addLayer({ id: 'p-heat', type: 'heatmap', source: 'points', paint: { 'heatmap-weight': ['get', 'w'], 'heatmap-radius': 24, 'heatmap-opacity': 0.75, 'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(255,255,204,0)', 0.2, '#c7e9b4', 0.4, '#7fcdbb', 0.6, '#41b6c4', 0.8, '#225ea8', 1, '#0c2c84'] } } as any);
     } else {
-      if (mode === 'clusters') map.addLayer({ id: 'p-cluster', type: 'circle', source: 'points', filter: ['has', 'point_count'], paint: { 'circle-color': '#7a5c00', 'circle-opacity': 0.85, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2, 'circle-radius': ['step', ['get', 'point_count'], 12, 5, 16, 15, 21, 40, 27] } } as any);
+      if (mode === 'clusters') map.addLayer({ id: 'p-cluster', type: 'circle', source: 'points', filter: ['has', 'point_count'], paint: { 'circle-color': '#4d3900', 'circle-opacity': 0.85, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2, 'circle-radius': ['step', ['get', 'point_count'], 12, 5, 16, 15, 21, 40, 27] } } as any);
       // A wide, faint ring says how roughly the notice locates the event: the wider the ring, the vaguer the place.
       map.addLayer({ id: 'p-ring', type: 'circle', source: 'points', filter: ['all', ['!', ['has', 'point_count']], ['in', ['get', 'precision'], ['literal', ['country', 'admin1']]]], paint: { 'circle-color': ['to-color', ['get', 'color']], 'circle-opacity': 0.07, 'circle-stroke-color': ['to-color', ['get', 'color']], 'circle-stroke-opacity': 0.35, 'circle-stroke-width': 0.8, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 1, ['case', ['==', ['get', 'precision'], 'country'], 9, 7], 6, ['case', ['==', ['get', 'precision'], 'country'], 44, 20]] } } as any);
       map.addLayer({ id: 'p-circle', type: 'circle', source: 'points', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['to-color', ['get', 'color']], 'circle-radius': ['get', 'r'], 'circle-opacity': 0.88, 'circle-stroke-color': '#fff', 'circle-stroke-width': ['case', ['==', ['get', 'precision'], 'country'], 2.5, 1], 'circle-stroke-opacity': 1 } } as any);

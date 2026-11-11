@@ -1,5 +1,5 @@
 /** Outbreak list (all event sources, transparent ranking) and auto-generated outbreak detail pages. */
-import { useEffect, useMemo } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type EventIdx } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
@@ -61,6 +61,43 @@ export function Outbreaks() {
   );
 }
 
+/** One dot per official notice on a time axis. Height is the case count the notice states (read automatically);
+ *  a hollow dot on the baseline means no count was read. An out-of-line dot usually exposes a misread figure. */
+function NoticeDots({ reports, sources }: { reports: any[]; sources: Record<string, { short_name: string }> }) {
+  const [tip, setTip] = useState<number | null>(null);
+  if (reports.length < 2) return null;
+  const W = 720, H = 190, L = 46, R = 14, T = 16, B = 34;
+  const t0 = Date.parse(reports[0].published), t1 = Date.parse(reports[reports.length - 1].published);
+  const span = Math.max(1, t1 - t0);
+  const vals = reports.map((r) => (r.counts?.cases?.value as number | undefined) ?? null);
+  const max = Math.max(1, ...vals.filter((v): v is number => v !== null));
+  const x = (r: any) => L + ((Date.parse(r.published) - t0) / span) * (W - L - R);
+  const y = (v: number | null) => (v === null ? H - B : H - B - (v / max) * (H - B - T));
+  const cur = tip !== null ? reports[tip] : null;
+  return (
+    <div class="noticedots" data-testid="notice-dots">
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="group" aria-label={t('timeline.aria')}>
+        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="#8fa1a5" />
+        <line x1={L} y1={T} x2={L} y2={H - B} stroke="#d9e1e3" />
+        <text x={L - 6} y={T + 4} text-anchor="end" font-size="11" fill="#4a5b5f">{num(max)}</text>
+        <text x={L - 6} y={H - B + 4} text-anchor="end" font-size="11" fill="#4a5b5f">0</text>
+        <text x={L} y={H - 8} font-size="11" fill="#4a5b5f">{date(reports[0].published)}</text>
+        <text x={W - R} y={H - 8} text-anchor="end" font-size="11" fill="#4a5b5f">{date(reports[reports.length - 1].published)}</text>
+        {reports.map((r, i) => (
+          <g key={r.report_id} tabIndex={0} role="img" aria-label={`${date(r.published, 'long')}: ${r.title}. ${vals[i] !== null ? t('timeline.stated', { n: num(vals[i]) }) + ' “' + r.counts.cases.quote + '”' : t('timeline.noCount')}`}
+            onFocus={() => setTip(i)} onBlur={() => setTip(null)} onMouseEnter={() => setTip(i)} onMouseLeave={() => setTip(null)} style={{ outline: 'none' }}>
+            <circle cx={x(r)} cy={y(vals[i])} r={tip === i ? 7 : 5} fill={vals[i] === null ? '#fff' : '#0b6e75'} stroke={tip === i ? '#17272b' : '#0b6e75'} stroke-width={tip === i ? 2.5 : 1.5} />
+          </g>
+        ))}
+      </svg>
+      <p class="small" aria-live="polite" style={{ minHeight: '3.2em' }}>
+        {cur ? <><b>{date(cur.published, 'long')}</b> · {sources[cur.source_id]?.short_name} · {cur.title}. {cur.counts?.cases ? <>{t('timeline.stated', { n: num(cur.counts.cases.value) })} <q class="quote">{cur.counts.cases.quote}</q></> : t('timeline.noCount')}</> : <span class="muted">{t('timeline.hint')}</span>}
+      </p>
+      <p class="small muted">{t('timeline.means')}</p>
+    </div>
+  );
+}
+
 export function Outbreak({ id }: { id: string }) {
   const { core, route } = useApp();
   const analyst = route.mode === 'analyst';
@@ -98,6 +135,7 @@ export function Outbreak({ id }: { id: string }) {
           </section>
           <section class="card">
             <h2>{t('outbreak.timeline')}</h2>
+            <NoticeDots reports={e.reports as any[]} sources={core.sources} />
             <ol class="list">
               {(e.reports as any[]).slice().reverse().map((r) => (
                 <li key={r.report_id}>
