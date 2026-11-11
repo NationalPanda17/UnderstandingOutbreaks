@@ -4,7 +4,7 @@ Written content in this repository (documentation in `docs/`, the Markdown files
 site's own explanatory text in `site/src/i18n/`) is licensed under the
 [Creative Commons Attribution 4.0 International License (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 
-Attribution: "UnderstandingOutbreaks contributors".
+Attribution: "Understanding Outbreaks contributors".
 
 Source code is licensed separately under the MIT License (see `LICENSE`).
 

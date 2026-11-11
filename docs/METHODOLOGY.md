@@ -1,6 +1,6 @@
 # Methodology
 
-UnderstandingOutbreaks aggregates and explains official public reports. It is not a surveillance system, not an
+Understanding Outbreaks aggregates and explains official public reports. It is not a surveillance system, not an
 early-warning service, not a forecasting service, and not medical advice. The same text, in plain language and in
 four languages, is on the site's Methodology page; this file is the reference version. Method changes are logged in
 `docs/METHODS_CHANGELOG.md`.

@@ -172,7 +172,7 @@ def test_catalog_metadata_uses_placeholders_not_invented_identities():
         text = (D / name).read_text()
         assert site["identity"]["creator"] in text
         assert "orcid.org" not in text.lower()
-    assert site["identity"]["creator"] == "UnderstandingOutbreaks contributors" and site["identity"]["orcid"] == ""
+    assert site["identity"]["creator"] == "Understanding Outbreaks contributors" and site["identity"]["orcid"] == ""
 
 
 def test_production_build_rejects_test_data(monkeypatch):

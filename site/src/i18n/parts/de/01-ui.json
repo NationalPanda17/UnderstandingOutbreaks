@@ -46,7 +46,7 @@
   "title.watchlists": "Merklisten",
   "persist.notice": "Gemeldete Zahlen treffen verspätet ein, erfassen keine Fälle, die nie getestet oder gemeldet wurden, und beruhen auf Definitionen, die sich je nach Quelle und Land unterscheiden.",
   "persist.more": "So lesen Sie diese Daten",
-  "footer.positioning": "UnderstandingOutbreaks trägt offizielle öffentliche Berichte zusammen und erklärt sie.",
+  "footer.positioning": "Understanding Outbreaks trägt offizielle öffentliche Berichte zusammen und erklärt sie.",
   "footer.official": "Offizielle Empfehlungen: Weltgesundheitsorganisation",
   "footer.licenseCode": "Code: MIT-Lizenz",
   "footer.licenseContent": "Texte und Dokumentation: CC BY 4.0",
@@ -229,7 +229,7 @@
   "embed.intro": "Fügen Sie diesen Code in eine Seite ein. Die Einbettung ist eine reduzierte, barrierearme Fassung dieser Ansicht; Quelle und Nachverfolgungslink bleiben erhalten.",
   "embed.pinned": "Die Einbettung ist auf den Datenstand {snapshot} festgelegt und zeigt daher dauerhaft genau diese Zahlen. Entfernen Sie den Parameter snapshot, um stets die neuesten Daten zu zeigen.",
   "embed.privacy": "Einbettungen laden nur Dateien dieser Website, setzen keine Cookies und stellen keine Anfragen an Dritte.",
-  "embed.fullSite": "Auf UnderstandingOutbreaks öffnen",
+  "embed.fullSite": "Auf Understanding Outbreaks öffnen",
   "api.intro": "Diese statischen Dateien enthalten die Werte hinter dieser Ansicht. Es sind einfache JSON-Dateien, die direkt abgerufen werden können.",
   "code.intro": "Dieser Code bildet genau diese Ansicht nach, einschließlich Filtern und Umrechnungen, auf Grundlage der veröffentlichten Revisionshistorie zum Datenstand {snapshot}.",
   "code.openSql": "In der SQL-Konsole öffnen",
@@ -584,5 +584,5 @@
   "methodology.params": "Aktuelle Parameter der Methoden",
   "methodology.paramsNote": "Direkt aus den veröffentlichten Daten gelesen; sie entsprechen daher stets dem, was die Datenverarbeitung verwendet hat.",
   "methodology.changelog": "Änderungsprotokoll der Methoden",
-  "about.title": "Über UnderstandingOutbreaks"
+  "about.title": "Über Understanding Outbreaks"
 }

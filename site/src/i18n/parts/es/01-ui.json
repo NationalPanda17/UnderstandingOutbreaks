@@ -46,7 +46,7 @@
   "title.watchlists": "Listas de seguimiento",
   "persist.notice": "Las cifras notificadas llegan con retraso, no incluyen los casos que nunca se analizaron ni se notificaron y usan definiciones que difieren entre fuentes y países.",
   "persist.more": "Cómo leer estos datos",
-  "footer.positioning": "UnderstandingOutbreaks reúne y explica informes públicos oficiales.",
+  "footer.positioning": "Understanding Outbreaks reúne y explica informes públicos oficiales.",
   "footer.official": "Orientación oficial: Organización Mundial de la Salud",
   "footer.licenseCode": "Código: licencia MIT",
   "footer.licenseContent": "Textos y documentación: CC BY 4.0",
@@ -229,7 +229,7 @@
   "embed.intro": "Pegue este código en una página. La inserción es una versión mínima y accesible de esta vista que conserva la fuente y el enlace de trazabilidad.",
   "embed.pinned": "La inserción está fijada a la instantánea {snapshot}, por lo que seguirá mostrando exactamente estas cifras. Quite el parámetro snapshot para mostrar siempre los datos más recientes.",
   "embed.privacy": "Las inserciones solo cargan archivos de este sitio, no usan cookies y no hacen peticiones a terceros.",
-  "embed.fullSite": "Abrir en UnderstandingOutbreaks",
+  "embed.fullSite": "Abrir en Understanding Outbreaks",
   "api.intro": "Estos archivos estáticos contienen los valores de esta vista. Son JSON sencillo y pueden descargarse directamente.",
   "code.intro": "Este código reproduce la vista exacta, con filtros y transformaciones, a partir del historial de revisiones publicado en la instantánea {snapshot}.",
   "code.openSql": "Abrir en la consola SQL",
@@ -584,5 +584,5 @@
   "methodology.params": "Parámetros actuales de los métodos",
   "methodology.paramsNote": "Se leen directamente de los datos publicados, por lo que siempre coinciden con lo que usó el proceso de datos.",
   "methodology.changelog": "Registro de cambios de métodos",
-  "about.title": "Acerca de UnderstandingOutbreaks"
+  "about.title": "Acerca de Understanding Outbreaks"
 }

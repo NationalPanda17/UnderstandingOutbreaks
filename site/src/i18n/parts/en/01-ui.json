@@ -229,7 +229,7 @@
   "embed.intro": "Paste this code into a page. The embed is a minimal, accessible version of this view with its source and trace link kept.",
   "embed.pinned": "The embed is pinned to snapshot {snapshot}, so it will keep showing exactly these numbers. Remove the snapshot parameter to always show the latest data.",
   "embed.privacy": "Embeds load only this site’s own files, set no cookies and make no third-party requests.",
-  "embed.fullSite": "Open on UnderstandingOutbreaks",
+  "embed.fullSite": "Open on Understanding Outbreaks",
   "api.intro": "These static files hold the values behind this view. They are plain JSON and can be fetched directly.",
   "code.intro": "This code reproduces the exact view, including filters and transforms, from the published revision history at snapshot {snapshot}.",
   "code.openSql": "Open in SQL console",
@@ -584,5 +584,5 @@
   "methodology.params": "Current method parameters",
   "methodology.paramsNote": "Read live from the published data, so this always matches what the pipeline used.",
   "methodology.changelog": "Methods changelog",
-  "about.title": "About UnderstandingOutbreaks"
+  "about.title": "About Understanding Outbreaks"
 }

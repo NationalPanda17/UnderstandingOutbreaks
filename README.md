@@ -1,9 +1,9 @@
-# UnderstandingOutbreaks
+# Understanding Outbreaks
 
 An open-source, static-first website that helps people understand infectious disease trends, from a global overview
 down to individual outbreaks, with every number traceable to its original source.
 
-**What it is not.** UnderstandingOutbreaks aggregates and explains official public reports. It is not a surveillance
+**What it is not.** Understanding Outbreaks aggregates and explains official public reports. It is not a surveillance
 system, not an early-warning service, not a forecasting service, and not medical advice. Automated signal flags are
 informational labels, not alerts. The simulation sandbox is an educational tool and never describes a real outbreak.
 

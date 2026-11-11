@@ -61,7 +61,7 @@ export function flowDiagramSvg(spec: ModelSpec, labels: { simulated: string; inf
 
 const header = (spec: ModelSpec, c: string) => [
   `${c} ILLUSTRATIVE SIMULATION: not a forecast, not fitted to data.`,
-  `${c} Reproduces a run of the UnderstandingOutbreaks teaching sandbox (engine ${ENGINE_VERSION}, model spec ${spec.specVersion}).`,
+  `${c} Reproduces a run of the Understanding Outbreaks teaching sandbox (engine ${ENGINE_VERSION}, model spec ${spec.specVersion}).`,
   `${c} Model: ${spec.name}. Solver in the browser: ${spec.solver.method}${spec.seed !== null ? `, seed ${spec.seed}` : ''}.`,
 ].join('\n');
 

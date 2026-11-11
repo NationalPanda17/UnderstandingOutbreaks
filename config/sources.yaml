@@ -205,16 +205,16 @@ sources:
     cadence: yearly
     kind: basemap
   - id: uo_site
-    name: UnderstandingOutbreaks (computed by this project)
-    short_name: UnderstandingOutbreaks
-    publisher: UnderstandingOutbreaks contributors
+    name: Understanding Outbreaks (computed by this project)
+    short_name: Understanding Outbreaks
+    publisher: Understanding Outbreaks contributors
     landing_url: /methodology
     license: CC BY 4.0 (methods and text); inputs keep their source licenses
     license_url: https://creativecommons.org/licenses/by/4.0/
     license_verification: verified-live
     license_checked: "2026-11-09"
     redistribute_raw: true
-    citation: "UnderstandingOutbreaks contributors. UnderstandingOutbreaks (site-derived values; see methodology)."
+    citation: "Understanding Outbreaks contributors. Understanding Outbreaks (site-derived values; see methodology)."
     cadence: daily
     kind: derived
   - id: literature
@@ -233,7 +233,7 @@ sources:
   - id: test_data
     name: TEST DATA (fixtures, not real)
     short_name: TEST DATA
-    publisher: UnderstandingOutbreaks test suite
+    publisher: Understanding Outbreaks test suite
     landing_url: /methodology
     license: Not for publication
     license_url: /methodology

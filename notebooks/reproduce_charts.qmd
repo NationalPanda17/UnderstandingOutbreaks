@@ -3,7 +3,7 @@ title: "Reproduce the site's main chart (R)"
 format: html
 ---
 
-This notebook loads UnderstandingOutbreaks data with R, redraws a country chart with likely-incomplete periods
+This notebook loads Understanding Outbreaks data with R, redraws a country chart with likely-incomplete periods
 marked, and loads a specific snapshot. The data aggregates official public reports; it is not a surveillance
 system and not medical advice. Install the pinned packages first: `source("renv-packages.R")`.
 
@@ -26,7 +26,7 @@ ggplot(country, aes(period_start, value)) +
   geom_line(data = filter(country, !likely_incomplete), colour = "#0072B2") +
   geom_line(data = filter(country, likely_incomplete), colour = "#0072B2", linetype = "dotted") +
   labs(title = paste(DISEASE, "in", ISO3), x = NULL, y = "Reported",
-       caption = paste0("Source: ", country$source_id[1], " via UnderstandingOutbreaks, snapshot ", manifest$snapshot_id,
+       caption = paste0("Source: ", country$source_id[1], " via Understanding Outbreaks, snapshot ", manifest$snapshot_id,
                         ". Dotted = likely incomplete."))
 ```
 

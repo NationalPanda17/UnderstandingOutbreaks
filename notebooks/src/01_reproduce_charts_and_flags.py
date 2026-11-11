@@ -1,7 +1,7 @@
 # %% [markdown]
 # # Reproduce the site's main chart and signal flags
 #
-# This notebook loads UnderstandingOutbreaks data, redraws a country chart, recomputes the automated signal
+# This notebook loads Understanding Outbreaks data, redraws a country chart, recomputes the automated signal
 # flags with the documented method, and shows how to load a specific snapshot.
 #
 # The data aggregates official public reports. It is not a surveillance system and not medical advice.
@@ -48,7 +48,7 @@ try:
         ax.axvspan(pd.to_datetime(inc["period_start"]).min(), pd.to_datetime(country["period_start"]).max(), color="#dddddd", hatch="//", alpha=0.6, label="likely incomplete")
         ax.plot(pd.to_datetime(inc["period_start"]), inc["value"], color="#0072B2", linestyle=":")
     ax.set_title(f"{DISEASE} in {ISO3}: reported {country['metric'].iloc[0]} ({country['case_definition'].iloc[0]})")
-    ax.set_xlabel(f"Source: {country['source_id'].iloc[0]} via UnderstandingOutbreaks, snapshot {manifest['snapshot_id']}")
+    ax.set_xlabel(f"Source: {country['source_id'].iloc[0]} via Understanding Outbreaks, snapshot {manifest['snapshot_id']}")
     ax.legend(loc="upper left")
     fig.tight_layout()
     os.makedirs("out", exist_ok=True)
@@ -153,4 +153,4 @@ print(changed.tail(10).to_string())
 sources = {s["id"]: s for s in read_json("sources.json")["sources"]}
 for sid in sorted(set(country["source_id"])):
     print("-", sources[sid]["citation"], "| License:", sources[sid]["license"])
-print(f"- UnderstandingOutbreaks contributors. UnderstandingOutbreaks, snapshot {manifest['snapshot_id']}.")
+print(f"- Understanding Outbreaks contributors. Understanding Outbreaks, snapshot {manifest['snapshot_id']}.")

@@ -22,7 +22,7 @@ export interface ViewSpec {
 }
 
 const header = (v: ViewSpec, c: string) => [
-  `${c} UnderstandingOutbreaks: reproduces one view exactly (snapshot ${v.snapshot}).`,
+  `${c} Understanding Outbreaks: reproduces one view exactly (snapshot ${v.snapshot}).`,
   ...(v.viewUrl ? [`${c} View: ${v.viewUrl}`] : []),
   `${c} Sources: ${v.sources.join('; ')}. Licenses: see ${v.base}/sources.json`,
   `${c} Aggregated official public reports. Not a surveillance system; not medical advice.`,

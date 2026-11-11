@@ -1,9 +1,9 @@
 cff-version: 1.2.0
-title: "UnderstandingOutbreaks"
+title: "Understanding Outbreaks"
 message: "If you use this software or its datasets, please cite it using this metadata and cite the original data sources."
 type: software
 authors:
-  - name: "UnderstandingOutbreaks contributors"
+  - name: "Understanding Outbreaks contributors"
 url: "https://understandingoutbreaks.pages.dev"
 license: MIT
 abstract: "An open-source, static website and data pipeline that aggregates and explains official public reports of infectious disease activity, with record-level provenance. Not a surveillance system; not medical advice."

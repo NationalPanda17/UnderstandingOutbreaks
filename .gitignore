@@ -12,3 +12,4 @@ site/public/r2/
 site/dist-r2/
 notebooks/out/
 site/public/notebooks/
+.claude/

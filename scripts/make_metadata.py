@@ -13,7 +13,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 site = json.loads((ROOT / "config" / "site.json").read_text())
 ident = site["identity"]
-PLACEHOLDER = "UnderstandingOutbreaks contributors"
+PLACEHOLDER = "Understanding Outbreaks contributors"
 
 
 def main() -> int:
@@ -46,7 +46,7 @@ def main() -> int:
     if ident.get("affiliation"):
         creator["affiliation"] = ident["affiliation"]
     zen = {"title": site["name"], "upload_type": "dataset", "creators": [creator], "license": "CC-BY-4.0", "access_right": "open",
-           "description": "Dataset snapshot and source code of UnderstandingOutbreaks: aggregated official public reports of infectious disease activity with record-level provenance. Each source keeps its own license (see sources.json). Not a surveillance system; not medical advice.",
+           "description": "Dataset snapshot and source code of Understanding Outbreaks: aggregated official public reports of infectious disease activity with record-level provenance. Each source keeps its own license (see sources.json). Not a surveillance system; not medical advice.",
            "keywords": ["infectious diseases", "outbreaks", "open data", "provenance"]}
     (ROOT / ".zenodo.json").write_text(json.dumps(zen, indent=2) + "\n")
     print("wrote CITATION.cff and .zenodo.json from config/site.json")

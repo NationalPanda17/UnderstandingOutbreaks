@@ -123,7 +123,7 @@ export function caption(core: Core, prov: Prov, title: string, subtitle?: string
   const lic = Array.from(new Set(prov.sourceIds.map((s) => core.sources[s]?.license).filter(Boolean))).join('; ');
   const kind = prov.origin === 'simulated'
     ? 'Illustrative simulation: not a forecast, not fitted to data.'
-    : prov.origin === 'site-derived' ? 'Computed by UnderstandingOutbreaks from the sources listed.' : 'As reported by the sources listed.';
+    : prov.origin === 'site-derived' ? 'Computed by Understanding Outbreaks from the sources listed.' : 'As reported by the sources listed.';
   const sim = prov.sim ? ` Engine ${prov.sim.engineVersion}, ${prov.sim.solver}${prov.sim.seed !== null ? ', seed ' + prov.sim.seed : ''}.` : '';
   return `${title}${subtitle ? ' (' + subtitle + ')' : ''}. ${kind}${sim} ${prov.origin === 'simulated' ? 'References' : 'Source'}: ${src}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''} ${lic ? 'License: ' + lic + '. ' : ''}Via ${SITE.name} (${SITE.shortUrl}), snapshot ${prov.snapshotId}.`;
 }
@@ -152,7 +152,7 @@ export interface ImageMeta { title: string; subtitle?: string; sourceLine: strin
 export function imageMeta(core: Core, prov: Prov, title: string, subtitle?: string): ImageMeta {
   return {
     title, subtitle,
-    sourceLine: (prov.origin === 'simulated' ? 'Simulated. References: ' : prov.origin === 'site-derived' ? 'Computed by UnderstandingOutbreaks from: ' : 'Source: ') + prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', '),
+    sourceLine: (prov.origin === 'simulated' ? 'Simulated. References: ' : prov.origin === 'site-derived' ? 'Computed by Understanding Outbreaks from: ' : 'Source: ') + prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', '),
     licenseLine: 'License: ' + (Array.from(new Set(prov.sourceIds.map((s) => core.sources[s]?.license).filter(Boolean))).join('; ') || 'see sources'),
     asOf: prov.asOf, shortUrl: SITE.shortUrl,
     watermark: prov.origin === 'simulated' ? 'ILLUSTRATIVE SIMULATION · NOT A FORECAST · NOT FITTED TO DATA' : undefined,

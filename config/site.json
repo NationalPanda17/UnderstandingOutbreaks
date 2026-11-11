@@ -1,5 +1,5 @@
 {
-  "name": "UnderstandingOutbreaks",
+  "name": "Understanding Outbreaks",
   "baseUrl": "https://understandingoutbreaks.pages.dev",
   "shortUrl": "understandingoutbreaks.pages.dev",
   "dataPath": "/data/v1",
@@ -17,8 +17,8 @@
     {"code": "de", "name": "Deutsch", "dir": "ltr", "status": "machine-drafted"}
   ],
   "identity": {
-    "creator": "UnderstandingOutbreaks contributors",
-    "maintainer": "UnderstandingOutbreaks contributors",
+    "creator": "Understanding Outbreaks contributors",
+    "maintainer": "Understanding Outbreaks contributors",
     "contact": "",
     "securityContact": "",
     "orcid": "",
