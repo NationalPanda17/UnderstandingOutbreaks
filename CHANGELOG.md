@@ -2,6 +2,11 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-11 — More frequent updates
+<!-- type: feature -->
+- The site now checks the official notice feeds every hour and runs a full update as soon as a new notice is listed.
+- The full update runs every six hours instead of once a day. A run that finds nothing new publishes nothing.
+
 ## 2026-11-11 — Outbreak Spread Explorer
 <!-- type: feature -->
 - New tool: step through one outbreak notice by notice. Countries appear on the date of the first official notice

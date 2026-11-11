@@ -1,13 +1,10 @@
 name: Live-site health check
 # Opens the live site in a real browser and checks that the map, search, the SQL console, an embed and the daily
-# data update still work, and that nothing is loaded from other servers. Runs every Monday and after each deploy.
+# data update still work, and that nothing is loaded from other servers. Runs every Monday and after each deploy (the deploy workflow starts it).
 # On failure it opens (or comments on) a GitHub issue. It only reads the public site and changes nothing.
 on:
   schedule:
     - cron: "41 7 * * 1"
-  workflow_run:
-    workflows: ["Update data and deploy"]
-    types: [completed]
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,8 +14,6 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check:
-    # after a deploy, only when that deploy succeeded (a failed one already opens its own issue)
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -29,7 +24,7 @@ jobs:
       - working-directory: healthcheck
         run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
       - name: Give a fresh deploy a minute to reach every edge location
-        if: github.event_name == 'workflow_run'
+        if: github.event_name == 'workflow_dispatch'
         run: sleep 60
       - name: Check the live site
         id: check

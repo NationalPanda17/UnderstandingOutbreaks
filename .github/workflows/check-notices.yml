@@ -1,0 +1,27 @@
+name: Check for new notices
+# Hourly, cheap check of the official notice feeds (WHO Disease Outbreak News, CDC travel notices, ECDC updates).
+# When a feed lists a notice the live site does not have yet, it starts the full "Update data and deploy" workflow.
+# It changes nothing itself: no data is written, no pull request is opened. The hours of the six-hourly full update
+# are left out, since that run reads the same feeds.
+on:
+  schedule:
+    - cron: "47 0-4,6-10,12-16,18-22 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write   # only to start the update workflow
+concurrency: { group: check-notices, cancel-in-progress: true }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet requests==2.34.2 PyYAML==6.0.3
+      - id: check
+        working-directory: pipeline
+        run: python3 -m uo.notice_check
+      - name: Start the full update
+        if: steps.check.outputs.new == 'true'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh workflow run update-data.yml --repo "${{ github.repository }}"

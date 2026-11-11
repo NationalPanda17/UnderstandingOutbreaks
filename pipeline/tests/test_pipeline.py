@@ -633,3 +633,24 @@ def test_quoted_sentences_are_verbatim_and_limited():
     assert E.quoted_sentences(text, E.ONSET_RX) == ["Symptom onset was on 1 October 2026."]
     assert E.quoted_sentences("Nothing relevant here.", E.ROUTE_RX) == []
     assert all(q in text for q in route)   # quotes are the notice's own words, never rewritten
+
+
+def test_notice_check_only_reports_unknown_ids():
+    from uo.notice_check import new_ids
+    assert new_ids(["a:1", "a:2", "b:9", "a:2"], ["a:1", "zz"]) == ["a:2", "b:9"]
+    assert new_ids(["a:1"], ["a:1"]) == []
+    assert new_ids([], ["a:1"]) == []
+
+
+def test_notice_check_filters_general_feeds_like_the_pipeline():
+    import datetime as dt
+    from uo import events as ev
+    from uo.core import load_diseases
+    from uo.notice_check import recent_reports
+    rss = b"""<?xml version="1.0"?><rss><channel>
+      <item><title>Measles outbreak update</title><link>https://example.org/a</link><pubDate>Mon, 02 Nov 2026 10:00:00 GMT</pubDate><description>x</description></item>
+      <item><title>Annual meeting of the network</title><link>https://example.org/b</link><pubDate>Mon, 02 Nov 2026 10:00:00 GMT</pubDate><description>x</description></item>
+    </channel></rss>"""
+    ds = {"id": "t", "source_id": "ecdc", "connector": "rss_notices", "url": "https://example.org/feed", "require_disease": True}
+    reps = recent_reports(ds, ev.DiseaseNormalizer(load_diseases()), dt.date(2026, 11, 3), get=lambda url, **k: (rss, {}))
+    assert [r["title"] for r in reps] == ["Measles outbreak update"]

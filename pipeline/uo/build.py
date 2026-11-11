@@ -13,6 +13,7 @@ import argparse
 import datetime as dt
 import json
 import shutil
+import os
 import sys
 import traceback
 
@@ -192,6 +193,12 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
                           status=status, events=ev_out["events"], event_history=ev_out["history"],
                           unmapped=ev_out["unmapped"], subnational=sub, now=now, changes=changes if is_new_snapshot else changes.iloc[0:0])
     summary = publish.publish_all(ctx, log)
+    # Notice ids this run already knows about. The hourly check (uo.notice_check) compares the live feeds with this
+    # list and starts a full update only when a feed lists a notice that is not in it.
+    write_json(DATA_OUT / "events" / "report_ids.json", {
+        "origin_type": "site-derived", "source_ids": sorted({d["source_id"] for d in load_yaml(CONFIG / "datasets.yaml")["events"]}),
+        "snapshot_id": snapshot_id, "generated_at": iso(now), "report_ids": ev_out["known_ids"]})
+    summary["changed"] = bool(is_new_snapshot)
     log("done", json.dumps(summary))
     return summary
 
@@ -203,6 +210,7 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
     cfg = load_yaml(CONFIG / "datasets.yaml")["events"]
     normalizer = ev.DiseaseNormalizer(diseases_doc)
     last_good: dict = read_json(STATE / "event_reports.json", {})
+    seen: dict[str, list[str]] = {}  # every notice id the feeds listed this run, kept even if the source is then quarantined
     for ds in cfg:
         dsid, source = ds["id"], registry[ds["source_id"]]
         st = status.setdefault(dsid, {})
@@ -221,6 +229,7 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
             if ds.get("require_disease"):
                 # A general feed: keep only notices whose title names a disease in the vocabulary.
                 reps = [r for r in reps if normalizer.normalize(r["title"])[0] is not None]
+            seen[dsid] = [r["report_id"] for r in reps]
             # feeds only list current notices: keep earlier ones from the last good run
             known = {r["report_id"]: r for r in last_good.get(dsid, [])}
             prev_n = len(known)
@@ -267,7 +276,9 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
         if not h or {k: v for k, v in h[-1].items() if k != "snapshot_id"} != fp:
             h.append({"snapshot_id": stamp, **fp})
             changed = True
-    return {"events": events, "id_map": id_map, "history": history, "unmapped": unmapped, "changed": changed}
+    known_ids = sorted({r["report_id"] for rs in last_good.values() for r in rs} | {i for ids in seen.values() for i in ids})
+    return {"events": events, "id_map": id_map, "history": history, "unmapped": unmapped, "changed": changed,
+            "known_ids": known_ids}
 
 
 def main(argv=None) -> int:
@@ -278,7 +289,11 @@ def main(argv=None) -> int:
     if a.clean and DATA_OUT.exists():
         shutil.rmtree(DATA_OUT)
     try:
-        run(offline=a.offline)
+        summary = run(offline=a.offline)
+        # Tell the workflow whether anything changed, so an unchanged run can stop before building and deploying.
+        if os.environ.get("GITHUB_OUTPUT"):
+            with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+                fh.write(f"changed={'true' if summary.get('changed') else 'false'}\n")
     except PipelineError as e:
         record_issue("pipeline-failure", "Pipeline run failed", f"**Error:** {e}\n\nThe last good snapshot stays live.",
                      dedupe_key="pipeline-failure")

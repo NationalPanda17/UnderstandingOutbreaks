@@ -70,7 +70,7 @@ The site runs at `understandingoutbreaks.com` (Cloudflare Pages), with large fil
    and `PAGES_PROJECT`. Pipeline state includes raw source files that may not be redistributed, so it is only ever
    written to the private bucket; never make that bucket public.
 5. The scheduled workflow `.github/workflows/update-data.yml` then fetches, validates, builds, uploads R2 files and
-   deploys Pages every day. Without the secrets it still runs the pipeline and tests but skips upload and deploy.
+   deploys Pages every six hours (and within about an hour of a new official notice). Without the secrets it still runs the pipeline and tests but skips upload and deploy.
 
 `npm run build` writes `site/dist/` (for Pages) and `site/dist-r2/` (for R2), plus `_redirects` and `_headers`. The
 build fails if any Pages file exceeds 25 MB or the file count exceeds 20,000.

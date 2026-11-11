@@ -1,10 +1,14 @@
 name: Update data and deploy
-# Scheduled data update. Sources are checked on their own cadence inside the pipeline (daily and weekly sources every
+# Scheduled data update, every six hours. The 05:17 UTC run always rebuilds and deploys; the other three stop after
+# the pipeline step when nothing changed (no new or revised value, no change to an outbreak), so an unchanged run
+# publishes nothing and saves no snapshot. A manual run, and a run started by the hourly notice check, always deploy.
+# Sources are checked on their own cadence inside the pipeline (daily and weekly sources every
 # run, monthly sources weekly, yearly sources monthly). On any failure the last good snapshot stays live and a GitHub
 # issue is opened. This workflow never opens pull requests and never changes code or configuration.
 on:
   schedule:
     - cron: "17 5 * * *"
+    - cron: "17 11,17,23 * * *"
   workflow_dispatch:
     inputs:
       linkcheck: { description: "Also check source links", type: boolean, default: false }
@@ -15,8 +19,12 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: write   # only to start the live-site health check after a deploy
 concurrency: { group: update-data, cancel-in-progress: false }
 env:
+  # 'false' only for the three extra scheduled runs, which deploy only when something changed. The daily run, the
+  # weekly run, and runs started by a person or by the notice check always deploy.
+  ALWAYS_DEPLOY: ${{ github.event.schedule != '17 11,17,23 * * *' }}
   # Two buckets, on purpose. R2_BUCKET is public and holds only files that may be redistributed (tool runtimes and
   # the redistributable part of the raw archive). R2_STATE_BUCKET is private and holds pipeline state, which
   # includes raw source files whose licence does not allow redistribution. State is never written to the public bucket.
@@ -53,19 +61,25 @@ jobs:
         id: pipeline
         working-directory: pipeline
         run: python -m uo.build
+      - name: Nothing changed
+        if: env.ALWAYS_DEPLOY != 'true' && steps.pipeline.outputs.changed != 'true'
+        run: echo "No new or revised data since the last snapshot. Nothing is rebuilt or deployed." >> "$GITHUB_STEP_SUMMARY"
       - name: Check source links
         if: inputs.linkcheck || github.event.schedule == '23 6 * * 1'
         working-directory: pipeline
         run: python -m uo.linkcheck
       - name: Source traceability tests (deployment is blocked if these fail)
+        if: (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         working-directory: pipeline
         run: python -m pytest -q tests/test_traceability.py
       - uses: actions/setup-node@v4
+        if: (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         with: { node-version: "22", cache: npm, cache-dependency-path: site/package-lock.json }
       - working-directory: site
+        if: (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         run: npm ci && node scripts/prepare-tools.mjs && npm run check:i18n && npm run build && npm run check:bundles
       - name: Save pipeline state to the private R2 bucket
-        if: env.R2_STATE_BUCKET != '' && env.AWS_ACCESS_KEY_ID != ''
+        if: env.R2_STATE_BUCKET != '' && env.AWS_ACCESS_KEY_ID != '' && (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         run: |
           aws configure set default.s3.max_concurrent_requests 4
           # sync is safe to repeat: a second pass uploads only what the first one missed
@@ -73,16 +87,21 @@ jobs:
           retry aws s3 sync state/ "s3://$R2_STATE_BUCKET/state/" --endpoint-url "$R2_ENDPOINT" --only-show-errors --exclude "issues/*"
           retry aws s3 sync site/public/data/ "s3://$R2_STATE_BUCKET/published/data/" --endpoint-url "$R2_ENDPOINT" --only-show-errors --delete
       - name: Upload redistributable files (tool runtimes, redistributable raw archive) to the public R2 bucket
-        if: env.R2_BUCKET != '' && env.AWS_ACCESS_KEY_ID != ''
+        if: env.R2_BUCKET != '' && env.AWS_ACCESS_KEY_ID != '' && (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         run: |
           aws configure set default.s3.max_concurrent_requests 4
           for i in 1 2 3; do aws s3 sync site/dist-r2/ "s3://$R2_BUCKET/" --endpoint-url "$R2_ENDPOINT" --only-show-errors && exit 0; sleep $((i * 20)); done; exit 1
       - name: Deploy to Cloudflare Pages
-        if: env.PAGES_PROJECT != '' && env.CLOUDFLARE_API_TOKEN != ''
+        id: deploy
+        if: env.PAGES_PROJECT != '' && env.CLOUDFLARE_API_TOKEN != '' && (env.ALWAYS_DEPLOY == 'true' || steps.pipeline.outputs.changed == 'true')
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 pages deploy site/dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
+      - name: Start the live-site health check
+        if: steps.deploy.outcome == 'success'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh workflow run health-check.yml --repo "${{ github.repository }}" || true
       - name: Open GitHub issues for anything that needs a person (issues only)
         if: always()
         env: { GH_TOKEN: "${{ github.token }}" }

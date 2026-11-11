@@ -20,6 +20,19 @@ of 50 or more, or 1%), no flood of new events (more than 50 and 30%), no loss of
 **quarantines** the dataset: the last good data stays live, the data-quality page shows it, and an issue request is
 written with the failing source, the error, the last good snapshot and a schema diff where detected.
 
+### How often it runs
+
+- **Every six hours** (05:17, 11:17, 17:17, 23:17 UTC) the full pipeline runs. Notice feeds are read on every run;
+  time-series sources are re-downloaded at most once a day (weekly sources daily, monthly weekly, yearly monthly).
+  The 05:17 run always rebuilds and deploys. The other three deploy only when something changed (a new or revised
+  value, or a change to an outbreak); otherwise nothing is published and no snapshot is saved.
+- **Every hour** in between, `uo.notice_check` reads the recent part of the three notice feeds and compares the
+  notice ids with the list the last run published (`events/report_ids.json`). If a feed lists a notice the site does
+  not have, it starts a full run. The check writes no data. A source it cannot read is skipped; the full run is what
+  reports source failures.
+- So a new official notice normally appears on the site within about an hour and a quarter of the source listing
+  it. Edits to a notice already on the site are picked up by the next six-hourly run.
+
 ## Normalization
 
 - Places: ISO 3166-1 alpha-3. Two-letter codes are converted with the GeoNames country table.
