@@ -1,23 +1,145 @@
 {
   "_comment": "Outbound context links. Shown as clearly labelled external links; never embedded, never fetched by the browser unless clicked. Flagged for human review.",
   "disease": {
-    "covid19": [{"label": "Nextstrain: SARS-CoV-2", "url": "https://nextstrain.org/ncov"}],
-    "mpox": [{"label": "Nextstrain: mpox", "url": "https://nextstrain.org/mpox"}],
-    "measles": [{"label": "Nextstrain: measles", "url": "https://nextstrain.org/measles"}],
-    "dengue": [{"label": "Nextstrain: dengue", "url": "https://nextstrain.org/dengue"}],
-    "influenza": [{"label": "Nextstrain: seasonal influenza", "url": "https://nextstrain.org/seasonal-flu"}],
-    "zika": [{"label": "Nextstrain: Zika", "url": "https://nextstrain.org/zika"}],
-    "ebola": [{"label": "Nextstrain: Ebola", "url": "https://nextstrain.org/ebola"}],
-    "avian_influenza": [{"label": "Nextstrain: avian influenza", "url": "https://nextstrain.org/avian-flu"}],
-    "lassa": [{"label": "Nextstrain: Lassa", "url": "https://nextstrain.org/lassa"}]
+    "covid19": [
+      {
+        "label": "Nextstrain: SARS-CoV-2",
+        "url": "https://nextstrain.org/ncov"
+      },
+      {
+        "label": "US CDC wastewater data: SARS-CoV-2 (United States only)",
+        "url": "https://data.cdc.gov/d/j9g8-acpt"
+      }
+    ],
+    "mpox": [
+      {
+        "label": "Nextstrain: mpox",
+        "url": "https://nextstrain.org/mpox"
+      },
+      {
+        "label": "Pathoplexus: mpox (genomic sequences)",
+        "url": "https://pathoplexus.org/mpox"
+      },
+      {
+        "label": "US CDC wastewater data: mpox (United States only)",
+        "url": "https://data.cdc.gov/d/xpxn-rzgz"
+      }
+    ],
+    "measles": [
+      {
+        "label": "Nextstrain: measles",
+        "url": "https://nextstrain.org/measles"
+      },
+      {
+        "label": "Pathoplexus: measles (genomic sequences)",
+        "url": "https://pathoplexus.org/measles"
+      },
+      {
+        "label": "US CDC wastewater data: measles (United States only)",
+        "url": "https://data.cdc.gov/d/akvg-8vrb"
+      }
+    ],
+    "dengue": [
+      {
+        "label": "Nextstrain: dengue",
+        "url": "https://nextstrain.org/dengue"
+      },
+      {
+        "label": "Pathoplexus: dengue (genomic sequences)",
+        "url": "https://pathoplexus.org/dengue"
+      }
+    ],
+    "influenza": [
+      {
+        "label": "Nextstrain: seasonal influenza",
+        "url": "https://nextstrain.org/seasonal-flu"
+      },
+      {
+        "label": "US CDC wastewater data: influenza A (United States only)",
+        "url": "https://data.cdc.gov/d/ymmh-divb"
+      }
+    ],
+    "zika": [
+      {
+        "label": "Nextstrain: Zika",
+        "url": "https://nextstrain.org/zika"
+      }
+    ],
+    "ebola": [
+      {
+        "label": "Nextstrain: Ebola",
+        "url": "https://nextstrain.org/ebola"
+      },
+      {
+        "label": "Pathoplexus: Ebola virus (Zaire) (genomic sequences)",
+        "url": "https://pathoplexus.org/ebola-zaire"
+      },
+      {
+        "label": "Pathoplexus: Ebola virus (Sudan) (genomic sequences)",
+        "url": "https://pathoplexus.org/ebola-sudan"
+      },
+      {
+        "label": "Pathoplexus: Bundibugyo virus (genomic sequences)",
+        "url": "https://pathoplexus.org/ebola-bdbv"
+      }
+    ],
+    "avian_influenza": [
+      {
+        "label": "Nextstrain: avian influenza",
+        "url": "https://nextstrain.org/avian-flu"
+      },
+      {
+        "label": "US CDC wastewater data: avian influenza A (H5) (United States only)",
+        "url": "https://data.cdc.gov/d/mtpu-urpp"
+      }
+    ],
+    "lassa": [
+      {
+        "label": "Nextstrain: Lassa",
+        "url": "https://nextstrain.org/lassa"
+      }
+    ],
+    "cchf": [
+      {
+        "label": "Pathoplexus: Crimean-Congo haemorrhagic fever (genomic sequences)",
+        "url": "https://pathoplexus.org/cchf"
+      }
+    ],
+    "chikungunya": [
+      {
+        "label": "Pathoplexus: chikungunya (genomic sequences)",
+        "url": "https://pathoplexus.org/chikungunya"
+      }
+    ],
+    "marburg": [
+      {
+        "label": "Pathoplexus: Marburg virus (genomic sequences)",
+        "url": "https://pathoplexus.org/marburg"
+      }
+    ]
   },
   "all_diseases": [
-    {"label": "WHO Disease Outbreak News", "url": "https://www.who.int/emergencies/disease-outbreak-news"},
-    {"label": "WHO health topics", "url": "https://www.who.int/health-topics"}
+    {
+      "label": "WHO Disease Outbreak News",
+      "url": "https://www.who.int/emergencies/disease-outbreak-news"
+    },
+    {
+      "label": "WHO health topics",
+      "url": "https://www.who.int/health-topics"
+    }
   ],
   "place": [
-    {"label": "WHO country page", "url": "https://www.who.int/countries/{iso3_lower}"},
-    {"label": "US CDC travel health notices", "url": "https://wwwnc.cdc.gov/travel/notices"},
-    {"label": "US CDC destinations list", "url": "https://wwwnc.cdc.gov/travel/destinations/list"}
+    {
+      "label": "WHO country page",
+      "url": "https://www.who.int/countries/{iso3_lower}"
+    },
+    {
+      "label": "US CDC travel health notices",
+      "url": "https://wwwnc.cdc.gov/travel/notices"
+    },
+    {
+      "label": "US CDC destinations list",
+      "url": "https://wwwnc.cdc.gov/travel/destinations/list"
+    }
   ]
 }

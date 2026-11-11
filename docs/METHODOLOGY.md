@@ -159,6 +159,34 @@ first-level region, for the countries where OpenDengue reports at that level.
 - **Basemap.** OpenStreetMap data as Protomaps PMTiles, built by `.github/workflows/build-basemap.yml` and served
   from the project's own bucket. Shaded areas are drawn beneath the basemap's place labels.
 
+## Outbreak Spread Explorer
+
+The Spread Explorer (`/spread/{event_id}`) replays one event notice by notice. It is a map of reporting, not of
+transmission, and it is built only from the event file the pipeline already publishes (`events/{id}.json`).
+
+- **Date shown for a country**: the publication date of the earliest notice in the event that lists the country in
+  its country field (or, failing that, the earliest notice from which the site located a place in that country). It
+  is labelled "first official notice", never "first case". If an earlier notice mentions the country only in its
+  text, and one of the sentences the pipeline quotes shows that, the sentence is displayed beside the country; the
+  map date does not change.
+- **Routes**: none are drawn and none are inferred. There are no lines or arrows between places. Sentences about
+  importation, travel or evacuation (`route_quotes`) and about symptom onset (`onset_quotes`) are shown verbatim.
+  They are picked by keyword (`events.py`, `ROUTE_RX`, `ONSET_RX`) and can miss context.
+- **Adjacent countries**: land neighbours (Natural Earth) of countries with a notice are hatched and labelled
+  "adjacent". This is geography only.
+- **Regions and towns**: a first-level region named in a notice is drawn as a dashed ring at the region's
+  population-weighted centre; the position within the region is unknown. A dot is drawn only for a town a notice
+  names, and marks the town, not a case.
+- **Counts**: the label under the map is the most recent case count a notice had stated by the selected date, in the
+  notice's words. It is omitted for events whose counts are suppressed (several countries or mixed definitions).
+- **Reporting completeness**: each country carries its `reporting_health` text for the disease's routine series,
+  or a statement that the site holds no such series.
+- **Side-by-side series**: the routine default series for up to six countries, on one time axis and optionally one
+  vertical scale, with the incomplete recent periods drawn as in every other chart.
+- **No projection**: nothing on the page extends past the last notice.
+- **Exports**: GeoJSON (points with precision and notice provenance; a `metadata` member with sources, snapshot and
+  caveats), a CSV bundle with provenance sidecar and data dictionary, and a link pinned to the snapshot and date.
+
 ## List order of outbreaks
 
 `active_rank` v1: `0.45 × exp(−days/30) + 0.25 × min(1, log10(1+cases)/5) + 0.10 × min(1, log10(1+deaths)/4) +

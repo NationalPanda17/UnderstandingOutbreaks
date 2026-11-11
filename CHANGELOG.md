@@ -2,6 +2,16 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-11 — Outbreak Spread Explorer
+<!-- type: feature -->
+- New tool: step through one outbreak notice by notice. Countries appear on the date of the first official notice
+  naming them, with each country's reporting record beside it. It is a map of reporting: no routes are drawn or
+  inferred, wording about importation or onset is quoted from the notice, and nothing is projected forward.
+- Adjacent countries are marked as adjacent only; regions named in a notice are rings, towns are dots only when a
+  notice names them. Routine series for the affected countries sit side by side on shared axes.
+- Exports: GeoJSON, CSV with provenance, and a link pinned to the snapshot and notice date.
+- Context links: Pathoplexus sequence pages and US CDC wastewater datasets (United States only).
+
 ## 2026-11-10 — Maps, regions, search, ECDC notices
 <!-- type: feature -->
 - Map: equal-area view, small multiples (per period or per disease), globe projection, region presets, a basemap

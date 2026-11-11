@@ -36,6 +36,7 @@ export function Outbreaks() {
   return (
     <>
       <h1>{t('outbreaks.title')}</h1>
+      <p class="small"><a href={href(route, 'spread')}>{t('spread.title')}</a>: {t('spread.isReportingShort')}</p>
       <p class="lead">{t('outbreaks.lead')}</p>
       <div class="tools" role="group" aria-label={t('overview.filters')}>
         <label>{t('filter.disease')} <select value={fd} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value || null })}><option value="">{t('filter.any')}</option>{diseases.map((d) => <option key={d} value={d}>{diseaseName(core, d)}</option>)}</select></label>
@@ -161,6 +162,7 @@ export function Outbreak({ id }: { id: string }) {
             <h2>{t('outbreak.locations')}</h2>
             {points.length ? <LazyMap points={points} pointMode="markers" names={names} ariaLabel={t('map.aria', { title })} view={{ lng: points[0].lon, lat: points[0].lat, z: 2.4 }} /> : <p class="muted">{t('outbreak.noLocation')}</p>}
             <p class="small muted">{t('outbreak.precisionNote')}</p>
+            <p><a class="btn small" href={href(route, 'spread/' + id)} data-testid="open-spread">{t('spread.open')}</a></p>
             <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('map.precision')}</th>{analyst && <th>{t('trace.method')}</th>}</tr></thead>
               <tbody>{(e.locations as any[]).map((l, i) => <tr key={i}><th scope="row">{l.name}{l.precision !== 'country' && <span class="muted">, {placeName(core, l.iso3)}</span>}</th><td>{t('precision.' + l.precision)}</td>{analyst && <td class="small"><code>{l.method} v{l.method_version}</code> {l.gazetteer_ref}</td>}</tr>)}</tbody></table></div>
           </section>

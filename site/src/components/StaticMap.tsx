@@ -168,4 +168,84 @@ export function MapGrid({ panels, breaks, ramp, region, onPanel }: { panels: Pan
   );
 }
 
+/** A map fitted to a set of countries (an outbreak's footprint), with a caller-supplied fill per country, rings for
+ *  regions and dots only for places a notice names. It draws no lines between places: it shows where notices were
+ *  published about, never a route. */
+export interface FitMapProps {
+  focus: string[];
+  fills: Record<string, string>;
+  labels?: { iso3: string; text: string }[];
+  rings?: { id: string; lon: number; lat: number; label: string; solid: boolean }[];
+  names?: Record<string, string>;
+  notes?: Record<string, string>;
+  centroids: Record<string, [number, number] | null | undefined>;
+  title: string;
+  height?: number;
+  svgRef?: { current: SVGSVGElement | null };
+  onSelect?: (iso3: string) => void;
+}
+export function FitMap(props: FitMapProps) {
+  const [fc, setFc] = useState<any>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => { let live = true; loadBoundaries().then((x) => { if (live) setFc(x); }).catch(() => setErr(true)); return () => { live = false; }; }, []);
+  const w = 960; const h = props.height ?? 520;
+  const key = props.focus.slice().sort().join(',');
+  const drawn = useMemo(() => {
+    if (!fc) return null;
+    const sel = fc.features.filter((f: any) => props.focus.includes(f.properties.iso3));
+    // Fit to the middles of the countries, padded, rather than to their full outlines: far-flung territories
+    // (Alaska, French Guiana) would otherwise shrink the countries that matter to a few pixels.
+    const cs = props.focus.map((c) => props.centroids[c]).filter(Boolean) as [number, number][];
+    const wide = !sel.length || props.focus.length > 40 || (cs.length > 1 && Math.max(...cs.map((c) => c[0])) - Math.min(...cs.map((c) => c[0])) > 150);
+    const mid = wide || !cs.length ? 11 : cs.reduce((a, c) => a + c[0], 0) / cs.length;
+    const proj = geoEqualEarth().rotate([-mid, 0]);
+    if (wide) proj.fitExtent([[2, 2], [w - 2, h - 2]], { type: 'Sphere' } as any);
+    else if (sel.length === 1) proj.fitExtent([[40, 40], [w - 40, h - 40]], sel[0]);
+    else {
+      const pad = 7; const pts: [number, number][] = [];
+      for (const c of cs) for (const dx of [-pad, pad]) for (const dy of [-pad, pad]) pts.push([c[0] + dx, Math.max(-85, Math.min(85, c[1] + dy))]);
+      proj.fitExtent([[20, 20], [w - 20, h - 20]], { type: 'MultiPoint', coordinates: pts } as any);
+    }
+    const path = geoPath(proj).digits(1);
+    const list: Shape[] = [];
+    for (const f of fc.features) { const d = path(f); if (d) list.push({ iso3: f.properties.iso3, name: f.properties.name, d }); }
+    return { list, project: (ll: [number, number]) => proj(ll) as [number, number] | null };
+  }, [fc, key, h]);
+  if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;
+  if (!drawn) return <div role="status" class="small muted">{t('state.loadingMap')}</div>;
+  const inside = (xy: [number, number] | null) => xy && xy[0] >= 0 && xy[0] <= w && xy[1] >= 0 && xy[1] <= h;
+  return (
+    <svg ref={props.svgRef as any} viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={props.title} class="staticmap" style={{ display: 'block', background: '#eef3f4', borderRadius: '8px' }}>
+      <defs><pattern id="fm-adj" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#fafafa" /><rect width="1.6" height="7" fill="#9aa7aa" /></pattern></defs>
+      {drawn.list.map((s, i) => (
+        <path key={s.iso3 + i} d={s.d} fill={props.fills[s.iso3] ?? '#fafafa'} stroke="#8fa1a5" stroke-width="0.6" vector-effect="non-scaling-stroke"
+          style={props.onSelect && props.fills[s.iso3] ? { cursor: 'pointer' } : undefined} onClick={props.onSelect && props.fills[s.iso3] ? () => props.onSelect!(s.iso3) : undefined}>
+          <title>{props.names?.[s.iso3] ?? s.name}{props.notes?.[s.iso3] ? ': ' + props.notes[s.iso3] : ''}</title>
+        </path>
+      ))}
+      {(props.rings ?? []).map((r) => {
+        const xy = drawn.project([r.lon, r.lat]); if (!inside(xy)) return null;
+        return (
+          <g key={r.id}>
+            <title>{r.label}</title>
+            {r.solid
+              ? <circle cx={xy![0]} cy={xy![1]} r="4.5" fill="#4d3900" stroke="#fff" stroke-width="1.5" />
+              : <><circle cx={xy![0]} cy={xy![1]} r="17" fill="#4d3900" fill-opacity="0.08" stroke="#4d3900" stroke-opacity="0.75" stroke-width="1.4" stroke-dasharray="4 3" /><circle cx={xy![0]} cy={xy![1]} r="2" fill="none" stroke="#4d3900" stroke-width="1" /></>}
+          </g>
+        );
+      })}
+      {(props.labels ?? []).map((l) => {
+        const c = props.centroids[l.iso3]; const xy = c ? drawn.project(c) : null; if (!inside(xy)) return null;
+        const wd = l.text.length * 6.4 + 12;
+        return (
+          <g key={l.iso3} pointer-events="none">
+            <rect x={xy![0] - wd / 2} y={xy![1] - 10} width={wd} height="19" rx="4" fill="#fff" fill-opacity="0.93" stroke="#8fa1a5" stroke-width="0.8" />
+            <text x={xy![0]} y={xy![1] + 4} text-anchor="middle" font-size="11.5" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" fill="#17272b">{l.text}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export default StaticMap;

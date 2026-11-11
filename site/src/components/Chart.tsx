@@ -35,6 +35,8 @@ export interface ChartProps {
   compact?: boolean;
   /** Epi-curve style: one bar per period. */
   bars?: boolean;
+  /** Fixed axis limits, so several small charts can share one scale (time mode: ISO dates). */
+  domain?: { x0?: string; x1?: string; y1?: number };
 }
 
 const ms = (p: string) => Date.parse(p + 'T00:00:00Z');
@@ -64,6 +66,10 @@ export function Chart(props: ChartProps) {
     for (const r of ribbons ?? []) for (const v of r.hi) if (v !== null && v > y1) y1 = v;
     if (hline && hline.y > y1) y1 = hline.y;
     if (!Number.isFinite(x0)) { x0 = 0; x1 = 1; }
+    const dom = props.domain;
+    if (dom?.x0 && xMode === 'time') x0 = ms(dom.x0);
+    if (dom?.x1 && xMode === 'time') x1 = ms(dom.x1);
+    if (dom?.y1 && dom.y1 > 0) y1 = dom.y1;
     if (!Number.isFinite(y1) || y1 <= 0) y1 = 1;
     if (x0 === x1) x1 = x0 + 1;
     const sx = scaleLinear().domain([x0, x1]).range([M.l, W - M.r]);
@@ -71,7 +77,7 @@ export function Chart(props: ChartProps) {
     const sy = useLog ? scaleLog().domain([Math.max(ymin * 0.8, 1e-6), y1 * 1.15]).range([H - M.b, M.t]).clamp(true)
       : scaleLinear().domain([0, y1 * 1.08]).range([H - M.b, M.t]).nice();
     return { data, sx, sy, x0, x1, useLog };
-  }, [series, xMode, log, H, ribbons, hline?.y]);
+  }, [series, xMode, log, H, ribbons, hline?.y, props.domain?.x0, props.domain?.x1, props.domain?.y1]);
 
   const { data, sx, sy, useLog } = model;
   const yTicks = (sy as any).ticks(useLog ? 4 : 5) as number[];

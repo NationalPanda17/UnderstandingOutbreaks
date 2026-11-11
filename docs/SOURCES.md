@@ -63,6 +63,15 @@ for human review.**
 | Our World in Data: wild poliovirus cases; cVDPV cases by strain | Annual, by country, processed from WHO and GPEI. Covers 2001–2023 (wild) and 2016–2023 (cVDPV); last updated by OWID in April 2024. Wild types are not separated (WPV1/2/3 together) | **Used** for the wild versus vaccine-derived split, marked stale because it ends in 2023 |
 | UN population API, geoBoundaries | Reachable | Not needed (World Bank and Natural Earth used) |
 
+### Evaluated for the Spread Explorer and not ingested
+
+| Wanted | What was found | Decision |
+| --- | --- | --- |
+| Sub-national case series for outbreaks (WHO AFRO, ministry situation reports) | PDF situation reports with no machine-readable listing; tables differ between issues | Not ingested. Numbers would have to be transcribed by hand or scraped from PDFs, which this project does not do. Only OpenDengue first-level data is used. |
+| Structured onset dates and travel history | WHO DON and CDC notices carry these only as prose | Not available as fields. The pipeline quotes the sentences (`route_quotes`, `onset_quotes`) and infers nothing. |
+| Wastewater sampling sites | US CDC NWSS publishes open datasets on data.cdc.gov (measles, influenza A, SARS-CoV-2, mpox, RSV, H5), by treatment plant and county, without site coordinates. No comparable multi-country official feed was found. | Not ingested. One country's sites on a world tool would misstate coverage. Linked from disease pages as context, labelled United States only. |
+| Genomic lineages | Nextstrain and Pathoplexus | Linked as context only (`config/context_links.json`); nothing is fetched by the browser unless clicked. |
+
 ## Event sources (Tier 2)
 
 | Source | Endpoint | Structure | Cadence | License | Decision |
