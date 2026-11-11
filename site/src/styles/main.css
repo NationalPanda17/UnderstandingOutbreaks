@@ -170,3 +170,4 @@ ul.cols { columns: 220px; padding-inline-start: 18px; margin: 6px 0 0; }
 .search li { display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .search li.on { background: #e6f1f2; }
 @media (prefers-reduced-motion: no-preference) { .search input { transition: width .15s; } }
+.mapswap { position: absolute; top: 10px; inset-inline-end: 10px; background: var(--card); box-shadow: var(--shadow); }

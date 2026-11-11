@@ -1642,5 +1642,6 @@
  "search.kind.place": "Pays",
  "search.kind.page": "Page",
  "search.kind.event": "Événement signalé · dernier avis {date}",
- "search.page.explorer": "Explorateur de données"
+ "search.page.explorer": "Explorateur de données",
+ "overview.panZoom": "Déplacer et zoomer"
 }

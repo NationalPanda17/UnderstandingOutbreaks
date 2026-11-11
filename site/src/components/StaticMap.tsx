@@ -30,8 +30,9 @@ function fixWinding(f: any): void {
   for (const poly of polys) if (geoArea({ type: 'Polygon', coordinates: poly } as any) > 2 * Math.PI) poly.forEach((ring) => ring.reverse());
 }
 
-const shapeCache = new Map<string, Shape[]>();
-function shapes(fc: any, box: Box, w: number, h: number): Shape[] {
+type Project = (lonlat: [number, number]) => [number, number] | null;
+const shapeCache = new Map<string, { list: Shape[]; project: Project }>();
+function shapes(fc: any, box: Box, w: number, h: number): { list: Shape[]; project: Project } {
   const key = `${box.join(',')}|${w}|${h}`;
   const hit = shapeCache.get(key); if (hit) return hit;
   const world = box[0] <= -179 && box[2] >= 179;
@@ -43,8 +44,9 @@ function shapes(fc: any, box: Box, w: number, h: number): Shape[] {
   const path = geoPath(proj).digits(1);
   const out: Shape[] = [];
   for (const f of fc.features) { const d = path(f); if (d) out.push({ iso3: f.properties.iso3, name: f.properties.name, d }); }
-  shapeCache.set(key, out);
-  return out;
+  const res = { list: out, project: (ll: [number, number]) => proj(ll) as [number, number] | null };
+  shapeCache.set(key, res);
+  return res;
 }
 
 export interface StaticMapProps {
@@ -62,6 +64,9 @@ export interface StaticMapProps {
   /** Small-multiple panel: no hover text per country, thinner lines. */
   compact?: boolean;
   onSelect?: (iso3: string) => void;
+  /** Event points drawn on top (position, label, size). */
+  points?: { id: string; lon: number; lat: number; label: string; radius?: number; precision?: string; sub?: string }[];
+  onPoint?: (id: string) => void;
   svgRef?: { current: SVGSVGElement | null };
 }
 
@@ -71,7 +76,7 @@ export function StaticMap(props: StaticMapProps) {
   useEffect(() => { let live = true; loadBoundaries().then((x) => { if (live) setFc(x); }).catch(() => setErr(true)); return () => { live = false; }; }, []);
   const w = props.width ?? 960; const h = props.height ?? 500;
   const box = (REGION_VIEWS[props.region ?? 'world'] ?? REGION_VIEWS.world).box;
-  const list = useMemo(() => (fc ? shapes(fc, box, w, h) : []), [fc, box, w, h]);
+  const { list, project } = useMemo(() => (fc ? shapes(fc, box, w, h) : { list: [] as Shape[], project: (() => null) as Project }), [fc, box, w, h]);
   const ramp = props.ramp ?? RAMP;
   if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;
   if (!fc) return <div role="status" class="small muted">{t('state.loadingMap')}</div>;
@@ -91,6 +96,16 @@ export function StaticMap(props: StaticMapProps) {
             style={props.onSelect ? { cursor: 'pointer' } : undefined} onClick={props.onSelect ? () => props.onSelect!(s.iso3) : undefined}>
             {!props.compact && <title>{name}: {c === null ? (props.missingLabel?.[s.iso3] ?? t('chart.noData')) : `${props.valueLabel ? props.valueLabel + ': ' : ''}${smart(v as number)}`}</title>}
           </path>
+        );
+      })}
+      {(props.points ?? []).map((p, i) => {
+        const xy = project([p.lon, p.lat]); if (!xy || xy[0] < 0 || xy[0] > w || xy[1] < 0 || xy[1] > h) return null;
+        const vague = p.precision === 'country' || p.precision === 'admin1';
+        return (
+          <g key={p.id + i} style={props.onPoint ? { cursor: 'pointer' } : undefined} onClick={props.onPoint ? () => props.onPoint!(p.id) : undefined}>
+            {vague && <circle cx={xy[0]} cy={xy[1]} r={(p.radius ?? 5) + 5} fill="#7a5c00" fill-opacity="0.07" stroke="#7a5c00" stroke-opacity="0.35" stroke-width="0.8" />}
+            <circle cx={xy[0]} cy={xy[1]} r={p.radius ?? 5} fill="#7a5c00" fill-opacity="0.88" stroke="#fff" stroke-width="1.5"><title>{p.label}{p.sub ? ' · ' + p.sub : ''}</title></circle>
+          </g>
         );
       })}
     </svg>

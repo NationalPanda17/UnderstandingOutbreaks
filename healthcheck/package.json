@@ -1,0 +1,8 @@
+{
+  "name": "understandingoutbreaks-healthcheck",
+  "private": true,
+  "type": "module",
+  "description": "Opens the live site in a real browser and checks that the things visitors rely on still work.",
+  "scripts": { "check": "node check.mjs" },
+  "dependencies": { "playwright": "^1.50.0" }
+}

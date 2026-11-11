@@ -1,0 +1,56 @@
+name: Live-site health check
+# Opens the live site in a real browser and checks that the map, search, the SQL console, an embed and the daily
+# data update still work, and that nothing is loaded from other servers. Runs every Monday and after each deploy.
+# On failure it opens (or comments on) a GitHub issue. It only reads the public site and changes nothing.
+on:
+  schedule:
+    - cron: "41 7 * * 1"
+  workflow_run:
+    workflows: ["Update data and deploy"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: health-check
+  cancel-in-progress: true
+jobs:
+  check:
+    # after a deploy, only when that deploy succeeded (a failed one already opens its own issue)
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - working-directory: healthcheck
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Give a fresh deploy a minute to reach every edge location
+        if: github.event_name == 'workflow_run'
+        run: sleep 60
+      - name: Check the live site
+        id: check
+        working-directory: healthcheck
+        run: node check.mjs
+      - name: Add the report to the run summary
+        if: always()
+        run: cat healthcheck/health-report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Open or update an issue when a check fails (issues only)
+        if: failure() && steps.check.conclusion == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="[health] Live-site check failed"
+          body="$(cat healthcheck/health-report.md)
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Nothing was changed automatically; a person needs to review."
+          gh label create health --color b45309 --description "Opened by the live-site health check" 2>/dev/null || true
+          n=$(gh issue list --state open --search "\"$title\" in:title" --json number,title -q ".[] | select(.title == \"$title\") | .number" | head -1)
+          if [ -n "$n" ]; then gh issue comment "$n" --body "Still failing.
+
+          $body"; else gh issue create --title "$title" --label health --body "$body"; fi

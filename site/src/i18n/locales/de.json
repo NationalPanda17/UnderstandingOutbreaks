@@ -1642,5 +1642,6 @@
  "search.kind.place": "Land",
  "search.kind.page": "Seite",
  "search.kind.event": "Gemeldetes Ereignis · letzte Meldung {date}",
- "search.page.explorer": "Daten-Explorer"
+ "search.page.explorer": "Daten-Explorer",
+ "overview.panZoom": "Verschieben und zoomen"
 }

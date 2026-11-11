@@ -1,8 +1,8 @@
 /** Global overview: choropleth for time-series diseases, ranked active outbreaks, trend sparklines, recent flags. */
-import { useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { absoluteUrl, href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type Core, type EventIdx, type Flag, type Overview as Ov } from '../lib/data';
-import { caption, copyText, exportImage, imageMeta } from '../lib/exporters';
+import { caption, copyText, exportImage, imageMeta, serializeSvg } from '../lib/exporters';
 import { date, num, periodLabel, smart, t } from '../lib/i18n';
 import { provBlock, type Prov } from '../lib/prov';
 import { mapMetricLabel, placeName } from '../lib/series';
@@ -57,6 +57,13 @@ export function Overview() {
   const [table, setTable] = useState(false);
   const [embed, setEmbed] = useState(false);
   const mapApi = useRef<any>(null);
+  // The home page draws a lightweight static map first (about 440 KB less to download than the interactive one)
+  // and loads the interactive map, with its basemap, only when the visitor asks to pan and zoom.
+  const [interactive, setInteractive] = useState(() => { try { return sessionStorage.getItem('uo-map-interactive') === '1'; } catch { return false; } });
+  const goInteractive = () => { try { sessionStorage.setItem('uo-map-interactive', '1'); } catch { /* storage unavailable: the choice lasts for this page only */ } setInteractive(true); };
+  const [stat, setStat] = useState<any>(null);
+  useEffect(() => { if (!interactive && !stat) import('../components/StaticMap').then(setStat).catch(() => setInteractive(true)); }, [interactive]);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const regions = useMemo(() => Array.from(new Set(Object.values(core.places).map((p) => p.region))).sort(), [core]);
 
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
@@ -95,9 +102,16 @@ export function Overview() {
   const embedUrl = absoluteUrl(`/embed/${route.locale}/map?d=${disease}${region ? '&region=' + encodeURIComponent(region) : ''}&snapshot=${core.manifest.snapshot_id}`);
 
   const exportMap = async (kind: 'png' | 'svg') => {
-    if (!mapApi.current || !prov) return;
-    const size = mapApi.current.size();
+    if (!prov) return;
     const legend = `${metricLabel} · ${windowText}`;
+    if (!interactive) {
+      if (!svgRef.current) return;
+      await exportImage(kind, serializeSvg(svgRef.current), imageMeta(core, prov, title, legend), title, provBlock(core, prov), caption(core, prov, title, legend),
+        `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
+      return;
+    }
+    if (!mapApi.current) return;
+    const size = mapApi.current.size();
     await exportImage(kind, { imageHref: mapApi.current.image(), width: size.width, height: size.height }, imageMeta(core, prov, title, legend), title, provBlock(core, prov), caption(core, prov, title, legend),
       `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
   };
@@ -125,7 +139,16 @@ export function Overview() {
             {prov && <SourceChip prov={prov} />}
           </header>
           {ov.loading && <Loading />}
-          {ov.data && !table && (
+          {ov.data && !table && !interactive && stat && (
+            <div style={{ position: 'relative' }}>
+              <stat.StaticMap svgRef={svgRef} values={values} breaks={breaks} names={names} valueLabel={metricLabel} height={470} title={t('map.aria', { title })}
+                points={points} onPoint={(id: string) => navigate(href(route, 'outbreak/' + id))} onSelect={(iso3: string) => navigate(href(route, 'place/' + iso3, { d: disease }))} />
+              <button type="button" class="btn small mapswap" onClick={goInteractive} data-testid="map-interactive">{t('overview.panZoom')}</button>
+            </div>
+          )}
+          {ov.data && !table && !interactive && !stat && <Loading />}
+          {ov.data && !table && !interactive && stat && <p class="mapattr">{t('map.attr.boundaries')} {t('map.attr.population')}{points.length ? ' ' + t('map.attr.gazetteer') : ''}</p>}
+          {ov.data && !table && interactive && (
             <LazyMap values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
               points={points} pointMode="markers" onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
               onSelect={(iso3) => navigate(href(route, 'place/' + iso3, { d: disease }))} ariaLabel={t('map.aria', { title })} apiRef={mapApi} />

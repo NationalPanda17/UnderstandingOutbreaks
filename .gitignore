@@ -13,3 +13,5 @@ site/dist-r2/
 notebooks/out/
 site/public/notebooks/
 .claude/
+healthcheck/node_modules/
+healthcheck/health-report.md

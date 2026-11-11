@@ -62,5 +62,6 @@
   "search.kind.place": "Country",
   "search.kind.page": "Page",
   "search.kind.event": "Reported event · last notice {date}",
-  "search.page.explorer": "Data explorer"
+  "search.page.explorer": "Data explorer",
+  "overview.panZoom": "Pan and zoom"
 }

@@ -1642,5 +1642,6 @@
  "search.kind.place": "País",
  "search.kind.page": "Página",
  "search.kind.event": "Evento notificado · último aviso {date}",
- "search.page.explorer": "Explorador de datos"
+ "search.page.explorer": "Explorador de datos",
+ "overview.panZoom": "Desplazar y ampliar"
 }
