@@ -35,8 +35,9 @@ export function EventSummary({ e, core }: { e: EventIdx; core: Core }) {
     <div data-testid="event-summary">
       <p>
         {t('event.sum.intro', { n: e.n_reports, source: src, disease: diseaseName(core, e.disease), places: eventPlaces(core, e), first: date(e.first_report, 'long'), last: date(e.last_report, 'long') })}{' '}
-        {e.cases && <>{t('event.sum.cases', { date: date(e.cases.as_of, 'long') })} <q class="quote">{e.cases.quote}</q>. </>}
-        {e.deaths && <>{t('event.sum.deaths')} <q class="quote">{e.deaths.quote}</q>. </>}
+        {e.cases && !e.counts_suppressed && <>{t('event.sum.cases', { date: date(e.cases.as_of, 'long') })} <q class="quote">{e.cases.quote}</q>. </>}
+        {e.deaths && !e.counts_suppressed && <>{t('event.sum.deaths')} <q class="quote">{e.deaths.quote}</q>. </>}
+        {e.counts_suppressed && <>{t('event.countsHidden.' + e.counts_suppressed)} </>}
         {!e.cases && !e.deaths && <>{t('event.sum.noCounts')} </>}
         {t('status.' + e.status + '.explain')}
       </p>
@@ -55,8 +56,10 @@ export function EventRow({ e, showScore }: { e: EventIdx; showScore?: boolean })
       </div>
       <div class="small muted">
         {t('event.lastUpdate', { date: date(e.last_report) })}
-        {e.cases && <> · {t('event.reportedCases', { n: num(e.cases.value) })}</>}
-        {e.deaths && <> · {t('event.reportedDeaths', { n: num(e.deaths.value) })}</>}
+        {e.cases && !e.counts_suppressed && <> · {t('event.reportedCases', { n: num(e.cases.value) })} <span class="badge">{t('def.' + e.cases.case_definition)}</span></>}
+        {e.deaths && !e.counts_suppressed && <> · {t('event.reportedDeaths', { n: num(e.deaths.value) })}</>}
+        {(e.cases || e.deaths) && !e.counts_suppressed && <> <span class="badge auto" title={t('event.autoExplain')}>{t('event.auto')}</span></>}
+        {e.counts_suppressed && <> · {t('event.countsHidden.' + e.counts_suppressed)}</>}
         {' · '}{t('event.nReports', { n: e.n_reports })}
         {showScore && <> · {t('rank.score')}: {e.rank.score.toFixed(3)}</>}
       </div>

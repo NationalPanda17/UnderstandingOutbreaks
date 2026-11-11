@@ -8,9 +8,9 @@ import { provBlock, type Prov } from '../lib/prov';
 import { mapMetricLabel, placeName } from '../lib/series';
 import { Sparkline } from '../components/Chart';
 import { EventRow } from '../components/Events';
-import { DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
+import { AgeBadge, DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
-import { MapLegend, quantileBreaks, type MapPoint } from '../components/mapUtil';
+import { CountryPopover, MapLegend, quantileBreaks, type MapPoint } from '../components/mapUtil';
 import { Dialog, SourceChip, useApp } from '../components/SourceChip';
 
 export function overviewProv(core: Core, ov: Ov, snapshot: string | null): Prov {
@@ -39,7 +39,8 @@ export function FlagList({ flags, limit }: { flags: Flag[]; limit: number }) {
           <li key={f.series_id} data-flag>
             <a href={href(route, 'place/' + f.iso3, { d: f.disease })}>{placeName(core, f.iso3)}</a> · {diseaseName(core, f.disease)} · {periodLabel(f.period, meta?.period_type ?? 'W')}
             <div class="muted">{t('flags.text', { method: f.method })}{n > 1 && <> {t('flags.more', { n })}</>}</div>
-            {analyst && <div class="muted">{t('flags.detail', { value: num(f.value), mean: num(f.baseline_mean), threshold: num(f.threshold), from: date(f.baseline_periods[0]), to: date(f.baseline_periods[1]) })}</div>}
+            {analyst && f.basis === 'percent_positive' && <div class="muted">{t('flags.detailPct', { value: num(f.value), detections: num(f.detections ?? null), specimens: num(f.specimens ?? null), mean: num(f.baseline_mean), threshold: num(f.threshold) })}</div>}
+            {analyst && f.basis !== 'percent_positive' && <div class="muted">{t('flags.detail', { value: num(f.value), mean: num(f.baseline_mean), threshold: num(f.threshold), from: date(f.baseline_periods[0]), to: date(f.baseline_periods[1]) })}</div>}
           </li>
         );
       })}
@@ -64,6 +65,7 @@ export function Overview() {
   const [stat, setStat] = useState<any>(null);
   useEffect(() => { if (!interactive && !stat) import('../components/StaticMap').then(setStat).catch(() => setInteractive(true)); }, [interactive]);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const regions = useMemo(() => Array.from(new Set(Object.values(core.places).map((p) => p.region))).sort(), [core]);
 
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
@@ -116,6 +118,16 @@ export function Overview() {
       `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
   };
 
+  const mapContext = `${diseaseName(core, disease)} · ${windowText}`;
+  const pk = picked && ov.data ? ov.data.latest[picked] : null;
+  const popover = picked ? (
+    <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
+      lines={pk ? [
+        pk.metric_value !== null ? `${metricLabel}: ${smart(pk.metric_value)}` : t('map.noDataWindow'),
+        ...(pk.value !== null ? [`${t('table.count')}: ${num(pk.value)}`] : []),
+        ...(pk.last_period ? [`${t('table.lastPeriod')}: ${periodLabel(pk.last_period, ov.data!.period_type)}`] : []),
+      ] : [t('map.miss.never')]} />
+  ) : null;
   return (
     <>
       <h1>{t('overview.title')}</h1>
@@ -135,25 +147,26 @@ export function Overview() {
       <div class="grid side">
         <section class="card" id="overview-map">
           <header>
-            <div><h2>{title}</h2><p class="sub">{windowText}{meta && <> · {t('def.' + meta.case_definition)}</>} <DiseaseBadge d={d} />{meta?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p></div>
+            <div><h2>{title}</h2><p class="sub">{windowText}{meta && <> · {t('def.' + meta.case_definition)}</>} <DiseaseBadge d={d} /> {ov.data && <AgeBadge period={ov.data.anchor} ptype={ov.data.period_type} />}{meta?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p></div>
             {prov && <SourceChip prov={prov} />}
           </header>
           {ov.loading && <Loading />}
           {ov.data && !table && !interactive && stat && (
             <div style={{ position: 'relative' }}>
-              <stat.StaticMap svgRef={svgRef} values={values} breaks={breaks} names={names} valueLabel={metricLabel} height={470} title={t('map.aria', { title })}
-                points={points} onPoint={(id: string) => navigate(href(route, 'outbreak/' + id))} onSelect={(iso3: string) => navigate(href(route, 'place/' + iso3, { d: disease }))} />
+              <stat.StaticMap svgRef={svgRef} values={values} breaks={breaks} names={names} valueLabel={metricLabel} context={mapContext} height={470} title={t('map.aria', { title })}
+                points={points} onPoint={(id: string) => navigate(href(route, 'outbreak/' + id))} onSelect={(iso3: string) => setPicked(iso3)} />
+              {popover}
               <button type="button" class="btn small mapswap" onClick={goInteractive} data-testid="map-interactive">{t('overview.panZoom')}</button>
             </div>
           )}
           {ov.data && !table && !interactive && !stat && <Loading />}
           {ov.data && !table && !interactive && stat && <p class="mapattr">{t('map.attr.boundaries')} {t('map.attr.population')}{points.length ? ' ' + t('map.attr.gazetteer') : ''}</p>}
           {ov.data && !table && interactive && (
-            <LazyMap values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
+            <div style={{ position: 'relative' }}>{popover}<LazyMap context={mapContext} values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
               points={points} pointMode="markers" onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
-              onSelect={(iso3) => navigate(href(route, 'place/' + iso3, { d: disease }))} ariaLabel={t('map.aria', { title })} apiRef={mapApi} />
+              onSelect={(iso3) => setPicked(iso3)} ariaLabel={t('map.aria', { title })} apiRef={mapApi} /></div>
           )}
-          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} />}
+          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} scale="view" />}
           {ov.data && !table && <p class="small"><label><input type="checkbox" checked={showEvents} onChange={(e) => setParams({ ev: (e.target as HTMLInputElement).checked ? null : '0' })} /> {t('overview.showEvents')}</label>{showEvents && points.length > 0 && <span class="muted"> · {t('overview.eventsOnMap')}</span>}</p>}
           {ov.data && table && (
             <div class="tablewrap" tabIndex={0}><table class="data">
@@ -212,11 +225,12 @@ export function Overview() {
           const p = o.global.p.slice(Math.max(0, cut)); const v = o.global.v.slice(Math.max(0, cut));
           const comp = p.map((x, i) => [x, v[i]] as const).filter(([x]) => x < o.incomplete_from);
           const last = comp[comp.length - 1];
+          const nAt = last ? o.global.n[o.global.p.indexOf(last[0])] : null;
           const m = core.seriesByKey[o.skey];
           return (
             <section class="card" key={o.disease}>
               <div class="row"><h3 style={{ margin: 0 }}><a href={href(route, 'disease/' + o.disease)}>{diseaseName(core, o.disease)}</a></h3><Sparkline p={p} v={v} incompleteFrom={o.incomplete_from} label={t('overview.sparkAria', { disease: diseaseName(core, o.disease) })} /></div>
-              <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
+              <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{last && nAt !== null && o.global.n_total ? ` · ${t('total.nOfN', { n: nAt, N: o.global.n_total })}` : ''} {last && <AgeBadge period={last[0]} ptype={o.period_type} />}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
               <SourceChip compact prov={{ title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived', sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } }} />
             </section>
           );

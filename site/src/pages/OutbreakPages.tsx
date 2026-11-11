@@ -1,6 +1,6 @@
 /** Outbreak list (all event sources, transparent ranking) and auto-generated outbreak detail pages. */
-import { useMemo } from 'preact/hooks';
-import { href, setParams } from '../lib/app';
+import { useEffect, useMemo } from 'preact/hooks';
+import { href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type EventIdx } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
 import { date, num, t } from '../lib/i18n';
@@ -66,7 +66,10 @@ export function Outbreak({ id }: { id: string }) {
   const analyst = route.mode === 'analyst';
   const ev = useAsync(() => getOptional<any>(`events/${id}.json`), [id]);
   const idx = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
-  if (ev.loading) return <Loading />;
+  // An id retired by a merge (two events found to be one outbreak) forwards to the event that replaced it.
+  const replacement = !ev.loading && !ev.data ? idx.data?.events.find((x) => x.supersedes?.includes(id))?.event_id : undefined;
+  useEffect(() => { if (replacement) navigate(href(route, 'outbreak/' + replacement)); }, [replacement]);
+  if (ev.loading || (!ev.data && (idx.loading || replacement))) return <Loading />;
   if (!ev.data) return <ErrorBox error={t('outbreak.unknown', { id })} />;
   const e = ev.data;
   const brief = idx.data?.events.find((x) => x.event_id === id) ?? (e as EventIdx & { n_reports: number });
@@ -86,7 +89,7 @@ export function Outbreak({ id }: { id: string }) {
             <EventSummary e={briefE} core={core} />
             <div class="readouts">
               <div>{t('outbreak.status')}<b>{t('status.' + e.status)}</b><span class="small">{t('statusbasis.' + e.status_basis)}</span></div>
-              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? `${t('def.' + e.cases.case_definition)} · ${t('chip.asOf', { date: date(e.cases.as_of) })}` : t('outbreak.notStated')}</span></div>
+              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? `${t('def.' + e.cases.case_definition)} · ${t('chip.asOf', { date: date(e.cases.as_of) })} · ${t('event.auto')}` : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.deaths')}<b>{e.deaths ? num(e.deaths.value) : '–'}</b><span class="small">{e.deaths ? t('chip.asOf', { date: date(e.deaths.as_of) }) : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.lastReport')}<b>{date(e.last_report)}</b><span class="small">{t('outbreak.daysAgo', { n: e.days_since_last_report })}</span></div>
             </div>

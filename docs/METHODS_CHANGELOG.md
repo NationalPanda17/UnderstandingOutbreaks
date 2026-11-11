@@ -3,6 +3,20 @@
 Versioned log of method changes. Each entry starts with `## YYYY-MM-DD — title`. Method versions appear in every trace
 panel and export, so a change here must come with a version bump in the code.
 
+## 2026-11-11 — Event grouping v2, headline-count rule, positivity flags, constant panel, date basis
+<!-- type: methodology -->
+- `group_by_disease_place_gap` v2: notices that name no country are folded into the single country-level event of
+  the same disease they overlap in time; if several overlap, nothing is merged. Retired event ids forward to the
+  event that replaced them.
+- Event cards show an extracted count only for events covering at most three named countries and with a stated
+  case definition. Otherwise the figures stay on the event page, each with its quoted phrase.
+- Influenza flags (`rolling_baseline_c2` v1) are now computed on percent positive (at least 10%, from periods with
+  at least 50 samples) instead of on the number of detections, which rises whenever testing does.
+- `constant_panel_total` v1: an optional world total over the countries that reported in at least 90% of the
+  complete periods shown.
+- Every series carries a `date_basis` (report date, source-assigned period, or calendar year) with the source's
+  own field name. `freshness_days` can no longer be negative.
+
 ## 2026-11-10 — Dengue by first-level region; map missing-data reasons
 <!-- type: methodology -->
 `dengue_admin1_annual` v1: annual dengue counts by first-level region from the OpenDengue spatial extract, using the

@@ -96,7 +96,7 @@ export default function MapView(props: MapProps) {
         const p = latest.current; const iso3 = f.properties.iso3;
         const val = p.values?.[iso3];
         map.getCanvas().style.cursor = p.onSelect ? 'pointer' : '';
-        setTip({ x: e.point.x, y: e.point.y, html: (<><b>{p.names?.[iso3] ?? f.properties.name}</b><div>{val === null || val === undefined ? (p.missingLabel?.[iso3] ?? t('chart.noData')) : `${p.valueLabel ? p.valueLabel + ': ' : ''}${smart(val)}`}</div>{p.sourceLabel && <div class="muted">{t('map.source')}: {p.sourceLabel}</div>}</>) });
+        setTip({ x: e.point.x, y: e.point.y, html: (<><b>{p.names?.[iso3] ?? f.properties.name}</b>{p.context && <div class="muted">{p.context}</div>}<div>{val === null || val === undefined ? (p.missingLabel?.[iso3] ?? t('chart.noData')) : `${p.valueLabel ? p.valueLabel + ': ' : ''}${smart(val)}`}</div>{p.sourceLabel && <div class="muted">{t('map.source')}: {p.sourceLabel}</div>}</>) });
       });
       map.on('mouseleave', 'c-fill', () => { setTip(null); map.getCanvas().style.cursor = ''; });
       map.on('click', (e: any) => {

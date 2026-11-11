@@ -17,6 +17,14 @@ const NAV: { path: string; key: string; cls?: string }[] = [
   { path: 'about', key: 'nav.about' },
 ];
 
+/** Annual series are often a year or two behind: say so next to the headline instead of leaving the reader to notice. */
+export function AgeBadge({ period, ptype }: { period: string | null | undefined; ptype: string }) {
+  if (!period || ptype !== 'Y') return null;
+  const year = parseInt(period.slice(0, 4), 10);
+  const n = new Date().getFullYear() - year;
+  return <span class="badge age" title={t('age.explain')}>{t('age.badge', { year: String(year), n })}</span>;
+}
+
 export function switchLocale(route: Route, loc: string): void {
   storage.set('locale', loc);
   const rest = route.parts.map(encodeURIComponent).join('/');
@@ -99,6 +107,7 @@ export function Layout({ children }: { children: any }) {
               <li>{t('footer.licenseContent')}</li>
               <li>{t('footer.licenseData')}</li>
               <li>{t('footer.privacy')}</li>
+              <li><a href={href(route, 'about') + '#contact'}>{t('contact.report')}</a></li>
             </ul>
           </div>
           <p class="small">{t('footer.snapshot', { id: latest, date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>

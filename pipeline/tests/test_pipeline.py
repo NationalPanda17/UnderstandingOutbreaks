@@ -585,3 +585,40 @@ def test_rss_notice_parser_reads_items_and_rejects_a_changed_feed():
         E.parse_rss_notices(ds, b"<rss><channel><item><title>No date</title><link>https://example.org/a</link></item></channel></rss>", "f")
     with pytest.raises(E.SchemaChange):
         E.parse_rss_notices(ds, b"<html>moved</html>", "f")
+
+
+def test_countryless_notices_join_the_single_overlapping_outbreak_and_old_ids_are_remembered():
+    """Grouping v2: an "Ebola: multi-country outbreak" notice belongs with the one Ebola event open at the time."""
+    reports = [_rep("a", "Ebola disease", "Democratic Republic of the Congo", "2026-05-22"), _rep("m", "Ebola disease", "", "2026-06-01"),
+               _rep("b", "Ebola disease", "Democratic Republic of the Congo", "2026-07-01")]
+    ids: dict = {}
+    ev1, _ = _events(reports, ids=ids, today=dt.date(2026, 7, 10))
+    assert len(ev1) == 1 and len(ev1[0]["reports"]) == 3 and ev1[0]["countries"] == ["COD"]
+    assert "includes-notices-without-a-country" in ev1[0]["quality_flags"]
+    # an id handed out before the merge rule existed keeps resolving
+    old = {"a": "ebola-cod-old", "b": "ebola-cod-old", "m": "ebola-multi-old"}
+    ev2, _ = _events(reports, ids=old, today=dt.date(2026, 7, 10))
+    assert [e["event_id"] for e in ev2] == ["ebola-cod-old"] and ev2[0]["supersedes"] == ["ebola-multi-old"]
+    assert old["__superseded__"] == {"ebola-multi-old": "ebola-cod-old"} and old["m"] == "ebola-cod-old"
+
+
+def test_countryless_notice_is_not_merged_when_two_outbreaks_could_be_meant():
+    reports = [_rep("a", "Ebola disease", "Democratic Republic of the Congo", "2026-05-22"), _rep("u", "Ebola disease", "Kenya", "2026-05-25"),
+               _rep("m", "Ebola disease", "", "2026-06-01")]
+    ev, _ = _events(reports, today=dt.date(2026, 7, 10))
+    assert sorted(len(e["reports"]) for e in ev) == [1, 1, 1] and sum(1 for e in ev if not e["countries"]) == 1
+
+
+def test_headline_counts_are_suppressed_for_many_countries_or_unknown_definitions():
+    one = _events([_rep("a", "Cholera", "Kenya", "2026-11-01", "A total of 120 confirmed cases and 3 deaths were reported.")], today=dt.date(2026, 11, 5))[0][0]
+    assert one["cases"]["value"] == 120 and one["counts_suppressed"] is None
+    vague = _events([_rep("a", "Cholera", "Kenya", "2026-11-01", "A total of 120 cases were reported.")], today=dt.date(2026, 11, 5))[0][0]
+    assert vague["cases"]["value"] == 120 and vague["counts_suppressed"] == "definition-unknown"
+    nowhere = _events([_rep("a", "Cholera", "", "2026-11-01", "A total of 120 confirmed cases were reported.")], today=dt.date(2026, 11, 5))[0][0]
+    assert nowhere["counts_suppressed"] == "multi-country" and "counts-not-shown-as-headline" in nowhere["quality_flags"]
+
+
+def test_every_dataset_states_its_date_basis():
+    for ds in core.load_datasets():
+        assert ds.get("date_basis") in {"report_date", "source_period", "calendar_year"}, ds["id"]
+        assert ds.get("date_basis_field"), ds["id"]

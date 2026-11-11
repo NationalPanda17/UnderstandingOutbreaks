@@ -19,7 +19,9 @@
   "identity": {
     "creator": "Understanding Outbreaks contributors",
     "maintainer": "Understanding Outbreaks contributors",
+    "maintainers": [],
     "contact": "",
+    "errorReportUrl": "",
     "securityContact": "",
     "orcid": "",
     "affiliation": "",

@@ -13,7 +13,7 @@ export interface Lag { lag_periods: number; basis: string; n_snapshots: number; 
 export interface SeriesMeta {
   skey: string; dataset_id: string; source_id: string; origin_type: Origin; metric: string; case_definition: string; case_definition_detail: string;
   surveillance_system: string; period_type: PType; chain_id: string; inputs: string[]; n_places: number; deep_link: string; link_kind: string;
-  case_definition_note?: string; surveillance_system_note?: string; lag: Lag; stale: boolean; freshness_days: number | null; retrieved_at: string | null; dataset_state: string;
+  case_definition_note?: string; surveillance_system_note?: string; date_basis?: string; date_basis_field?: string | null; lag: Lag; stale: boolean; freshness_days: number | null; retrieved_at: string | null; dataset_state: string;
 }
 export interface Disease {
   id: string; name: string; icd11: string; mesh: string; data_type: string; seasonal?: boolean; cadence?: string; aliases: string[];
@@ -30,6 +30,7 @@ export interface EventIdx {
   cases: null | { value: number; case_definition: string; quote: string; as_of: string; report_id: string };
   deaths: null | { value: number; quote: string; as_of: string; report_id: string };
   n_reports: number; source_ids: string[]; rank: { score: number; components: Record<string, number>; active: boolean; method: string; method_version: string };
+  counts_suppressed?: string | null; supersedes?: string[];
   latest_title: string; latest_url: string; quality_flags: string[]; locations: { iso3: string; precision: string; lon: number | null; lat: number | null; name: string }[]; days_since_last_report: number;
 }
 export interface Overview {
@@ -37,11 +38,13 @@ export interface Overview {
   method: { name: string; version: string; window_periods: number };
   latest: Record<string, { window: [string, string]; n_periods: number; value: number | null; metric_value: number | null; last_period: string | null; trend: { latest_complete: string | null; value?: number; change_pct?: number | null; prev_period?: string | null } }>;
   grid: { periods: string[]; values: Record<string, (number | null)[]> };
-  global: { p: string[]; v: number[]; n: number[] };
+  global: { p: string[]; v: number[]; n: number[]; n_total?: number };
+  global_panel?: { p: string[]; v: (number | null)[]; n_panel: number; min_coverage: number };
 }
 export interface Flag {
   disease: string; iso3: string; skey: string; series_id: string; period: string; value: number; status: string; baseline_mean: number; baseline_sd: number; threshold: number;
   baseline_periods: [string, string]; baseline_points: number; seasonal: null | { years_used: number; mean: number; sd: number; threshold: number }; method: string; method_version: string; source_ids: string[];
+  basis?: 'count' | 'percent_positive'; detections?: number; specimens?: number;
 }
 
 const cache = new Map<string, Promise<any>>();

@@ -264,7 +264,7 @@ def parse_owid_grapher(ds: dict, content: bytes, fetch_id: str, ref: dict) -> pd
         if len(code) != 3 or not code.isalpha() or v is None:
             continue  # aggregates such as OWID_WRL are not countries
         y = int(r["year"])
-        rows.append((code, f"{y}-01-01", "Y", "cases", v, "notified", "annual reported cases, as processed by Our World in Data",
+        rows.append((code, f"{y}-01-01", "Y", "cases", v, "notified", ds.get("detail", "annual reported cases, as processed by Our World in Data"),
                      "national_notification", f"code={code};year={y}"))
     return _rows(ds, fetch_id, rows)
 

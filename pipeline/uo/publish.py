@@ -127,7 +127,8 @@ def stale_info(ctx: Context, dsid: str, ptype: str | None, last_period: str | No
     today = ctx.now.date()
     if last_period and ptype:
         end = dt.date.fromisoformat(last_period) + dt.timedelta(days=PERIOD_DAYS[ptype])
-        age = (today - end).days
+        # A period that has not ended yet (the current week) is zero days old, not "minus five".
+        age = max(0, (today - end).days)
     else:
         age = None
     limit = 2 * CADENCE_DAYS[cadence] + 14
@@ -277,6 +278,7 @@ def publish_all(ctx: Context, log) -> dict:
                 "surveillance_system": r.surveillance_system, "period_type": r.period_type, "chain_id": r.chain_id,
                 "inputs": r.inputs, "n_places": int(r.n_places), "deep_link": ds["deep_link"], "link_kind": ds.get("link_kind", "deep"),
                 "case_definition_note": ds.get("case_definition_note"), "surveillance_system_note": ds.get("surveillance_system_note"),
+                "date_basis": ds.get("date_basis", "source_period"), "date_basis_field": ds.get("date_basis_field"),
                 "lag": lg, "stale": st["stale"], "freshness_days": st["freshness_days"],
                 "retrieved_at": max((ctx.fetches[f]["retrieved_at"] for f in ctx.status.get(r.dataset_id, {}).get("fetch_ids", [])
                                      if f in ctx.fetches), default=None),
@@ -343,9 +345,17 @@ def publish_all(ctx: Context, log) -> dict:
             if any(x is not None for x in row):
                 grid[iso3] = row
         glob = dd.groupby("period").agg(v=("value", "sum"), n=("iso3", "nunique")).sort_index()
+        # World totals move when the set of reporting countries changes, not only when disease activity does.
+        # n_total says how many countries ever report in this series; the "constant panel" total keeps to the
+        # countries that reported in at least 90% of the complete periods shown, so the set does not change.
+        n_total = int(piv.shape[1])
+        pw = [p for p in gp if p < incf]
+        panel_cols = [c for c in piv.columns if pw and sum(1 for p in pw if p in piv.index and not np.isnan(piv.at[p, c])) >= 0.9 * len(pw)]
+        panel = {"p": pw, "v": [ts.safe(float(np.nansum([piv.at[p, c] for c in panel_cols if p in piv.index]))) if panel_cols else None for p in pw],
+                 "n_panel": len(panel_cols), "min_coverage": 0.9, "method": {"name": "constant_panel_total", "version": "1"}}
+        glob_out = {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]], "n_total": n_total}
         ov_summary.append({"disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
-                           "snapshot_id": ctx.snapshot_id, "period_type": ptype, "incomplete_from": incf,
-                           "global": {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]]}})
+                           "snapshot_id": ctx.snapshot_id, "period_type": ptype, "incomplete_from": incf, "anchor": anchor, "global": glob_out})
         write_json(out / "overview" / f"{did}.json", {
             "disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
             "snapshot_id": ctx.snapshot_id, "period_type": ptype, "map_metric": entry["map_metric"],
@@ -353,17 +363,30 @@ def publish_all(ctx: Context, log) -> dict:
                        "population": "World Bank most recent year" if not pct else None},
             "anchor": anchor, "incomplete_from": incf, "data_edge": edge, "latest": latest,
             "grid": {"periods": gp, "values": grid},
-            "global": {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]]},
+            "global": glob_out, "global_panel": panel,
         })
         # signal flags on the default series
         fl_rows = []
+        flag_basis, flag_params = "count", signals.FLAG_PARAMS
+        if pct and spec is not None:
+            # Influenza: the number of detections rises whenever more samples are tested, so flags are computed
+            # on the share of tested samples that were positive, for periods with enough samples to mean something.
+            flag_basis, flag_params = "percent_positive", {**signals.FLAG_PARAMS, **signals.POSITIVITY_FLAG_PARAMS}
         if ptype in signals.FLAG_PARAMS["min_count"]:
             for iso3 in piv.columns:
                 s = piv[iso3].dropna()
-                for f in signals.compute_flags(s.index.tolist(), s.tolist(), ptype, incf, bool(d.get("seasonal"))):
-                    fl_rows.append({"disease": did, "iso3": iso3, "skey": dk, "series_id": f"{dk}.{iso3}", **f,
+                extra = {}
+                if flag_basis == "percent_positive":
+                    if iso3 not in spec.columns:
+                        continue
+                    sp = spec[iso3].reindex(s.index)
+                    ok = sp >= flag_params["min_specimens"]
+                    extra = {p: {"detections": ts.safe(float(s[p])), "specimens": ts.safe(float(sp[p]))} for p in s.index[ok]}
+                    s = (100.0 * s[ok] / sp[ok]).round(2)
+                for f in signals.compute_flags(s.index.tolist(), s.tolist(), ptype, incf, bool(d.get("seasonal")), flag_params if flag_basis != "count" else None):
+                    fl_rows.append({"disease": did, "iso3": iso3, "skey": dk, "series_id": f"{dk}.{iso3}", **f, "basis": flag_basis, **extra.get(f["period"], {}),
                                     "origin_type": "site-derived", "source_ids": [mrow["source_id"]], "params_version": "1"})
-        write_json(out / "flags" / f"{did}.json", {"disease": did, "method": signals.FLAG_METHOD, "params": signals.FLAG_PARAMS,
+        write_json(out / "flags" / f"{did}.json", {"disease": did, "method": signals.FLAG_METHOD, "params": flag_params, "basis": flag_basis,
                                                     "origin_type": "site-derived", "snapshot_id": ctx.snapshot_id, "flags": fl_rows})
         all_flags += fl_rows
 
@@ -412,7 +435,8 @@ def publish_all(ctx: Context, log) -> dict:
                     "cases": e["cases"], "deaths": e["deaths"], "n_reports": len(e["reports"]), "source_ids": e["source_ids"],
                     "rank": e["rank"], "latest_title": latest["title"], "latest_url": latest["url"], "quality_flags": e["quality_flags"],
                     "locations": [{k: l.get(k) for k in ("iso3", "precision", "lon", "lat", "name")} for l in e["locations"]],
-                    "origin_type": "site-derived", "days_since_last_report": e["days_since_last_report"]})
+                    "origin_type": "site-derived", "days_since_last_report": e["days_since_last_report"],
+                    "counts_suppressed": e.get("counts_suppressed"), "supersedes": e.get("supersedes", [])})
     idx.sort(key=lambda x: (-x["rank"]["score"], x["event_id"]))
     from .events import RANK_METHOD, GROUP_METHOD, GEOCODE_METHOD, NO_RECENT_UPDATE_DAYS
     # The home page needs only the events still being reported, and the per-disease world totals: two small files

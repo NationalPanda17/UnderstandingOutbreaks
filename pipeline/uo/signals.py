@@ -30,6 +30,10 @@ FLAG_PARAMS = {
     "seasonal_k": 3.0,
     "lookback_periods": 52,   # how far back flags are computed and published
 }
+# Overrides used when the flagged quantity is a percentage of samples positive (influenza) rather than a count:
+# the value must be at least 10 percent, from a period with at least 50 samples tested. The other rules are
+# unchanged (the sd floor of sqrt(mean) then works in percentage points, which keeps small wobbles from flagging).
+POSITIVITY_FLAG_PARAMS = {"min_count": {"W": 10.0, "M": 10.0}, "min_specimens": 50, "unit": "percent_positive"}
 
 
 # ----------------------------------------------------------------------------- reporting lag

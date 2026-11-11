@@ -130,6 +130,23 @@ export function Methodology() {
   );
 }
 
+/** Who maintains the site and how to report a mistake. Names and addresses come only from config/site.json. */
+function Contact() {
+  const id = SITE.identity as { maintainer: string; maintainers?: string[]; contact?: string; errorReportUrl?: string };
+  const names = (id.maintainers ?? []).filter(Boolean);
+  const repo = (SITE as { repoUrl?: string }).repoUrl ?? '';
+  const report = id.errorReportUrl || (repo ? repo.replace(/\/$/, '') + '/issues/new' : '') || (id.contact ? 'mailto:' + id.contact : '');
+  return (
+    <section id="contact">
+      <h2>{t('contact.title')}</h2>
+      <p>{names.length ? t('contact.maintainedBy', { names: names.join(', ') }) : t('contact.maintainedByDefault', { name: id.maintainer })}</p>
+      {id.contact ? <p>{t('contact.email')} <a href={'mailto:' + id.contact}>{id.contact}</a></p> : <p>{t('contact.none')}</p>}
+      {report && <p><a class="btn" href={report} target={report.startsWith('mailto:') ? undefined : '_blank'} rel="noopener noreferrer" data-testid="report-error">{t('contact.report')}</a></p>}
+      <p class="small muted">{t('contact.corrections')}</p>
+    </section>
+  );
+}
+
 export function About() {
   const { route } = useApp();
   return (
@@ -137,6 +154,7 @@ export function About() {
       <h1>{t('about.title')}</h1>
       <Positioning />
       <Sections base="about" ids={['what', 'not', 'audiences', 'trust', 'open', 'privacy', 'languages']} />
+      <Contact />
       <p><a href={href(route, 'methodology')}>{t('nav.methodology')}</a> · <a href={href(route, 'sources')}>{t('nav.sources')}</a> · <a href={href(route, 'data-quality')}>{t('nav.quality')}</a></p>
     </div>
   );

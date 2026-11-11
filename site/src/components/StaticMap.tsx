@@ -57,6 +57,7 @@ export interface StaticMapProps {
   missingLabel?: Record<string, string>;
   names?: Record<string, string>;
   valueLabel?: string;
+  context?: string;
   region?: string;
   width?: number;
   height?: number;
@@ -86,15 +87,15 @@ export function StaticMap(props: StaticMapProps) {
         <pattern id="sm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f4f4f4" /><rect width="2.2" height="6" fill="#d2d2d2" /></pattern>
         <pattern id="sm-dots" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#fbf6e6" /><circle cx="1.5" cy="1.5" r="0.9" fill="#b89b3c" /><circle cx="4.5" cy="4.5" r="0.9" fill="#b89b3c" /></pattern>
       </defs>
-      {list.map((s) => {
+      {list.map((s, i) => {
         const v = props.values[s.iso3];
         const c = colorFor(v, props.breaks, ramp);
         const fill = c ?? (props.missing?.[s.iso3] === 'pending' ? 'url(#sm-dots)' : 'url(#sm-hatch)');
         const name = props.names?.[s.iso3] ?? s.name;
         return (
-          <path key={s.iso3} d={s.d} fill={fill} stroke="#8fa1a5" stroke-width={props.compact ? 0.3 : 0.6} vector-effect="non-scaling-stroke"
+          <path key={s.iso3 + i} d={s.d} fill={fill} stroke="#8fa1a5" stroke-width={props.compact ? 0.3 : 0.6} vector-effect="non-scaling-stroke"
             style={props.onSelect ? { cursor: 'pointer' } : undefined} onClick={props.onSelect ? () => props.onSelect!(s.iso3) : undefined}>
-            {!props.compact && <title>{name}: {c === null ? (props.missingLabel?.[s.iso3] ?? t('chart.noData')) : `${props.valueLabel ? props.valueLabel + ': ' : ''}${smart(v as number)}`}</title>}
+            {!props.compact && <title>{name}{props.context ? ' · ' + props.context : ''}: {c === null ? (props.missingLabel?.[s.iso3] ?? t('chart.noData')) : `${props.valueLabel ? props.valueLabel + ': ' : ''}${smart(v as number)}`}</title>}
           </path>
         );
       })}

@@ -54,3 +54,12 @@
   registered app name).
 - WHO FluID syndromic series; sub-national sources where openly licensed.
 - A district gazetteer; verified contact matrices; a formal accessibility audit; human translation review.
+
+## Hosting
+
+- Cloudflare, which delivers the site, tries to add its Web Analytics script to pages as it serves them. The
+  site's Content-Security-Policy blocks the script, so it does not run and nothing is sent, and the live-site
+  health check fails if anything is ever loaded from another server. The dashboard setting that stops the attempt
+  has not been found; the About page says so.
+- Named maintainers and a contact address appear on the About page only when set in `config/site.json`
+  (`identity.maintainers`, `identity.contact`, `identity.errorReportUrl`, `repoUrl`). They are empty by default.

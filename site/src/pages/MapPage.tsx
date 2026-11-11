@@ -9,7 +9,7 @@ import { provBlock, type Prov } from '../lib/prov';
 import { placeName } from '../lib/series';
 import { ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
-import { DENSITY_RAMP, MapLegend, REGION_VIEWS, classifyMissing, quantileBreaks, type MapPoint, type Missing } from '../components/mapUtil';
+import { CountryPopover, DENSITY_RAMP, MapLegend, REGION_VIEWS, classifyMissing, quantileBreaks, type MapPoint, type Missing } from '../components/mapUtil';
 import { SourceChip, useApp } from '../components/SourceChip';
 
 export function MapPage() {
@@ -31,6 +31,7 @@ export function MapPage() {
   const [stat, setStat] = useState<any>(null);
   useEffect(() => { if (view !== 'map' && !stat) import('../components/StaticMap').then(setStat).catch(() => undefined); }, [view]);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
   const allOv = useAsync(() => (view === 'grid' && gridBy === 'diseases' ? Promise.all(tsDiseases.map((d) => getJSON<Ov>(`overview/${d.id}.json`))) : Promise.resolve(null)), [view, gridBy]);
   const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
@@ -128,6 +129,11 @@ export function MapPage() {
       `${title}. ${ranked.slice(0, 5).map(([k, v]) => `${names[k]}: ${smart(v as number)}`).join('; ')}.`);
   };
 
+  const mapContext = layer === 'disease' && period ? `${diseaseName(core, disease)} · ${periodLabel(period, ov.data!.period_type)}` : layer === 'density' ? t('map.density') : '';
+  const popover = picked ? (
+    <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
+      lines={[values[picked] !== null && values[picked] !== undefined ? `${metric}: ${smart(values[picked] as number)}` : (missingLabel[picked] ?? t('chart.noData'))]} />
+  ) : null;
   return (
     <>
       <h1>{t('mappage.title')}</h1>
@@ -169,23 +175,23 @@ export function MapPage() {
         )}
         {ov.loading && <Loading />}
         {!table && view === 'map' && (
-          <LazyMap tall projection={proj} missing={missing} missingLabel={missingLabel} values={layer === 'none' ? {} : values} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
+          <div style={{ position: 'relative' }}>{popover}<LazyMap tall projection={proj} missing={missing} missingLabel={missingLabel} context={mapContext} values={layer === 'none' ? {} : values} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
             sourceLabel={prov.sourceIds.filter((s) => s !== 'naturalearth' && s !== 'geonames').map((s) => core.sources[s]?.short_name).join(', ')}
             points={points} pointMode={pm === 'off' ? 'markers' : pm} selected={selected}
-            onSelect={(iso3) => navigate(href(route, 'place/' + iso3, { d: disease }))} onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
+            onSelect={(iso3) => setPicked(iso3)} onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
             view={q.get('lng') ? { lng: parseFloat(q.get('lng')!), lat: parseFloat(q.get('lat') ?? '18'), z: parseFloat(q.get('z') ?? '1.1') } : undefined}
-            onMove={(v) => setParams({ lng: String(v.lng), lat: String(v.lat), z: String(v.z) })} ariaLabel={t('map.aria', { title })} apiRef={mapApi} />
+            onMove={(v) => setParams({ lng: String(v.lng), lat: String(v.lat), z: String(v.z) })} ariaLabel={t('map.aria', { title })} apiRef={mapApi} /></div>
         )}
         {!table && view === 'flat' && stat && (
-          <stat.StaticMap svgRef={svgRef} values={layer === 'none' ? {} : values} missing={missing} missingLabel={missingLabel} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
-            region={rg} height={rg === 'world' ? 500 : 620} title={t('map.aria', { title })} onSelect={(iso3: string) => navigate(href(route, 'place/' + iso3, { d: disease }))} />
+          <div style={{ position: 'relative' }}>{popover}<stat.StaticMap svgRef={svgRef} context={mapContext} values={layer === 'none' ? {} : values} missing={missing} missingLabel={missingLabel} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} names={names} valueLabel={metric}
+            region={rg} height={rg === 'world' ? 500 : 620} title={t('map.aria', { title })} onSelect={(iso3: string) => setPicked(iso3)} /></div>
         )}
         {!table && view === 'grid' && stat && layer !== 'none' && (
           <stat.MapGrid panels={panels} breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} region={rg}
             onPanel={gridBy === 'time' ? (k: string) => setParams({ t: k, v: null }) : (k: string) => setParams({ d: k, g: null, v: null, t: null })} />
         )}
         {!table && view !== 'map' && !stat && <Loading />}
-        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} title={metric} pending={layer === 'disease'} />}
+        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layer === 'density' ? DENSITY_RAMP : undefined} title={metric} pending={layer === 'disease'} scale={layer === 'disease' ? 'fixed' : undefined} />}
         {table && (
           <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metric}</th></tr></thead>
             <tbody>{ranked.map(([k, v]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: disease })}>{names[k]}</a></th><td class="n">{smart(v as number)}</td></tr>)}</tbody></table>

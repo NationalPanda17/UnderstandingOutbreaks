@@ -58,8 +58,9 @@ for human review.**
 | US CDC data.cdc.gov (e.g. `pwn4-m3yp`) | Reachable; US-only | Not used for the global Tier 1 set |
 | PAHO dengue indicators page | HTTP 502 | Dropped |
 | Africa CDC RSS feed | Reachable but contained no items | Dropped |
-| GPEI wild poliovirus count page | HTML without a machine-readable table | Dropped |
-| WHO POLIS API | Requires a token | Dropped |
+| GPEI wild poliovirus and cVDPV count pages | Re-checked 2026-11-11: the counts are an embedded Power BI report, not a table or file | Not used directly |
+| WHO POLIS API | Re-checked 2026-11-11: the service document is public but every data request returns 401 without a token | Not used until a maintainer obtains a token |
+| Our World in Data: wild poliovirus cases; cVDPV cases by strain | Annual, by country, processed from WHO and GPEI. Covers 2001–2023 (wild) and 2016–2023 (cVDPV); last updated by OWID in April 2024. Wild types are not separated (WPV1/2/3 together) | **Used** for the wild versus vaccine-derived split, marked stale because it ends in 2023 |
 | UN population API, geoBoundaries | Reachable | Not needed (World Bank and Natural Earth used) |
 
 ## Event sources (Tier 2)
@@ -75,6 +76,8 @@ for human review.**
 | WHO Regional Office for Africa | `https://www.afro.who.int/rss/emergencies.xml` held 2 items, the newest from 2025 (checked 2026-11-10) | – | – | – | Not used: stale |
 | CDC Health Alert Network | HTTP 403 to automated clients | – | – | – | Dropped |
 | ReliefWeb | API v1 retired; v2 requires an approved app name | – | – | – | Not used until a maintainer registers an app name |
+| WHO Ebola / Bundibugyo virus disease situation reports | Checked 2026-11-11: published as PDF documents. WHO's public listings (`/api/hubs/publications`, `/api/news/documents1`) return no current situation reports for this outbreak (the newest Ebola situation report listed is from 2020) | – | – | – | Not ingested. No machine-readable listing was found, and this site does not transcribe figures from PDFs by hand |
+| WHO monthly multi-country cholera situation reports | Checked 2026-11-11: PDF documents; not present in the same listings (only the annual "Global situation report for cholera" appears) | – | – | – | Not ingested, for the same reason |
 | ProMED | subscription / restricted | – | – | – | Not used |
 
 Events participate in revision history: each run records status, counts, number of notices and countries per event,

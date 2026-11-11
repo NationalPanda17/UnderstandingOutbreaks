@@ -180,6 +180,7 @@ export function TracePanel({ prov, onClose }: { prov: Prov; onClose: () => void 
                   <div class="muted">
                     <code>{it.iso3 ? `${it.skey}.${it.iso3}` : it.skey}</code><br />
                     {m.case_definition_note}<br />{m.surveillance_system_note}
+                    {m.date_basis && <><br />{t('datebasis.label')}: {t('datebasis.' + m.date_basis)}{m.date_basis_field ? ` (${t('datebasis.field', { field: m.date_basis_field })})` : ''}</>}
                     {fetchesFor(m.dataset_id).slice(0, 3).map((f) => <div key={f.fetch_id}><code>{f.fetch_id}</code> sha256 <code>{f.raw_file_hash.slice(0, 20)}…</code> · {f.retrieved_at}</div>)}
                     {it.iso3 && lineage[`${m.disease}/${it.iso3}`]?.series?.[it.skey] && (
                       <div>{t('trace.rawRefs')}: <code>{lineage[`${m.disease}/${it.iso3}`].series[it.skey].r.slice(-2).join(' | ')}</code></div>

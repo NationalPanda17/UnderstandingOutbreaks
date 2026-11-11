@@ -3,8 +3,16 @@
 # link_kind: "deep" or "dataset-level link" (only a landing page exists).
 # chain: ordered transformation steps applied by the connector (operation, method_version, params).
 # ref_template: how a raw_record_ref is built for one normalized record (documented in docs/PROVENANCE.md).
+# date_basis says what a period's date means, as far as the source file itself tells us:
+#   report_date    the date the figure was reported (the source's field says so)
+#   source_period  the week, month or day the source assigns the figure to; the file does not say whether that is
+#                  symptom onset, sample collection or report, so no finer claim is made here
+#   calendar_year  the year an annual figure is reported for
+# date_basis_field is the source's own column name, so a reader can check.
 datasets:
   - id: who_flunet_weekly
+    date_basis: source_period
+    date_basis_field: "ISO_WEEKSTARTDATE (ISO week)"
     lag_default_periods: 2
     source_id: who_flunet
     connector: flunet
@@ -22,6 +30,8 @@ datasets:
     ref_template: "COUNTRY_CODE={iso3};ISO_WEEKSTARTDATE={period};ORIGIN_SOURCE={system_raw}"
     expected_min_rows: 20000
   - id: who_covid_weekly
+    date_basis: report_date
+    date_basis_field: "Date_reported"
     allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
     lag_default_periods: 2
     source_id: who_covid
@@ -40,6 +50,8 @@ datasets:
     ref_template: "Country_code={iso2};Date_reported={period_end}"
     expected_min_rows: 50000
   - id: who_mpox_daily
+    date_basis: source_period
+    date_basis_field: "DATE"
     allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
     lag_default_periods: 4
     source_id: who_mpox
@@ -58,6 +70,8 @@ datasets:
     ref_template: "ISO3={iso3};DATE in [{period}, {period}+6d]"
     expected_min_rows: 2000
   - id: owid_mpox
+    date_basis: source_period
+    date_basis_field: "date"
     allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
     lag_default_periods: 4
     source_id: owid
@@ -76,6 +90,8 @@ datasets:
     ref_template: "iso_code={iso3};date in [{period}, {period}+6d]"
     expected_min_rows: 2000
   - id: who_measles_monthly
+    date_basis: source_period
+    date_basis_field: "Year, Month"
     allow_negative: true   # sources publish negative values as retrospective corrections; kept and flagged
     lag_default_periods: 2
     source_id: who_measles_provisional
@@ -93,6 +109,8 @@ datasets:
     ref_template: "sheet=WEB;ISO3={iso3};Year={year};Month={month}"
     expected_min_rows: 20000
   - id: who_wiise_measles
+    date_basis: calendar_year
+    date_basis_field: "YEAR"
     source_id: who_wiise
     connector: who_wiise
     disease: measles
@@ -108,6 +126,8 @@ datasets:
     ref_template: "CODE={iso3};YEAR={year};DISEASE=MEASLES"
     expected_min_rows: 5000
   - id: who_wiise_polio
+    date_basis: calendar_year
+    date_basis_field: "YEAR"
     source_id: who_wiise
     connector: who_wiise
     disease: polio
@@ -123,6 +143,8 @@ datasets:
     ref_template: "CODE={iso3};YEAR={year};DISEASE=POLIO"
     expected_min_rows: 5000
   - id: owid_measles
+    date_basis: calendar_year
+    date_basis_field: "Year"
     source_id: owid
     connector: owid_grapher
     disease: measles
@@ -138,6 +160,8 @@ datasets:
     ref_template: "code={iso3};year={year}"
     expected_min_rows: 3000
   - id: owid_polio
+    date_basis: calendar_year
+    date_basis_field: "Year"
     source_id: owid
     connector: owid_grapher
     disease: polio
@@ -152,7 +176,81 @@ datasets:
     chain: [{op: select_columns, method_version: "1", params: {}}]
     ref_template: "code={iso3};year={year}"
     expected_min_rows: 3000
+  - id: owid_polio_wild
+    date_basis: calendar_year
+    date_basis_field: "year"
+    source_id: owid
+    connector: owid_grapher
+    disease: polio
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-wild-polioviruses.csv?csvType=full&useColumnShortNames=true"
+    value_column: wild_poliovirus_cases
+    detail: "wild poliovirus (any type: WPV1, WPV2, WPV3), annual reported paralytic cases"
+    deep_link: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-wild-polioviruses?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO and Global Polio Eradication Initiative data."
+    case_definition_note: "Annual reported paralytic polio cases caused by wild poliovirus of any type. The source does not separate WPV1 from the other wild types in this file."
+    chain: [{op: select_columns, method_version: "1", params: {column: wild_poliovirus_cases}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 2000
+  - id: owid_polio_cvdpv1
+    date_basis: calendar_year
+    date_basis_field: "year"
+    source_id: owid
+    connector: owid_grapher
+    disease: polio
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain.csv?csvType=full&useColumnShortNames=true"
+    value_column: cvdpv1
+    detail: "circulating vaccine-derived poliovirus type 1 (cVDPV1), annual reported paralytic cases"
+    deep_link: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO and Global Polio Eradication Initiative data."
+    case_definition_note: "Annual reported paralytic polio cases caused by circulating vaccine-derived poliovirus type 1. Countries appear only in years with at least one such case."
+    chain: [{op: select_columns, method_version: "1", params: {column: cvdpv1}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 3
+  - id: owid_polio_cvdpv2
+    date_basis: calendar_year
+    date_basis_field: "year"
+    source_id: owid
+    connector: owid_grapher
+    disease: polio
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain.csv?csvType=full&useColumnShortNames=true"
+    value_column: cvdpv2
+    detail: "circulating vaccine-derived poliovirus type 2 (cVDPV2), annual reported paralytic cases"
+    deep_link: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO and Global Polio Eradication Initiative data."
+    case_definition_note: "Annual reported paralytic polio cases caused by circulating vaccine-derived poliovirus type 2. Countries appear only in years with at least one such case."
+    chain: [{op: select_columns, method_version: "1", params: {column: cvdpv2}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 40
+  - id: owid_polio_cvdpv3
+    date_basis: calendar_year
+    date_basis_field: "year"
+    source_id: owid
+    connector: owid_grapher
+    disease: polio
+    raw_ext: csv
+    url: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain.csv?csvType=full&useColumnShortNames=true"
+    value_column: cvdpv3
+    detail: "circulating vaccine-derived poliovirus type 3 (cVDPV3), annual reported paralytic cases"
+    deep_link: "https://ourworldindata.org/grapher/cases-of-paralytic-polio-from-vaccine-derived-viruses-by-strain?country={iso3}"
+    link_kind: deep
+    period_type: Y
+    surveillance_system_note: "Our World in Data's processing of WHO and Global Polio Eradication Initiative data."
+    case_definition_note: "Annual reported paralytic polio cases caused by circulating vaccine-derived poliovirus type 3. Countries appear only in years with at least one such case."
+    chain: [{op: select_columns, method_version: "1", params: {column: cvdpv3}}]
+    ref_template: "code={iso3};year={year}"
+    expected_min_rows: 1
   - id: owid_cholera
+    date_basis: calendar_year
+    date_basis_field: "Year"
     source_id: owid
     connector: owid_grapher
     disease: cholera
@@ -168,6 +266,8 @@ datasets:
     ref_template: "code={iso3};year={year}"
     expected_min_rows: 1000
   - id: who_gho_cholera
+    date_basis: calendar_year
+    date_basis_field: "TimeDim"
     source_id: who_gho
     connector: who_gho
     disease: cholera
@@ -182,6 +282,8 @@ datasets:
     ref_template: "IndicatorCode=CHOLERA_0000000001;SpatialDim={iso3};TimeDim={year}"
     expected_min_rows: 1000
   - id: opendengue_national
+    date_basis: source_period
+    date_basis_field: "calendar_start_date, calendar_end_date"
     source_id: opendengue
     connector: opendengue
     disease: dengue

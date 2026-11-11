@@ -7,7 +7,8 @@ import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
-import { DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
+import { useState } from 'preact/hooks';
+import { AgeBadge, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { WatchButton } from './Watchlists';
 
@@ -45,12 +46,17 @@ export function DiseasePage({ id }: { id: string }) {
   const ov = useAsync(() => (d?.has_timeseries ? getOptional<Ov>(`overview/${id}.json`) : Promise.resolve(null)), [id]);
   const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
   const regions = useAsync(() => getOptional<{ countries: Record<string, { years: [number, number]; latest_year: number | null; n_matched: number }> }>(`subnational/${id}/index.json`), [id]);
+  const [panelOn, setPanelOn] = useState(false);
   if (!d) return <ErrorBox error={t('disease.unknown', { id })} />;
   const name = diseaseName(core, id);
   const mine = (events.data?.events ?? []).filter((e) => e.disease === id).sort((a, b) => (a.last_report < b.last_report ? 1 : -1));
   const o = ov.data;
   const meta = o ? core.seriesByKey[o.skey] : null;
   const global: SeriesData | null = o ? { id: 'global', label: t('disease.globalLabel', { n: Math.max(...o.global.n) }), p: o.global.p, v: o.global.v, ptype: o.period_type as PType, incompleteFrom: o.incomplete_from } : null;
+  // Constant panel: the same countries in every period, so a change in who reported cannot move the line.
+  const panel = o?.global_panel && o.global_panel.n_panel > 0 ? o.global_panel : null;
+  const panelSeries: SeriesData | null = o && panel ? { id: 'panel', label: t('panel.label', { n: panel.n_panel }), p: panel.p, v: panel.v as number[], ptype: o.period_type as PType, incompleteFrom: o.incomplete_from } : null;
+  const nLatest = o ? o.global.n[o.global.p.indexOf(o.anchor)] : undefined;
   const top = o ? Object.entries(o.latest).filter(([, r]) => r.metric_value !== null).sort((a, b) => (b[1].metric_value as number) - (a[1].metric_value as number)).slice(0, 15) : [];
   const rec = core.reconciliation[id];
   return (
@@ -61,9 +67,11 @@ export function DiseasePage({ id }: { id: string }) {
       {ov.loading && <Loading />}
       {o && global && meta && (
         <>
-          <ChartCard id="disease-global" title={t('disease.globalTitle', { name })} series={[global]}
+          {panelSeries && <p class="small"><label><input type="checkbox" checked={panelOn} onChange={(e) => setPanelOn((e.target as HTMLInputElement).checked)} data-testid="panel-toggle" /> {t('panel.toggle', { n: panel!.n_panel, pct: Math.round(panel!.min_coverage * 100) })}</label></p>}
+          <ChartCard id="disease-global" title={t('disease.globalTitle', { name })} series={[panelOn && panelSeries ? panelSeries : global]}
             prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
             yLabel={t('metric.' + meta.metric)} means={t('disease.globalMeans')} embed={{ kind: 'chart', params: { d: id, global: '1' } }} tours={['epicurve', 'recentlow']} />
+          <p class="small muted">{nLatest !== undefined && o.global.n_total ? t('total.nOfNPeriod', { n: nLatest, N: o.global.n_total, period: periodLabel(o.anchor, o.period_type) }) : ''} <AgeBadge period={o.anchor} ptype={o.period_type} /> {panelOn && panel && t('panel.explain', { n: panel.n_panel, pct: Math.round(panel.min_coverage * 100) })}</p>
           {meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <section class="card" style={{ marginTop: '16px' }}>
             <header><h2>{t('disease.top', { metric: mapMetricLabel(core, id, o.method.window_periods, o.period_type) })}</h2>
@@ -92,7 +100,8 @@ export function DiseasePage({ id }: { id: string }) {
           <ul class="list small">
             {d.series.filter((s) => route.mode === 'analyst' || s.skey === d.default_skey || s.n_places > 20).map((s) => (
               <li key={s.skey}><b>{seriesLabel(core, s, { withSource: true })}</b> · {t('ptype.' + s.period_type)} · {t('disease.nPlaces', { n: s.n_places })} <span class="badge">{t('origin.' + s.origin_type)}</span>{s.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}{s.skey === d.default_skey && <> <span class="badge ts">{t('place.defaultSeries')}</span></>}
-                <div class="muted">{s.case_definition_note} {s.surveillance_system_note}</div></li>
+                <div class="muted">{s.case_definition_note} {s.surveillance_system_note}</div>
+                {s.date_basis && <div class="muted">{t('datebasis.label')}: {t('datebasis.' + s.date_basis)}{s.date_basis_field ? ` (${t('datebasis.field', { field: s.date_basis_field })})` : ''}</div>}</li>
             ))}
           </ul>
           {rec && <p class="small">{t('disease.reconcile', { overlaps: num(rec.overlaps), n: num(rec.disagreements) })}</p>}

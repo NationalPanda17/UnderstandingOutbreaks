@@ -14,6 +14,8 @@ export interface MapProps {
   /** Tooltip text for an area without a value (for example "Not yet reported; last report March 2026"). */
   missingLabel?: Record<string, string>;
   projection?: 'mercator' | 'globe';
+  /** What the colours show, for tooltips: disease and period, e.g. "Measles · Aug 2026". */
+  context?: string;
   breaks?: number[];
   ramp?: string[];
   valueLabel?: string;
@@ -68,7 +70,7 @@ export function classifyMissing(grid: Record<string, (number | null)[]>, ti: num
   return out;
 }
 
-export function MapLegend({ breaks, ramp = RAMP, title, pending }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean }) {
+export function MapLegend({ breaks, ramp = RAMP, title, pending, scale }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean; scale?: 'view' | 'fixed' | 'own' }) {
   const stops = [0, ...breaks];
   return (
     <div class="maplegend" aria-label={title}>
@@ -78,6 +80,19 @@ export function MapLegend({ breaks, ramp = RAMP, title, pending }: { breaks: num
       {stops.length > 1 && <span><span class="sw" style={{ background: ramp[Math.min(ramp.length - 1, stops.length)] }} /> ≥ {smart(stops[stops.length - 1])}</span>}
       {pending && <span><span class="sw pending" /> {t('map.pending')}</span>}
       <span><span class="sw missing" /> {pending ? t('map.noReport') : t('map.noData')}</span>
+      {scale && <span class="legendnote">{t('legend.scale.' + scale)}</span>}
+    </div>
+  );
+}
+
+/** What a click on a country shows: its name, what the map says about it, and a way through to its page. */
+export function CountryPopover({ name, context, lines, to, onClose }: { name: string; context?: string; lines: string[]; to: string; onClose: () => void }) {
+  return (
+    <div class="mappop" role="dialog" aria-label={name} data-testid="country-popover">
+      <div class="row"><b>{name}</b><button type="button" class="btn small" onClick={onClose} aria-label={t('action.close')}>×</button></div>
+      {context && <div class="small muted">{context}</div>}
+      {lines.map((l) => <div class="small" key={l}>{l}</div>)}
+      <a class="btn small primary" href={to} style={{ marginTop: '6px' }}>{t('popover.open', { name })}</a>
     </div>
   );
 }

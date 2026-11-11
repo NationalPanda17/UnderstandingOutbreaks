@@ -23,7 +23,10 @@ from .core import Fetch, PipelineError, SchemaChange, archive_raw, http_get
 RANK_METHOD = {"name": "active_rank", "version": "1",
                "weights": {"recency": 0.45, "cases": 0.25, "deaths": 0.10, "countries": 0.10, "source_type": 0.10},
                "recency_half_scale_days": 30, "active_window_days": 180}
-GROUP_METHOD = {"name": "group_by_disease_place_gap", "version": "1", "max_gap_days": 120}
+GROUP_METHOD = {"name": "group_by_disease_place_gap", "version": "2", "max_gap_days": 120, "merge_countryless": True}
+# Event cards show a case or death count only when it can be read as one number: at most this many countries,
+# and a stated case definition. Otherwise the figures stay on the event page, each with its quoted source phrase.
+COUNT_HEADLINE_MAX_COUNTRIES = 3
 GEOCODE_METHOD = {"name": "gazetteer_match", "version": "1"}
 SUMMARY_METHOD = {"name": "template_summary", "version": "1"}
 COUNT_METHOD = {"name": "regex_count_extraction", "version": "1"}
@@ -351,11 +354,18 @@ def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocod
 
 
 def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) -> list[dict]:
-    """Group reports of the same event (method ``group_by_disease_place_gap`` v1) and assign stable ids.
+    """Group reports of the same event (method ``group_by_disease_place_gap`` v2) and assign stable ids.
 
     Two reports belong together when they share a disease, name at least one common country (or both name
     none), and are no more than ``max_gap_days`` apart. 'other' diseases also need the same source wording.
-    ``id_map`` (report_id -> event_id) persists between runs so ids never change once assigned.
+
+    New in v2: notices that name no country in their title ("Ebola disease: multi-country outbreak") used to form
+    a second event beside the country-level one for the same outbreak. A countryless group is now folded into a
+    country group of the same disease when exactly one such group overlaps it in time (within ``max_gap_days``).
+    If several overlap, nothing is merged: which outbreak the notice means is not decided by guessing.
+
+    ``id_map`` (report_id -> event_id) persists between runs so ids never change once assigned. When a merge
+    retires an id, the reserved key ``__superseded__`` remembers old id -> new id so old links still resolve.
     """
     groups: list[dict] = []
     for r in sorted(reports, key=lambda x: (x["published"], x["report_id"])):
@@ -386,20 +396,48 @@ def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) ->
         for c in r["countries"]:
             if c not in target["countries"]:
                 target["countries"].append(c)
+    # v2: fold countryless groups into the single country group they overlap ('other' is never merged this way)
+    def span(g):
+        return dt.date.fromisoformat(g["first_report"]), dt.date.fromisoformat(g["last_report"])
+
+    gap = dt.timedelta(days=GROUP_METHOD["max_gap_days"])
+    for g0 in [g for g in groups if not g["countries"] and g["disease"] != "other"]:
+        a0, b0 = span(g0)
+        over = [g for g in groups if g is not g0 and g["disease"] == g0["disease"] and g["countries"]
+                and span(g)[0] - gap <= b0 and a0 <= span(g)[1] + gap]
+        if len(over) != 1:
+            continue
+        tgt = over[0]
+        tgt["reports"] = sorted(tgt["reports"] + g0["reports"], key=lambda x: (x["published"], x["report_id"]))
+        tgt["first_report"] = min(tgt["first_report"], g0["first_report"])
+        tgt["last_report"] = max(tgt["last_report"], g0["last_report"])
+        tgt.setdefault("merged_countryless", 0)
+        tgt["merged_countryless"] += len(g0["reports"])
+        groups.remove(g0)
+    superseded: dict = id_map.setdefault("__superseded__", {})
     events = []
     used: set[str] = set()
-    for g in groups:
+    # groups that keep the id of their earliest report go first, so a merge never steals another event's id
+    for g in sorted(groups, key=lambda g: (g["reports"][0]["published"], g["reports"][0]["report_id"])):
         existing = [id_map[r["report_id"]] for r in g["reports"] if r["report_id"] in id_map]
-        eid = next((e for e in existing if e not in used), None)
+        own = id_map.get(next((r["report_id"] for r in g["reports"] if r["countries"]), g["reports"][0]["report_id"]))
+        eid = own if own and own not in used else next((e for e in existing if e not in used), None)
         if eid is None:
             first = g["reports"][0]
             place = (first["countries"][0] if first["countries"] else "multi").lower()
             h = hashlib.sha1(first["report_id"].encode()).hexdigest()[:6]
             eid = f"{g['disease'].replace('_', '-')}-{place}-{first['published'][:7].replace('-', '')}-{h}"
         used.add(eid)
+        for old in set(existing) - {eid}:
+            superseded[old] = eid
         for r in g["reports"]:
             id_map[r["report_id"]] = eid
         events.append(build_event(eid, g, today))
+    live = {e["event_id"] for e in events}
+    for old in [o for o in superseded if o in live]:
+        del superseded[old]   # an id that is in use again is not an alias
+    for e in events:
+        e["supersedes"] = sorted(o for o, n in superseded.items() if n == e["event_id"])
     return events
 
 
@@ -428,6 +466,17 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
         qf.append("disease-unmapped")
     if not g["countries"]:
         qf.append("no-country-in-title")
+    if g.get("merged_countryless"):
+        qf.append("includes-notices-without-a-country")
+    # Should a card show the extracted count as one headline number?
+    suppressed = None
+    if latest_counts:
+        if not g["countries"] or len(g["countries"]) > COUNT_HEADLINE_MAX_COUNTRIES:
+            suppressed = "multi-country"
+        elif "cases" in latest_counts and latest_counts["cases"].get("case_definition") in (None, "", "unknown"):
+            suppressed = "definition-unknown"
+    if suppressed:
+        qf.append("counts-not-shown-as-headline")
     ev = {
         "event_id": eid, "disease": g["disease"], "name_in_source": g["name_in_source"], "pathogen": None,
         "countries": g["countries"], "locations": locs, "first_report": g["first_report"], "last_report": g["last_report"],
@@ -437,6 +486,7 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
                   if "cases" in latest_counts else None),
         "deaths": ({**latest_counts["deaths"], "as_of": counts_report["published"], "report_id": counts_report["report_id"]}
                    if "deaths" in latest_counts else None),
+        "counts_suppressed": suppressed,
         "source_ids": sorted({r["source_id"] for r in reps}), "quality_flags": qf, "origin_type": "site-derived",
         "methods": {"grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD, "summary": SUMMARY_METHOD, "counts": COUNT_METHOD},
         "reports": [{k: r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
