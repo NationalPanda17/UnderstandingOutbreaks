@@ -9,7 +9,7 @@ system and not medical advice. Install the pinned packages first: `source("renv-
 
 ```{r}
 library(dplyr); library(tidyr); library(arrow); library(ggplot2); library(jsonlite)
-BASE <- Sys.getenv("UO_BASE", "https://understandingoutbreaks.pages.dev/data/v1")
+BASE <- Sys.getenv("UO_BASE", "https://understandingoutbreaks.com/data/v1")
 DISEASE <- "measles"; ISO3 <- "KEN"
 uo_read <- function(path) {
   if (grepl("^https?://", path)) { tmp <- tempfile(fileext = ".parquet"); download.file(path, tmp, mode = "wb", quiet = TRUE); path <- tmp }

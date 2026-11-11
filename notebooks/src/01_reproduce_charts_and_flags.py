@@ -12,7 +12,7 @@ import json, os
 import numpy as np
 import pandas as pd
 
-BASE = os.environ.get("UO_BASE", "https://understandingoutbreaks.pages.dev/data/v1")  # or a local folder
+BASE = os.environ.get("UO_BASE", "https://understandingoutbreaks.com/data/v1")  # or a local folder
 DISEASE, ISO3 = "measles", "KEN"
 
 def read_json(path):

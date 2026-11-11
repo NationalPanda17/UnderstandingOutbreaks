@@ -4,7 +4,7 @@ message: "If you use this software or its datasets, please cite it using this me
 type: software
 authors:
   - name: "Understanding Outbreaks contributors"
-url: "https://understandingoutbreaks.pages.dev"
+url: "https://understandingoutbreaks.com"
 license: MIT
 abstract: "An open-source, static website and data pipeline that aggregates and explains official public reports of infectious disease activity, with record-level provenance. Not a surveillance system; not medical advice."
 keywords:

@@ -1,7 +1,7 @@
 # Starter script for the in-browser R console (webR). Base R only: no packages are downloaded.
 # It loads one disease's published data and summarises a country's default series.
 # The data aggregates official public reports; it is not a surveillance system and not medical advice.
-BASE <- "https://understandingoutbreaks.pages.dev/data/v1"
+BASE <- "https://understandingoutbreaks.com/data/v1"
 DISEASE <- "measles"; ISO3 <- "KEN"
 tmp <- tempfile(fileext = ".csv.gz")
 download.file(paste0(BASE, "/bulk/timeseries/disease=", DISEASE, "/data.csv.gz"), tmp, mode = "wb", quiet = TRUE)

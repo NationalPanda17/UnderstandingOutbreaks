@@ -147,7 +147,7 @@ describe.skipIf(!hasData)('exports always carry provenance', () => {
   it('images bake in title, source names, license, data-as-of and the short URL; captions cite the source', () => {
     const { prov } = mk();
     const svg = composeExportSVG({ svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340"><rect/></svg>', width: 760, height: 340 }, imageMeta(core, prov, 'Measles in Kenya', 'Per 100,000 people'));
-    for (const needle of ['Measles in Kenya', 'Per 100,000 people', 'WHO measles (provisional)', 'Our World in Data', 'License:', 'Data as of', 'understandingoutbreaks.pages.dev']) expect(svg).toContain(needle);
+    for (const needle of ['Measles in Kenya', 'Per 100,000 people', 'WHO measles (provisional)', 'Our World in Data', 'License:', 'Data as of', 'understandingoutbreaks.com']) expect(svg).toContain(needle);
     const cap = caption(core, prov, 'Measles in Kenya');
     expect(cap).toContain('WHO measles (provisional)'); expect(cap).toContain('snapshot'); expect(cap).toMatch(/License/);
   });

@@ -57,7 +57,7 @@ cd site && npm run check:i18n && npm test && npm run build && npm run check:bund
 
 ## Deploying to Cloudflare Pages and R2
 
-The site launches on a free `pages.dev` address. **The base URL is one config value**: `baseUrl` (and `shortUrl`) in
+The site runs at `understandingoutbreaks.com` (Cloudflare Pages), with large files on `assets.understandingoutbreaks.com` (R2). **The base URL is one config value**: `baseUrl` (and `shortUrl`) in
 `config/site.json`. Moving to a custom domain is that one-line change plus a rebuild.
 
 1. Create a Cloudflare Pages project (direct upload) and an R2 bucket with a public custom domain or `r2.dev` URL.

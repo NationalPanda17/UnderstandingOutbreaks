@@ -8,7 +8,7 @@
 import json, os
 import pandas as pd
 
-BASE = os.environ.get("UO_BASE", "https://understandingoutbreaks.pages.dev/data/v1")
+BASE = os.environ.get("UO_BASE", "https://understandingoutbreaks.com/data/v1")
 DISEASE = "covid19"
 rev = pd.read_parquet(f"{BASE}/bulk/revisions/disease={DISEASE}/revisions.parquet")
 snapshots = sorted(rev["snapshot_id"].unique())
