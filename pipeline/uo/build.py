@@ -55,6 +55,25 @@ def _load_fetches(name: str) -> list[Fetch] | None:
     return out
 
 
+def _restore_public_raw(snapshot_id: str) -> None:
+    """Put back the redistributable raw files the current snapshot lists.
+
+    The public archive folder is rebuilt on every run. When a run finds no changes it keeps the previous snapshot,
+    whose manifest can list a raw file this run did not download again (a reference file that has since been
+    replaced upstream, for instance). The bytes are still in private state, so copy them back."""
+    snap = read_json(DATA_OUT / "snapshots" / f"{snapshot_id}.json", {})
+    for f in snap.get("raw_files", []):
+        if not (f.get("archive_public") and f.get("archive_key")):
+            continue
+        pub = R2_OUT / f["archive_key"]
+        if pub.exists():
+            continue
+        local = next(iter(sorted((STATE / "raw" / f["dataset_id"]).glob(f["raw_file_hash"] + ".*"))), None)
+        if local is not None:
+            pub.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(local, pub)
+
+
 def _issue_for_failure(ds_id: str, source: dict, err: Exception, status: dict) -> None:
     last_good = status.get(ds_id, {}).get("last_good_snapshot") or "none yet"
     body = [f"**Failing source:** {source['name']} (`{source['id']}`), dataset `{ds_id}`",
@@ -193,6 +212,7 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
                           status=status, events=ev_out["events"], event_history=ev_out["history"],
                           unmapped=ev_out["unmapped"], subnational=sub, now=now, changes=changes if is_new_snapshot else changes.iloc[0:0])
     summary = publish.publish_all(ctx, log)
+    _restore_public_raw(snapshot_id)
     # Notice ids this run already knows about. The hourly check (uo.notice_check) compares the live feeds with this
     # list and starts a full update only when a feed lists a notice that is not in it.
     write_json(DATA_OUT / "events" / "report_ids.json", {
