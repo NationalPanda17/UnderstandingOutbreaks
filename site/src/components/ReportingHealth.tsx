@@ -21,6 +21,12 @@ export function reportingText(r: Reporting, iso3: string): string | null {
   ].join(' · ');
 }
 
+/** Short form for tables and map popovers: how far behind the latest report is, and how complete recent reporting was. */
+export function reportingShort(r: Reporting, iso3: string): string | null {
+  const x = r.places[iso3]; if (!x) return null;
+  return `${x.periods_behind === 0 ? t('health.upToDate') : t('health.behind.' + r.period_type, { n: x.periods_behind })} · ${t('health.present', { pct: Math.round(x.completeness * 100), n: x.expected })}`;
+}
+
 export function ReportingChip({ disease, iso3 }: { disease: string; iso3: string }) {
   const rep = useAsync(() => loadReporting(disease), [disease]);
   const text = rep.data ? reportingText(rep.data, iso3) : null;

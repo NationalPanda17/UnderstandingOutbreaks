@@ -141,7 +141,10 @@ export function MapPage() {
   const popover = picked ? (
     <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
       lines={[values[picked] !== null && values[picked] !== undefined ? `${metric}: ${smart(values[picked] as number)}` : (missingLabel[picked] ?? t('chart.noData')),
-        ...(layer === 'disease' && ov.data && core.seriesByKey[ov.data.skey] ? [`${t('metric.' + core.seriesByKey[ov.data.skey].metric)} (${t('def.' + core.seriesByKey[ov.data.skey].case_definition)})`] : [])]} />
+        ...(layer === 'disease' && ov.data && core.seriesByKey[ov.data.skey] ? [`${t('metric.' + core.seriesByKey[ov.data.skey].metric)} (${t('def.' + core.seriesByKey[ov.data.skey].case_definition)})`] : [])]}>
+      {layer === 'disease' && ov.data && values[picked] !== null && values[picked] !== undefined && <CiteButton prov={{ ...prov, series: [{ skey: ov.data.skey, iso3: picked }] }} title={title}
+        statement={t('citep.stmt.place', { place: names[picked] ?? picked, metric, value: smart(values[picked] as number), window: mapContext })} />}
+    </CountryPopover>
   ) : null;
   return (
     <>

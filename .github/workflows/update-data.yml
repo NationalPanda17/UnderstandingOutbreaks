@@ -1,7 +1,8 @@
 name: Update data and deploy
 # Scheduled data update, every six hours. The 05:17 UTC run always rebuilds and deploys; the other three stop after
 # the pipeline step when nothing changed (no new or revised value, no change to an outbreak), so an unchanged run
-# publishes nothing and saves no snapshot. A manual run, and a run started by the hourly notice check, always deploy.
+# publishes nothing and saves no snapshot. A manual run, and a run started by the hourly notice check, always deploy
+# (a manual run can ask for the stop-when-unchanged behaviour with the only_if_changed input).
 # Sources are checked on their own cadence inside the pipeline (daily and weekly sources every
 # run, monthly sources weekly, yearly sources monthly). On any failure the last good snapshot stays live and a GitHub
 # issue is opened. This workflow never opens pull requests and never changes code or configuration.
@@ -12,6 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       linkcheck: { description: "Also check source links", type: boolean, default: false }
+      only_if_changed: { description: "Stop after the pipeline when nothing changed (as the extra scheduled runs do)", type: boolean, default: false }
   workflow_call:
     inputs:
       linkcheck: { type: boolean, default: false }
@@ -24,7 +26,7 @@ concurrency: { group: update-data, cancel-in-progress: false }
 env:
   # 'false' only for the three extra scheduled runs, which deploy only when something changed. The daily run, the
   # weekly run, and runs started by a person or by the notice check always deploy.
-  ALWAYS_DEPLOY: ${{ github.event.schedule != '17 11,17,23 * * *' }}
+  ALWAYS_DEPLOY: ${{ github.event.schedule != '17 11,17,23 * * *' && inputs.only_if_changed != true }}
   # Two buckets, on purpose. R2_BUCKET is public and holds only files that may be redistributed (tool runtimes and
   # the redistributable part of the raw archive). R2_STATE_BUCKET is private and holds pipeline state, which
   # includes raw source files whose licence does not allow redistribution. State is never written to the public bucket.

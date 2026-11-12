@@ -9,6 +9,7 @@ import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { Regions } from '../components/Regions';
 import { ReportingChip } from '../components/ReportingHealth';
+import { FeedLink } from '../components/FeedLink';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
@@ -123,7 +124,7 @@ export function Place({ iso3 }: { iso3: string }) {
               {!myFlags.length && <p class="muted small">{t('flags.none')}</p>}
               {!analyst && myFlags.length > 0 && <p class="small" data-flag>{t('flags.text', { method: 'rolling_baseline_c2' })} {t('flags.count', { n: myFlags.length })}</p>}
               {analyst && allFlagRows.length > 0 && (
-                <div class="tablewrap"><table class="data">
+                <div class="tablewrap" tabIndex={0}><table class="data">
                   <thead><tr><th>{t('table.period')}</th><th class="n">{t('table.value')}</th><th class="n">{t('flags.baselineMean')}</th><th class="n">{t('flags.threshold')}</th><th>{t('flags.baselineWindow')}</th><th>{t('flags.status')}</th></tr></thead>
                   <tbody>{allFlagRows.slice().reverse().map((f) => <tr key={f.period} data-flag><th scope="row">{periodLabel(f.period, model.defMeta.period_type)}</th><td class="n">{num(f.value)}</td><td class="n">{num(f.baseline_mean)}</td><td class="n">{num(f.threshold)}</td><td>{date(f.baseline_periods[0])} – {date(f.baseline_periods[1])}</td><td>{t('flagstatus.' + f.status)}{f.seasonal && <div class="muted small">{t('flags.seasonal', { years: f.seasonal.years_used, threshold: num(f.seasonal.threshold) })}</div>}</td></tr>)}</tbody>
                 </table></div>
@@ -140,7 +141,7 @@ export function Place({ iso3 }: { iso3: string }) {
                 means={disagreements.length ? t('reconcile.disagree', { n: disagreements.length }) : t('reconcile.agree')} tours={['definitions']} />
               {analyst && disagreements.length > 0 && (
                 <details class="more"><summary>{t('reconcile.details', { n: disagreements.length })}</summary>
-                  <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.period')}</th><th>{t('table.sources')}</th><th class="n">{t('table.values')}</th></tr></thead>
+                  <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.period')}</th><th>{t('table.sources')}</th><th class="n">{t('table.values')}</th></tr></thead>
                     <tbody>{disagreements.slice(-60).reverse().map((r: any) => <tr key={r.period + r.metric}><th scope="row">{periodLabel(r.period, r.period_type)} · {t('metric.' + r.metric)}</th><td>{r.datasets.map((x: string) => core.sources[core.manifest.datasets[x]?.source_id]?.short_name ?? x).join(' / ')}</td><td class="n">{r.values.map((v: number) => num(v)).join(' / ')}</td></tr>)}</tbody></table></div>
                 </details>
               )}
@@ -152,7 +153,7 @@ export function Place({ iso3 }: { iso3: string }) {
               <h2>{t('revisions.title')}</h2>
               <p class="sub">{t('pin.vintage')}</p>
               {revised.length === 0 ? <p class="muted small">{t('revisions.none', { n: core.manifest.snapshots.length })} {t('revisions.began', { date: date(core.manifest.snapshots[0]?.created_at, 'long') })}</p> : (
-                <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.period')}</th><th>{t('table.series')}</th><th>{t('revisions.history')}</th></tr></thead>
+                <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.period')}</th><th>{t('table.series')}</th><th>{t('revisions.history')}</th></tr></thead>
                   <tbody>{revised.slice(-80).reverse().map((r) => <tr key={r.skey + r.period}><th scope="row">{r.period}</th><td>{seriesLabel(core, core.seriesByKey[r.skey], { withSource: true })}</td><td>{r.h.map(([si, v]) => `${revs.data!.snapshots[si]?.slice(0, 8)}: ${v === null ? t('revisions.removed') : num(v)}`).join(' → ')}</td></tr>)}</tbody></table></div>
               )}
               <p class="small"><a href={href(route, 'workbench/diff')}>{t('revisions.diffTool')}</a></p>
@@ -176,6 +177,7 @@ export function Place({ iso3 }: { iso3: string }) {
 
       <section class="card" style={{ marginTop: '16px' }}>
         <h2>{t('place.events', { name })}</h2>
+        <FeedLink kind="place" id={iso3} name={name} />
         {!myEvents.length && <p class="muted">{t('place.noEvents')}</p>}
         <ul class="list">{myEvents.slice(0, 10).map((e) => <EventRow key={e.event_id} e={e} />)}</ul>
         {myEvents.length > 10 && <p><a href={href(route, 'outbreaks', { c: iso3 })}>{t('overview.allOutbreaks', { n: myEvents.length })}</a></p>}

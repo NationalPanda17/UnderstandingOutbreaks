@@ -171,7 +171,9 @@ first-level region, for the countries where OpenDengue reports at that level.
 - **Matching names to boundaries.** A source name is matched to a Natural Earth admin-1 region of the same country
   only when the two are identical after removing case, accents, punctuation and generic words such as "province"
   (spacing is also ignored, so "Chonburi" matches "Chon Buri"). A name that fits two regions is ambiguous and not
-  matched. Nothing is matched by similarity. A person can add a reviewed mapping in `config/admin1_aliases.yaml`.
+  matched. Nothing is matched by similarity. A person can add a reviewed mapping in `config/admin1_aliases.yaml`. A name that was reviewed and cannot be drawn
+  (a part of a boundary region, a region newer than the boundary file, a different kind of unit, or a duplicate
+  spelling that would conflict) is listed there under `not_mappable` with its reason; it stays in the tables.
 - **Unmatched names** stay in the published table, marked as not on the map, and are listed in a GitHub issue.
 - **Two names for one region.** If two source names match the same region and both report the same year, the
   region is left off the map for that year and the table says so; the values are never added together.

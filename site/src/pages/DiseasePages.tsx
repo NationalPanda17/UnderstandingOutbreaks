@@ -5,6 +5,9 @@ import { num, periodLabel, smart, t } from '../lib/i18n';
 import { mapMetricLabel, placeName, seriesLabel } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
+import { CiteButton, globalStatement } from '../components/Cite';
+import { FeedLink } from '../components/FeedLink';
+import { loadReporting, reportingShort } from '../components/ReportingHealth';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { useState } from 'preact/hooks';
@@ -47,6 +50,7 @@ export function DiseasePage({ id }: { id: string }) {
   const events = useAsync(() => getJSON<{ events: EventIdx[] }>('events/index.json'), []);
   const regions = useAsync(() => getOptional<{ countries: Record<string, { years: [number, number]; latest_year: number | null; n_matched: number }> }>(`subnational/${id}/index.json`), [id]);
   const [panelOn, setPanelOn] = useState(false);
+  const rep = useAsync(() => (d?.has_timeseries ? loadReporting(id) : Promise.resolve(null)), [id]);
   if (!d) return <ErrorBox error={t('disease.unknown', { id })} />;
   const name = diseaseName(core, id);
   const mine = (events.data?.events ?? []).filter((e) => e.disease === id).sort((a, b) => (a.last_report < b.last_report ? 1 : -1));
@@ -71,16 +75,19 @@ export function DiseasePage({ id }: { id: string }) {
           <ChartCard id="disease-global" title={t('disease.globalTitle', { name })} series={[panelOn && panelSeries ? panelSeries : global]}
             prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
             yLabel={t('metric.' + meta.metric)} means={t('disease.globalMeans')} embed={{ kind: 'chart', params: { d: id, global: '1' } }} tours={['epicurve', 'recentlow']} />
-          <p class="small muted">{nLatest !== undefined && o.global.n_total ? t('total.nOfNPeriod', { n: nLatest, N: o.global.n_total, period: periodLabel(o.anchor, o.period_type) }) : ''} <AgeBadge period={o.anchor} ptype={o.period_type} /> {panelOn && panel && t('panel.explain', { n: panel.n_panel, pct: Math.round(panel.min_coverage * 100) })}</p>
+          <p class="small muted">{nLatest !== undefined && o.global.n_total ? t('total.nOfNPeriod', { n: nLatest, N: o.global.n_total, period: periodLabel(o.anchor, o.period_type) }) : ''} <AgeBadge period={o.anchor} ptype={o.period_type} /> {panelOn && panel && t('panel.explain', { n: panel.n_panel, pct: Math.round(panel.min_coverage * 100) })}
+            {(() => { const i = o.global.p.indexOf(o.anchor); const v = i >= 0 ? o.global.v[i] : null; if (v === null || v === undefined) return null;
+              return <> <CiteButton inline title={t('disease.globalTitle', { name })} prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
+                statement={globalStatement(name, periodLabel(o.anchor, o.period_type), num(v), `${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)})`, nLatest, o.global.n_total)} /></>; })()}</p>
           <Breakdown g={o.global} ptype={o.period_type} />
           {meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <section class="card" style={{ marginTop: '16px' }}>
             <header><h2>{t('disease.top', { metric: mapMetricLabel(core, id, o.method.window_periods, o.period_type) })}</h2>
               <SourceChip compact prov={{ title: t('disease.top', { metric: mapMetricLabel(core, id, o.method.window_periods, o.period_type) }), origin: 'site-derived', sourceIds: o.source_ids, asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: o.method.name, version: o.method.version, params: { window_periods: o.method.window_periods } } }} /></header>
             <p class="sub">{periodLabel(o.anchor, o.period_type)} · {t('disease.topCaveat')}</p>
-            <div class="tablewrap"><table class="data">
-              <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{mapMetricLabel(core, id, o.method.window_periods, o.period_type)}</th><th scope="col" class="n">{t('table.count')}</th></tr></thead>
-              <tbody>{top.map(([k, r]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: id })}>{placeName(core, k)}</a></th><td class="n">{smart(r.metric_value)}</td><td class="n">{num(r.value)}</td></tr>)}</tbody>
+            <div class="tablewrap" tabIndex={0}><table class="data">
+              <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{mapMetricLabel(core, id, o.method.window_periods, o.period_type)}</th><th scope="col" class="n">{t('table.count')}</th>{rep.data && <th scope="col" title={t('health.explain')}>{t('health.title')}</th>}</tr></thead>
+              <tbody>{top.map(([k, r]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: id })}>{placeName(core, k)}</a></th><td class="n">{smart(r.metric_value)}</td><td class="n">{num(r.value)}</td>{rep.data && <td class="small" data-testid="reporting-badge">{reportingShort(rep.data, k) ?? '–'}</td>}</tr>)}</tbody>
             </table></div>
             <p class="small"><a href={href(route, '', { d: id })}>{t('disease.seeMap')}</a></p>
           </section>
@@ -89,6 +96,7 @@ export function DiseasePage({ id }: { id: string }) {
 
       <section class="card" style={{ marginTop: '16px' }}>
         <h2>{t('disease.events', { name })}</h2>
+        <FeedLink kind="disease" id={id} name={name} />
         {!mine.length && !events.loading && <p class="muted">{t('disease.noEvents')}</p>}
         <ul class="list">{mine.slice(0, 12).map((e) => <EventRow key={e.event_id} e={e} />)}</ul>
         {mine.length > 12 && <p><a href={href(route, 'outbreaks', { d: id })}>{t('overview.allOutbreaks', { n: mine.length })}</a></p>}

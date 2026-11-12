@@ -20,6 +20,17 @@ def J(p):
     return json.loads((D / p).read_text(encoding="utf-8"))
 
 
+def never_fetched(disease):
+    """True when no dataset of this disease has ever been fetched successfully in this state directory.
+
+    CI builds from live sources with no stored state, so one source timing out leaves that disease with no files
+    at all. That is a source outage (reported as an issue by the pipeline), not a traceability violation; the
+    scheduled update keeps the last good data and never reaches this case.
+    """
+    ds = [d for d in J("quality.json")["datasets"] if d.get("disease") == disease]
+    return bool(ds) and not any(d.get("last_good_snapshot") for d in ds)
+
+
 @pytest.fixture(scope="module")
 def reg():
     return {s["id"]: s for s in J("sources.json")["sources"]}
@@ -133,6 +144,8 @@ def test_events_flags_and_derived_views_carry_sources(reg):
     for l in full["locations"]:
         assert l["method"] and l["method_version"] and l["source_ids"]
     for disease in ("measles", "influenza", "covid19", "mpox"):
+        if never_fetched(disease):
+            continue
         fl = J(f"flags/{disease}.json")
         assert fl["origin_type"] == "site-derived" and fl["method"]["version"] and fl["params"]["k"]
         for f in fl["flags"][:200]:
@@ -197,6 +210,8 @@ def test_workflows_only_open_issues_never_pull_requests():
 # ---------------------------------------------------------------- published-data guards (the build fails on these)
 
 def test_published_percent_positive_is_never_above_100_and_rests_on_paired_samples():
+    if never_fetched("influenza"):
+        pytest.skip("influenza source was unreachable and there is no stored copy")
     o = J("overview/influenza.json")
     for iso3, r in o["latest"].items():
         if r.get("metric_value") is not None:
@@ -223,3 +238,24 @@ def test_published_events_have_no_oversized_groups_or_overlapping_open_events():
     clash = [(a["event_id"], b["event_id"]) for a, b in itertools.combinations(live, 2)
              if a["disease"] == b["disease"] and set(a["countries"]) & set(b["countries"])]
     assert not clash, f"two open events for the same disease and country: {clash[:5]}"
+
+
+def test_reviewed_region_names_are_drawn_and_none_is_listed_twice():
+    """Every reviewed alias resolves to a boundary region in the published tables, creates no same-year conflict,
+    and no source name is both mapped and declared impossible to map."""
+    cfg = core.load_yaml(core.CONFIG / "admin1_aliases.yaml")
+    aliases, skipped = cfg.get("aliases") or {}, cfg.get("not_mappable") or {}
+    for iso3, groups in skipped.items():
+        listed = [n for names in groups.values() for n in names]
+        assert len(listed) == len(set(listed)), iso3
+        assert not set(listed) & set(aliases.get(iso3, {})), iso3
+    for iso3, names in aliases.items():
+        f = D / "subnational" / "dengue" / f"{iso3}.json"
+        if not f.exists():
+            continue
+        doc = json.loads(f.read_text(encoding="utf-8"))
+        units = {u["name_in_source"]: u for u in doc["units"]}
+        for src_name, target in names.items():
+            if src_name in units:
+                assert units[src_name]["id"] and units[src_name]["name"] == target, (iso3, src_name)
+                assert not units[src_name]["conflict_years"], (iso3, src_name, units[src_name]["conflict_years"])

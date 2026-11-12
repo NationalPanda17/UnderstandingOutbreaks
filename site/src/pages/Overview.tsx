@@ -9,7 +9,8 @@ import { mapMetricLabel, placeName } from '../lib/series';
 import { Sparkline } from '../components/Chart';
 import { EventRow, eventPlaces } from '../components/Events';
 import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
-import { CiteButton } from '../components/Cite';
+import { CiteButton, globalStatement } from '../components/Cite';
+import { loadReporting, reportingShort } from '../components/ReportingHealth';
 import { LazyMap } from '../components/LazyMap';
 import { CountryPopover, MapLegend, fixedBreaks, type MapPoint } from '../components/mapUtil';
 import { Dialog, SourceChip, useApp } from '../components/SourceChip';
@@ -86,6 +87,7 @@ export function Overview() {
   const ov = useAsync(() => getJSON<Ov>(`overview/${disease}.json`), [disease]);
   const events = useAsync(() => getJSON<{ events: EventIdx[]; n_events: number }>('events/active.json'), []);
   const flags = useAsync(() => getOptional<{ flags: Flag[] }>('flags/recent.json'), []);
+  const rep = useAsync(() => loadReporting(disease), [disease]);
   const sparks = useAsync(() => getJSON<{ diseases: Pick<Ov, 'disease' | 'skey' | 'source_ids' | 'snapshot_id' | 'period_type' | 'incomplete_from' | 'global'>[] }>('overview/summary.json').then((x) => x.diseases), []);
 
   const inRegion = (iso3: string) => !region || core.places[iso3]?.region === region;
@@ -142,7 +144,11 @@ export function Overview() {
         ...windowLines(pk, metricLabel, ov.data!.period_type),
         ...(meta ? [`${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)})`] : []),
         ...(pk.last_period ? [`${t('table.lastPeriod')}: ${periodLabel(pk.last_period, ov.data!.period_type)}`] : []),
-      ] : [t('map.miss.never')]} />
+        ...(rep.data && reportingShort(rep.data, picked) ? [`${t('health.title')}: ${reportingShort(rep.data, picked)}`] : []),
+      ] : [t('map.miss.never')]}>
+      {pk && pk.metric_value !== null && prov && <CiteButton prov={{ ...prov, series: [{ skey: ov.data!.skey, iso3: picked }] }} title={title} subtitle={windowText}
+        statement={t('citep.stmt.place', { place: names[picked] ?? picked, metric: metricLabel, value: smart(pk.metric_value), window: windowText })} url={href(route, 'place/' + picked, { d: disease })} />}
+    </CountryPopover>
   ) : null;
   return (
     <>
@@ -261,7 +267,9 @@ export function Overview() {
               <div class="row"><h3 style={{ margin: 0 }}><a href={href(route, 'disease/' + o.disease)}>{diseaseName(core, o.disease)}</a></h3><Sparkline p={p} v={v} incompleteFrom={o.incomplete_from} label={t('overview.sparkAria', { disease: diseaseName(core, o.disease) })} /></div>
               <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{last && nAt !== null && o.global.n_total ? ` · ${t('total.nOfN', { n: nAt, N: o.global.n_total })}` : ''} {last && <AgeBadge period={last[0]} ptype={o.period_type} />}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
               <Breakdown g={o.global} ptype={o.period_type} />
-              <SourceChip compact prov={{ title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived', sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } }} />
+              {(() => { const sp = { title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived' as const, sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } };
+                return <div class="chipline"><SourceChip compact prov={sp} />{last && m && <> <CiteButton inline prov={sp} title={sp.title} url={href(route, 'disease/' + o.disease)}
+                  statement={globalStatement(diseaseName(core, o.disease), periodLabel(last[0], o.period_type), num(last[1]), `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`, nAt, o.global.n_total)} /></>}</div>; })()}
             </section>
           );
         })}

@@ -265,6 +265,37 @@ export function diffSnapshots(changes: Record<string, Record<string, [number, nu
   return out.sort((x, y) => (x.series_id === y.series_id ? (x.period < y.period ? -1 : 1) : x.series_id < y.series_id ? -1 : 1));
 }
 
+// ---------------------------------------------------------------- event changes between snapshots
+
+export interface EventState { snapshot_id: string; status: string; cases: number | null; deaths: number | null; n_reports: number; last_report: string; countries: string[] }
+export interface EventChange { event_id: string; disease: string; countries: string[]; kind: 'new' | 'changed'; before: EventState | null; after: EventState; what: ('status' | 'cases' | 'deaths' | 'notices' | 'countries')[] }
+
+/** What an event looked like at a snapshot: its last recorded state at or before that snapshot, or null if the
+ *  event did not exist yet. Snapshot ids are UTC timestamps, so they compare as text. */
+export function eventStateAt(history: EventState[], snapshot: string): EventState | null {
+  let out: EventState | null = null;
+  for (const h of history) if (h.snapshot_id <= snapshot) out = h;
+  return out;
+}
+
+/** Events that are new, or whose status, stated counts, notices or countries differ, between two snapshots. */
+export function diffEvents(events: Record<string, { disease: string; countries: string[]; history: EventState[] }>, a: string, b: string): EventChange[] {
+  const out: EventChange[] = [];
+  for (const [event_id, e] of Object.entries(events)) {
+    const before = eventStateAt(e.history, a); const after = eventStateAt(e.history, b);
+    if (!after) continue;
+    if (!before) { out.push({ event_id, disease: e.disease, countries: after.countries, kind: 'new', before: null, after, what: [] }); continue; }
+    const what: EventChange['what'] = [];
+    if (before.status !== after.status) what.push('status');
+    if (before.cases !== after.cases) what.push('cases');
+    if (before.deaths !== after.deaths) what.push('deaths');
+    if (before.n_reports !== after.n_reports) what.push('notices');
+    if (before.countries.join() !== after.countries.join()) what.push('countries');
+    if (what.length) out.push({ event_id, disease: e.disease, countries: after.countries, kind: 'changed', before, after, what });
+  }
+  return out.sort((x, y) => (x.after.last_report < y.after.last_report ? 1 : x.after.last_report > y.after.last_report ? -1 : x.event_id < y.event_id ? -1 : 1));
+}
+
 // ---------------------------------------------------------------- selections
 
 /** Sum several places' series on their shared periods; a period is kept only if every selected place has a value. */

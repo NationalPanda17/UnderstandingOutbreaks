@@ -5,13 +5,13 @@
  *  of the world. These maps are plain SVG: they export cleanly, print well and need no map engine.
  *  This file is loaded on demand (d3-geo is not in the main bundle). */
 import { geoArea, geoEqualEarth, geoPath } from 'd3-geo';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { dataUrl } from '../lib/app';
 import { smart, t } from '../lib/i18n';
 import { RAMP, REGION_VIEWS, colorFor, type Missing } from './mapUtil';
 
 type Box = [number, number, number, number];
-interface Shape { iso3: string; name: string; d: string }
+interface Shape { iso3: string; name: string; d: string; cx: number; cy: number; area: number }
 
 let boundaries: Promise<any> | null = null;
 function loadBoundaries(): Promise<any> {
@@ -43,7 +43,7 @@ function shapes(fc: any, box: Box, w: number, h: number): { list: Shape[]; proje
   proj.fitExtent([[2, 2], [w - 2, h - 2]], { type: 'MultiPoint', coordinates: pts } as any);
   const path = geoPath(proj).digits(1);
   const out: Shape[] = [];
-  for (const f of fc.features) { const d = path(f); if (d) out.push({ iso3: f.properties.iso3, name: f.properties.name, d }); }
+  for (const f of fc.features) { const d = path(f); if (d) { const [cx, cy] = path.centroid(f); out.push({ iso3: f.properties.iso3, name: f.properties.name, d, cx, cy, area: path.area(f) }); } }
   const res = { list: out, project: (ll: [number, number]) => proj(ll) as [number, number] | null };
   shapeCache.set(key, res);
   return res;
@@ -71,6 +71,23 @@ export interface StaticMapProps {
   svgRef?: { current: SVGSVGElement | null };
 }
 
+/** Keyboard movement between countries: from the current one, the nearest country lying in the arrow's direction.
+ *  Distance across the direction counts double, so "right" prefers a neighbour to the east over one far north-east. */
+export function nextInDirection(list: { cx: number; cy: number }[], from: number, key: string): number {
+  const dir: Record<string, [number, number]> = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
+  const v = dir[key]; if (!v || !list[from]) return from;
+  let best = from; let score = Infinity;
+  list.forEach((s, i) => {
+    if (i === from || !Number.isFinite(s.cx)) return;
+    const dx = s.cx - list[from].cx; const dy = s.cy - list[from].cy;
+    const along = dx * v[0] + dy * v[1]; const across = Math.abs(dx * v[1] - dy * v[0]);
+    if (along <= 1 || across > along * 2) return;
+    const sc = along + across * 2;
+    if (sc < score) { score = sc; best = i; }
+  });
+  return best;
+}
+
 export function StaticMap(props: StaticMapProps) {
   const [fc, setFc] = useState<any>(null);
   const [err, setErr] = useState(false);
@@ -80,10 +97,35 @@ export function StaticMap(props: StaticMapProps) {
   const { list, project } = useMemo(() => (fc ? shapes(fc, box, w, h) : { list: [] as Shape[], project: (() => null) as Project }), [fc, box, w, h]);
   const ramp = props.ramp ?? RAMP;
   const [focus, setFocus] = useState<number | null>(null);
+  // Keyboard use: the map is one tab stop. Arrow keys move between countries, a letter jumps to the next country
+  // starting with it, Enter opens the country, Escape leaves. One entry per country (its largest piece).
+  const keyed = !!props.onSelect && !props.compact;
+  const nav = useMemo(() => { const m = new Map<string, Shape>(); for (const s of list) { const x = m.get(s.iso3); if (!x || s.area > x.area) m.set(s.iso3, s); } return Array.from(m.values()).filter((s) => Number.isFinite(s.cx)); }, [list]);
+  const [cur, setCur] = useState<number | null>(null);
+  const [inMap, setInMap] = useState(false);
+  const local = useRef<SVGSVGElement | null>(null);
+  const nameOf = (s: Shape) => props.names?.[s.iso3] ?? s.name;
+  const describe = (s: Shape) => { const v = props.values[s.iso3]; return `${nameOf(s)}: ${v === null || v === undefined ? (props.missingLabel?.[s.iso3] ?? t('chart.noData')) : `${props.valueLabel ? props.valueLabel + ': ' : ''}${smart(v as number)}`}`; };
+  const onKey = (e: KeyboardEvent) => {
+    if (!nav.length || e.target !== local.current) return;
+    setInMap(true);
+    const start = () => { let b = 0; let bd = Infinity; nav.forEach((s, i) => { const d = Math.hypot(s.cx - w / 2, s.cy - h / 2); if (d < bd) { bd = d; b = i; } }); return b; };
+    if (e.key.startsWith('Arrow')) { e.preventDefault(); setCur(cur === null ? start() : nextInDirection(nav, cur, e.key)); }
+    else if ((e.key === 'Enter' || e.key === ' ') && cur !== null) { e.preventDefault(); props.onSelect!(nav[cur].iso3); }
+    else if (e.key === 'Escape') setCur(null);
+    else if (e.key.length === 1 && /\p{L}/u.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const k = e.key.toLocaleLowerCase(); const order = nav.map((s, i) => i).sort((a, b) => nameOf(nav[a]).localeCompare(nameOf(nav[b])));
+      const hits = order.filter((i) => nameOf(nav[i]).toLocaleLowerCase().startsWith(k)); if (!hits.length) return;
+      const at = cur === null ? -1 : hits.indexOf(cur); setCur(hits[(at + 1) % hits.length]);
+    }
+  };
   if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;
   if (!fc) return <div role="status" class="small muted">{t('state.loadingMap')}</div>;
+  const here = keyed && inMap && cur !== null ? nav[cur] ?? null : null;
   return (
-    <svg ref={props.svgRef as any} viewBox={`0 0 ${w} ${h}`} width="100%" role="img" aria-label={props.title} class={'staticmap' + (props.compact ? ' compact' : '')} style={{ display: 'block', background: '#eef3f4', borderRadius: '8px' }}>
+    <>
+    <svg ref={(el: SVGSVGElement | null) => { local.current = el; if (props.svgRef) props.svgRef.current = el; }} viewBox={`0 0 ${w} ${h}`} width="100%" class={'staticmap' + (props.compact ? ' compact' : '')} style={{ display: 'block', background: '#eef3f4', borderRadius: '8px' }}
+      {...(keyed ? { tabIndex: 0, role: 'application', 'aria-roledescription': t('map.kbd.role'), 'aria-label': `${props.title.replace(/[.\s]+$/, '')}. ${t('map.kbd.hint')}`, onKeyDown: onKey, onFocus: (e: FocusEvent) => { if (e.target === local.current) setInMap(true); }, onBlur: (e: FocusEvent) => { if (e.target === local.current) setInMap(false); }, 'data-testid': 'static-map' } : { role: 'img', 'aria-label': props.title })}>
       <defs>
         <pattern id="sm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f4f4f4" /><rect width="2.2" height="6" fill="#d2d2d2" /></pattern>
         <pattern id="sm-dots" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#fbf6e6" /><circle cx="1.5" cy="1.5" r="0.9" fill="#b89b3c" /><circle cx="4.5" cy="4.5" r="0.9" fill="#b89b3c" /></pattern>
@@ -114,7 +156,10 @@ export function StaticMap(props: StaticMapProps) {
           </g>
         );
       })}
+      {here && <g pointer-events="none" data-kbd-cursor><path d={here.d} fill="none" stroke="#fff" stroke-width="5" vector-effect="non-scaling-stroke" /><path d={here.d} fill="none" stroke="#17272b" stroke-width="2.5" vector-effect="non-scaling-stroke" /></g>}
     </svg>
+    {keyed && <p class="small mapkbd" aria-live="polite" data-testid="map-kbd-status">{here ? <><b>{describe(here)}</b> · {t('map.kbd.enter')}</> : <span class="muted kbdhint">{t('map.kbd.hint')}</span>}</p>}
+    </>
   );
 }
 
@@ -208,7 +253,7 @@ export function FitMap(props: FitMapProps) {
     }
     const path = geoPath(proj).digits(1);
     const list: Shape[] = [];
-    for (const f of fc.features) { const d = path(f); if (d) list.push({ iso3: f.properties.iso3, name: f.properties.name, d }); }
+    for (const f of fc.features) { const d = path(f); if (d) list.push({ iso3: f.properties.iso3, name: f.properties.name, d, cx: NaN, cy: NaN, area: 0 }); }
     return { list, project: (ll: [number, number]) => proj(ll) as [number, number] | null };
   }, [fc, key, h]);
   if (err) return <div class="notice warn" role="alert">{t('map.failed')}</div>;

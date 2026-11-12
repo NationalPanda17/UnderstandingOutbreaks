@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type EventIdx } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
-import { date, num, t } from '../lib/i18n';
+import { date, num, periodLabel, t } from '../lib/i18n';
 import { placeName } from '../lib/series';
 import { ContextLinks } from '../components/ContextLinks';
-import { EventRow, EventSummary, StatusBadge, eventPlaces, eventProv } from '../components/Events';
+import { EventCite, EventRow, EventSummary, StatusBadge, eventPlaces, eventProv } from '../components/Events';
+import { FeedLink } from '../components/FeedLink';
 import { ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
 import { SourceChip, useApp } from '../components/SourceChip';
@@ -32,12 +33,13 @@ export function Outbreaks() {
   const all = idx.data?.events ?? [];
   const diseases = Array.from(new Set(all.map((e) => e.disease))).sort();
   const countries = Array.from(new Set(all.flatMap((e) => e.countries))).sort((a, b) => placeName(core, a).localeCompare(placeName(core, b)));
-  const prov = { title: t('outbreaks.title'), origin: 'site-derived' as const, sourceIds: Array.from(new Set(events.flatMap((e) => e.source_ids))), asOf: all.map((e) => e.last_report).sort().pop() ?? null, snapshotId: route.snapshot ?? core.manifest.snapshot_id, method: { name: 'active_rank', version: '1', params: idx.data?.methods?.ranking?.weights } };
+  const prov = { title: t('outbreaks.title'), origin: 'site-derived' as const, sourceIds: Array.from(new Set(events.flatMap((e) => e.source_ids))), asOf: all.map((e) => e.last_report).sort().pop() ?? null, snapshotId: route.snapshot ?? core.manifest.snapshot_id, method: { name: 'active_rank', version: idx.data?.methods?.ranking?.version ?? '2', params: idx.data?.methods?.ranking?.weights } };
   return (
     <>
       <h1>{t('outbreaks.title')}</h1>
       <p class="small"><a href={href(route, 'spread')}>{t('spread.title')}</a>: {t('spread.isReportingShort')}</p>
       <p class="lead">{t('outbreaks.lead')}</p>
+      <FeedLink kind="all" />
       <div class="tools" role="group" aria-label={t('overview.filters')}>
         <label>{t('filter.disease')} <select value={fd} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value || null })}><option value="">{t('filter.any')}</option>{diseases.map((d) => <option key={d} value={d}>{diseaseName(core, d)}</option>)}</select></label>
         <label>{t('filter.place')} <select value={fc} onChange={(e) => setParams({ c: (e.target as HTMLSelectElement).value || null })}><option value="">{t('filter.any')}</option>{countries.map((c) => <option key={c} value={c}>{placeName(core, c)}</option>)}</select></label>
@@ -53,12 +55,54 @@ export function Outbreaks() {
         <p class="sub">{t('outbreaks.rankNote')} <a href={href(route, 'methodology')}>{t('nav.methodology')}</a></p>
         {analyst && idx.data && <p class="small muted">{t('rank.formula')} <code>{JSON.stringify(idx.data.methods.ranking.weights)}</code></p>}
         {idx.loading && <Loading />}
+        <EventTimeline events={events.slice(0, 30)} total={events.length} />
         <ul class="list">{events.slice(0, 150).map((e) => <EventRow key={e.event_id} e={e} showScore={analyst} />)}</ul>
         {analyst && (
           <div class="btnrow"><button type="button" class="btn small" onClick={() => exportBundle(core, prov, events.flatMap((e) => (e.locations.length ? e.locations : [{ iso3: '', precision: '', lon: null, lat: null, name: '' }]).map((l) => ({ event_id: e.event_id, disease: e.disease, countries: e.countries.join(';'), first_report: e.first_report, last_report: e.last_report, status: e.status, status_basis: e.status_basis, cases: e.cases?.value ?? null, cases_definition: e.cases?.case_definition ?? '', deaths: e.deaths?.value ?? null, n_reports: e.n_reports, location_name: l.name, location_precision: l.precision, lon: l.lon, lat: l.lat, location_method: 'gazetteer_match v1', rank_score: e.rank.score, source_id: e.source_ids.join(';'), source_url: e.latest_url, origin_type: 'site-derived', snapshot_id: prov.snapshotId }))), 'csv', 'outbreak-events')}>{t('action.downloadCsv')}</button></div>
         )}
       </section>
     </>
+  );
+}
+
+/** A strip of the listed events on one time axis: each bar runs from an event's first official notice to its
+ *  latest one. It shows when notices were published, nothing about how large or how serious an event is. */
+function EventTimeline({ events, total }: { events: EventIdx[]; total: number }) {
+  const { core, route } = useApp();
+  if (events.length < 2) return null;
+  const DAY = 86400000;
+  const end = Date.now();
+  const earliest = Math.min(...events.map((e) => Date.parse(e.first_report)));
+  const start = Math.max(earliest, end - 730 * DAY);  // at most two years, so recent events are not squeezed
+  const pos = (ms: number) => Math.min(100, Math.max(0, ((ms - start) / (end - start)) * 100));
+  const ticks: { at: number; label: string }[] = [];
+  const d0 = new Date(start); const cur = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1));
+  const step = (end - start) / DAY > 400 ? 6 : (end - start) / DAY > 150 ? 3 : 1;
+  while (cur.getTime() < end) { if (cur.getUTCMonth() % step === 0) ticks.push({ at: pos(cur.getTime()), label: periodLabel(cur.toISOString().slice(0, 10), 'M') }); cur.setUTCMonth(cur.getUTCMonth() + 1); }
+  return (
+    <details class="more evtl" open data-testid="event-timeline">
+      <summary>{t('evtl.title', { n: events.length })}</summary>
+      <p class="small muted">{t('evtl.means')}{total > events.length ? ' ' + t('evtl.first', { n: events.length, total }) : ''}</p>
+      <div class="evtl-axis" aria-hidden="true">{ticks.map((k) => <span key={k.label + k.at} style={{ insetInlineStart: k.at + '%' }}>{k.label}</span>)}</div>
+      <ol class="evtl-rows">
+        {events.map((e) => {
+          const a = pos(Date.parse(e.first_report)); const b = pos(Date.parse(e.last_report));
+          const clipped = Date.parse(e.first_report) < start;
+          const label = `${diseaseName(core, e.disease)} — ${eventPlaces(core, e)}`;
+          return (
+            <li key={e.event_id}>
+              <a href={href(route, 'outbreak/' + e.event_id)} aria-label={t('evtl.row', { label, first: date(e.first_report, 'long'), last: date(e.last_report, 'long'), n: e.n_reports })}>
+                <span class="evtl-name">{label}</span>
+                <span class="evtl-track" aria-hidden="true">
+                  <span class={'evtl-bar' + (clipped ? ' clipped' : '')} style={{ insetInlineStart: a + '%', width: Math.max(0.8, b - a) + '%' }} />
+                  <span class="evtl-dot" style={{ insetInlineStart: b + '%' }} />
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </details>
   );
 }
 
@@ -133,6 +177,7 @@ export function Outbreak({ id }: { id: string }) {
             </div>
             {e.status_quote && <p class="small">{t('outbreak.statusQuote')} <q class="quote">{e.status_quote}</q></p>}
             <p class="small muted">{t('outbreak.countsNote')}</p>
+            <div class="btnrow"><EventCite e={{ ...briefE, cases: e.cases, deaths: e.deaths, counts_suppressed: e.counts_suppressed }} /></div>
           </section>
           <section class="card">
             <h2>{t('outbreak.timeline')}</h2>
@@ -152,7 +197,7 @@ export function Outbreak({ id }: { id: string }) {
             <section class="card">
               <h2>{t('outbreak.revisions')}</h2>
               <p class="sub">{t('pin.vintage')}</p>
-              <div class="tablewrap"><table class="data"><thead><tr><th>{t('trace.snapshot')}</th><th>{t('outbreak.status')}</th><th class="n">{t('outbreak.cases')}</th><th class="n">{t('outbreak.deaths')}</th><th class="n">{t('outbreak.reports')}</th></tr></thead>
+              <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('trace.snapshot')}</th><th>{t('outbreak.status')}</th><th class="n">{t('outbreak.cases')}</th><th class="n">{t('outbreak.deaths')}</th><th class="n">{t('outbreak.reports')}</th></tr></thead>
                 <tbody>{(e.history as any[]).slice().reverse().map((h) => <tr key={h.snapshot_id}><th scope="row"><code>{h.snapshot_id}</code></th><td>{t('status.' + h.status)}</td><td class="n">{num(h.cases)}</td><td class="n">{num(h.deaths)}</td><td class="n">{h.n_reports}</td></tr>)}</tbody></table></div>
             </section>
           )}
@@ -163,7 +208,7 @@ export function Outbreak({ id }: { id: string }) {
             {points.length ? <LazyMap points={points} pointMode="markers" names={names} ariaLabel={t('map.aria', { title })} view={{ lng: points[0].lon, lat: points[0].lat, z: 2.4 }} /> : <p class="muted">{t('outbreak.noLocation')}</p>}
             <p class="small muted">{t('outbreak.precisionNote')}</p>
             <p><a class="btn small" href={href(route, 'spread/' + id)} data-testid="open-spread">{t('spread.open')}</a></p>
-            <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('map.precision')}</th>{analyst && <th>{t('trace.method')}</th>}</tr></thead>
+            <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('map.precision')}</th>{analyst && <th>{t('trace.method')}</th>}</tr></thead>
               <tbody>{(e.locations as any[]).map((l, i) => <tr key={i}><th scope="row">{l.name}{l.precision !== 'country' && <span class="muted">, {placeName(core, l.iso3)}</span>}</th><td>{t('precision.' + l.precision)}</td>{analyst && <td class="small"><code>{l.method} v{l.method_version}</code> {l.gazetteer_ref}</td>}</tr>)}</tbody></table></div>
           </section>
           {e.linked_series?.length > 0 && (
@@ -171,6 +216,10 @@ export function Outbreak({ id }: { id: string }) {
               <ul class="list small">{(e.linked_series as any[]).map((l) => <li key={l.iso3}><a href={href(route, 'place/' + l.iso3, { d: l.disease })}>{diseaseName(core, l.disease)} · {placeName(core, l.iso3)}</a></li>)}</ul></section>
           )}
           {analyst && <section class="card"><h2>{t('rank.title')}</h2><p class="small">{t('rank.formula')}</p><dl class="small" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 12px' }}>{Object.entries(e.rank.components).map(([k, v]) => <><dt>{t('rank.' + k)}</dt><dd>{(v as number).toFixed(3)}</dd></>)}<dt><b>{t('rank.score')}</b></dt><dd><b>{e.rank.score.toFixed(3)}</b></dd></dl><p class="small muted">{e.quality_flags.map((q: string) => t('qf.' + q)).join(' · ')}</p></section>}
+          <section class="card"><h2>{t('feed.title')}</h2>
+            <FeedLink kind="disease" id={e.disease} name={diseaseName(core, e.disease)} />
+            {(e.countries as string[]).slice(0, 4).map((c) => <FeedLink key={c} kind="place" id={c} name={placeName(core, c)} />)}
+          </section>
           <ContextLinks disease={e.disease} iso3={e.countries[0]} />
         </div>
       </div>

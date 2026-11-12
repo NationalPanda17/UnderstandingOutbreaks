@@ -92,7 +92,7 @@ export function Layout({ children }: { children: any }) {
         </div>
       </header>
       {first !== 'learn' && (
-        <div class="persist" role="note"><div class="wrap">{t('persist.notice')} <a href={href(route, 'methodology')}>{t('persist.more')}</a></div></div>
+        <aside class="persist" aria-label={t('persist.more')}><div class="wrap">{t('persist.notice')} <a href={href(route, 'methodology')}>{t('persist.more')}</a></div></aside>
       )}
       <main id="main" tabIndex={-1}>
         <div class="wrap">

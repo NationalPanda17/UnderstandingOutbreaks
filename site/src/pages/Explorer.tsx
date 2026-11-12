@@ -162,7 +162,7 @@ function RevExplorer() {
         <label>{t('filter.place')} <select value={iso3} onChange={(e) => setParams({ c: (e.target as HTMLSelectElement).value })}>{Object.values(core.places).sort((a, b) => a.name.localeCompare(b.name)).map((p) => <option key={p.iso3} value={p.iso3}>{placeName(core, p.iso3)}</option>)}</select></label>
       </div>
       <p>{t('explorer.revCount', { n: rows.length, snapshots: core.manifest.snapshots.length })}</p>
-      {rows.length > 0 && <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.series')}</th><th>{t('table.period')}</th><th>{t('trace.snapshot')}</th><th class="n">{t('table.value')}</th></tr></thead>
+      {rows.length > 0 && <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.series')}</th><th>{t('table.period')}</th><th>{t('trace.snapshot')}</th><th class="n">{t('table.value')}</th></tr></thead>
         <tbody>{rows.slice(0, 300).map((r, i) => <tr key={i}><td class="small"><code>{r.series_id}</code></td><td>{r.period}</td><td><code>{r.snapshot_id}</code></td><td class="n">{r.value === null ? t('revisions.removed') : num(r.value)}</td></tr>)}</tbody></table></div>}
       <div class="btnrow" style={{ marginTop: '8px' }}>
         <button type="button" class="btn" disabled={!rows.length} onClick={() => exportBundle(core, prov, rows, 'csv', 'explorer-revisions')}>{t('action.downloadCsv')}</button>

@@ -2,7 +2,7 @@
  *
  * Rule: no export leaves the site without provenance. Mixed-source tables keep per-row source_id and source_url.
  */
-import { SITE } from './app';
+import { SITE, absoluteUrl } from './app';
 import type { Core } from './data';
 import { deepLink } from './data';
 import { provBlock, suggestedCitation, type Prov } from './prov';
@@ -140,16 +140,28 @@ export function pinnedUrl(snapshotId: string): string {
 }
 
 /** Everything a reporter needs to cite a view, in one paste: plain caption with the as-of date, attribution line, caveat, pinned link. */
-export function citeText(core: Core, prov: Prov, title: string, subtitle?: string): string {
+/** The plain caption copied by "Cite this". `statement` is the figure in a sentence (for a single number);
+ *  `url` replaces the address of the current page when the figure has a page of its own. */
+export function citeText(core: Core, prov: Prov, title: string, subtitle?: string, statement?: string, url?: string): string {
   const src = prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', ');
   const lic = Array.from(new Set(prov.sourceIds.map((s) => core.sources[s]?.license).filter(Boolean))).join('; ');
   const sim = prov.origin === 'simulated';
   return [
-    `${title}${subtitle ? ' (' + subtitle + ')' : ''}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''}`,
+    // a single figure is cited by its sentence; a whole view by its title
+    statement ? `${statement}${prov.asOf ? (prov.asOfKind === 'published' ? ' Latest notice published ' : ' Data as of ') + prov.asOf + '.' : ''}`
+      : `${title}${subtitle ? ' (' + subtitle + ')' : ''}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''}`,
     `${sim ? 'Illustrative simulation: not a forecast, not fitted to data. References' : 'Source'}: ${src}${prov.origin === 'site-derived' ? `; calculated by ${SITE.name}` : ''}. Via ${SITE.name} (${SITE.shortUrl}).${lic ? ' License: ' + lic + '.' : ''}`,
     sim ? '' : CAVEAT,
-    `Link to exactly this view (snapshot ${prov.snapshotId}): ${pinnedUrl(prov.snapshotId)}`,
+    `Link to exactly this view (snapshot ${prov.snapshotId}): ${citeUrl(prov.snapshotId, url)}`,
   ].filter(Boolean).join('\n');
+}
+
+/** Address pinned to a snapshot: the current page, or a given site path. */
+export function citeUrl(snapshotId: string, url?: string): string {
+  if (!url) return pinnedUrl(snapshotId);
+  const u = new URL(url, window.location.origin);
+  u.searchParams.set('snapshot', snapshotId);
+  return absoluteUrl(u.pathname + u.search);
 }
 
 export function altText(series: SeriesData[], title: string): string {

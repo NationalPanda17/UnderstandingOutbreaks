@@ -13,6 +13,8 @@ export interface Prov {
   sourceIds: string[];
   /** "Data as of" date (ISO). */
   asOf: string | null;
+  /** What the date is: when this site retrieved the data (default), or when the source published its latest notice. */
+  asOfKind?: 'retrieved' | 'published';
   snapshotId: string;
   /** Underlying series (for lineage links and per-record traces). */
   series?: { skey: string; iso3?: string }[];

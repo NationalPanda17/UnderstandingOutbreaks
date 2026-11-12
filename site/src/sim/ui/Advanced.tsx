@@ -31,7 +31,7 @@ function Bars({ data, label, xLabel }: { data: { x: string; y: number }[]; label
   );
 }
 const table = (rows: (string | number)[][], head: string[], cap: string) => (
-  <details class="more"><summary>{t('action.viewData')}</summary><div class="tablewrap"><table class="data"><caption class="sr">{cap}</caption><thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows.slice(0, 300).map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} class={typeof c === 'number' ? 'n' : undefined}>{typeof c === 'number' ? smart(c) : c}</td>)}</tr>)}</tbody></table></div></details>
+  <details class="more"><summary>{t('action.viewData')}</summary><div class="tablewrap" tabIndex={0}><table class="data"><caption class="sr">{cap}</caption><thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows.slice(0, 300).map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} class={typeof c === 'number' ? 'n' : undefined}>{typeof c === 'number' ? smart(c) : c}</td>)}</tr>)}</tbody></table></div></details>
 );
 
 // ---------------------------------------------------------------- ensembles
@@ -302,7 +302,7 @@ export function Metapop() {
             <Slider id="m-r0" label={t('param.R0')} value={R0} min={0.8} max={6} step={0.05} onChange={setR0} />
           </div>
           <h3>{t('meta.patches')}</h3>
-          <div class="tablewrap"><table class="data"><caption class="sr">{t('meta.patches')}</caption><thead><tr><th>{t('meta.name')}</th><th class="n">{t('param.N')}</th><th class="n">{t('param.I0')}</th><th class="n">{t('meta.now')}</th><th /></tr></thead>
+          <div class="tablewrap" tabIndex={0}><table class="data"><caption class="sr">{t('meta.patches')}</caption><thead><tr><th>{t('meta.name')}</th><th class="n">{t('param.N')}</th><th class="n">{t('param.I0')}</th><th class="n">{t('meta.now')}</th><th /></tr></thead>
             <tbody>{patches.map((p, i) => <tr key={p.id}><th scope="row">{p.name}</th><td class="n"><input type="number" min={100} max={5e6} step={1000} value={p.population} style={{ width: '7em' }} aria-label={`${p.name}: ${t('param.N')}`} onInput={(e) => setPatches(patches.map((x) => (x.id === p.id ? { ...x, population: Math.max(100, Math.min(5e6, Number((e.target as HTMLInputElement).value) || 100)) } : x)))} /></td><td class="n"><input type="number" min={0} max={1000} value={p.seedInfected} style={{ width: '5em' }} aria-label={`${p.name}: ${t('param.I0')}`} onInput={(e) => setPatches(patches.map((x) => (x.id === p.id ? { ...x, seedInfected: Math.max(0, Math.min(1000, Number((e.target as HTMLInputElement).value) || 0)) } : x)))} /></td><td class="n">{num(prev(i, day), { style: 'percent', maximumFractionDigits: 1 })}</td><td><button type="button" class="btn small" onClick={() => setPatches(patches.filter((x) => x.id !== p.id))} aria-label={t('meta.remove', { name: p.name })}>×</button></td></tr>)}</tbody></table></div>
         </section>
       </div>

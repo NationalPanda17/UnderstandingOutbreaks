@@ -12,7 +12,7 @@ export default function ComparePlain() {
       <h1>{t('datecompare.title')}</h1>
       <p class="lead">{t('datecompare.lead')}</p>
       <div class="notice" role="note">{t('datecompare.how')}</div>
-      <Diff />
+      <Diff plain />
       <p class="small"><a href={href(route, 'changes')}>{t('nav.changes')}</a> · <a href={href(route, 'glossary') + '#revision'}>{t('datecompare.whatIsRevision')}</a></p>
     </>
   );

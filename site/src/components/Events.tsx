@@ -5,14 +5,18 @@ import { date, num, t } from '../lib/i18n';
 import type { Prov } from '../lib/prov';
 import { placeName } from '../lib/series';
 import { diseaseName } from './Layout';
+import { CiteButton } from './Cite';
 import { SourceChip, useApp } from './SourceChip';
+
+/** Grouping method as published in events/index.json (methods.grouping). Kept in step by a test. */
+export const GROUPING = { version: '3', max_gap_days: 120, max_notice_countries: 10 };
 
 export function eventProv(core: Core, e: EventIdx, snapshot: string | null): Prov {
   return {
     title: t('event.provTitle', { disease: diseaseName(core, e.disease), places: eventPlaces(core, e) }),
     origin: 'site-derived', sourceIds: Array.from(new Set([...e.source_ids, ...(e.locations.length ? ['geonames', 'naturalearth'] : [])])),
-    asOf: e.last_report, snapshotId: snapshot ?? core.manifest.snapshot_id,
-    method: { name: 'group_by_disease_place_gap', version: '1', params: { max_gap_days: 120 } },
+    asOf: e.last_report, asOfKind: 'published', snapshotId: snapshot ?? core.manifest.snapshot_id,
+    method: { name: 'group_by_disease_place_gap', version: GROUPING.version, params: { max_gap_days: GROUPING.max_gap_days, max_notice_countries: GROUPING.max_notice_countries } },
     links: [{ label: t('event.originalNotice'), url: e.latest_url, kind: 'deep', sourceId: e.source_ids[e.source_ids.length - 1], external: true }],
     notes: [t('event.summaryNote')],
   };
@@ -22,6 +26,21 @@ export function eventPlaces(core: Core, e: EventIdx): string {
   if (!e.countries.length) return t('event.multiCountry');
   const names = e.countries.map((c) => placeName(core, c));
   return names.length > 4 ? `${names.slice(0, 4).join(', ')} +${names.length - 4}` : names.join(', ');
+}
+
+/** The event's stated figures as one sentence. Counts are given in the notice's own words, in quotation marks. */
+export function eventStatement(core: Core, e: EventIdx): string {
+  const head = `${diseaseName(core, e.disease)}, ${eventPlaces(core, e)}`;
+  const src = core.sources[e.source_ids[e.source_ids.length - 1]]?.short_name ?? '';
+  if (e.counts_suppressed || (!e.cases && !e.deaths)) return t('citep.stmt.eventNone', { head, n: e.n_reports, first: date(e.first_report, 'long'), last: date(e.last_report, 'long') });
+  const quotes = [e.cases?.quote, e.deaths?.quote].filter(Boolean).map((q) => `“${q}”`).join('; ');
+  return t('citep.stmt.event', { head, source: src, date: date((e.cases ?? e.deaths)!.as_of, 'long'), quotes });
+}
+
+export function EventCite({ e, inline }: { e: EventIdx; inline?: boolean }) {
+  const { core, route } = useApp();
+  // a quoted figure is cited to the notices alone, not to the gazetteer and boundaries used to place it on a map
+  return <CiteButton inline={inline} prov={{ ...eventProv(core, e, route.snapshot), sourceIds: e.source_ids }} title={`${diseaseName(core, e.disease)} — ${eventPlaces(core, e)}`} statement={eventStatement(core, e)} url={href(route, 'outbreak/' + e.event_id)} />;
 }
 
 export function StatusBadge({ e }: { e: EventIdx }) {
@@ -64,7 +83,7 @@ export function EventRow({ e, showScore }: { e: EventIdx; showScore?: boolean })
         {' · '}{t('event.nReports', { n: e.n_reports })}
         {showScore && <> · {t('rank.score')}: {e.rank.score.toFixed(3)}</>}
       </div>
-      <div style={{ marginTop: '4px' }}><SourceChip prov={eventProv(core, e, route.snapshot)} compact /></div>
+      <div style={{ marginTop: '4px' }} class="chipline"><SourceChip prov={eventProv(core, e, route.snapshot)} compact /> <EventCite e={e} inline /></div>
     </li>
   );
 }

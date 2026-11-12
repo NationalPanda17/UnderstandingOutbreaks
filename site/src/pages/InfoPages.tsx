@@ -272,7 +272,7 @@ export function Researchers() {
       </div>
       <h2>{t('researchers.bulk')}</h2>
       <p class="muted">{t('researchers.bulkNote', { snapshot: m.snapshot_id })}</p>
-      <div class="tablewrap"><table class="data">
+      <div class="tablewrap" tabIndex={0}><table class="data">
         <thead><tr><th>{t('researchers.dataset')}</th><th class="n">{t('researchers.rows')}</th><th>Parquet</th><th>CSV</th><th>{t('table.sources')}</th></tr></thead>
         <tbody>
           {m.bulk.timeseries.map((b: any) => <tr key={b.disease}><th scope="row">{t('researchers.ts', { disease: diseaseName(core, b.disease) })}</th><td class="n">{num(b.rows)}</td><td><a href={`${SITE.dataPath}/${b.parquet}`}>data.parquet</a> <span class="small muted">({num(b.bytes / 1024, { maximumFractionDigits: 0 })} KB)</span></td><td><a href={`${SITE.dataPath}/${b.csv}`}>data.csv.gz</a></td><td class="small">{b.source_ids.map((s: string) => core.sources[s]?.short_name).join(', ')} · <a href={`${SITE.dataPath}/bulk/timeseries/disease=${b.disease}/provenance.json`}>provenance.json</a></td></tr>)}
@@ -284,7 +284,7 @@ export function Researchers() {
       <p class="small">{t('researchers.dictionary')} <a href={`${SITE.dataPath}/catalog/dictionary.json`}>dictionary.json</a> · <a href={`${SITE.dataPath}/catalog/datapackage.json`}>datapackage.json</a> · <a href={`${SITE.dataPath}/catalog/dcat.jsonld`}>dcat.jsonld</a></p>
       <h2>{t('researchers.api')}</h2>
       <p>{t('researchers.apiNote')}</p>
-      <div class="tablewrap"><table class="data"><thead><tr><th>{t('researchers.endpoint')}</th><th>{t('researchers.path')}</th></tr></thead>
+      <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('researchers.endpoint')}</th><th>{t('researchers.path')}</th></tr></thead>
         <tbody>{Object.entries(m.endpoints).map(([k, v]) => <tr key={k}><th scope="row">{t('endpoint.' + k)}</th><td><code>{SITE.dataPath}/{v as string}</code></td></tr>)}</tbody></table></div>
       <h3>Python</h3>
       <pre>{`import pandas as pd, requests\nBASE = "${base}"\nsources = requests.get(f"{BASE}/sources.json").json()["sources"]          # the source registry\nts = requests.get(f"{BASE}/ts/measles/KEN.json").json()                   # one disease and country\nlineage = requests.get(f"{BASE}/lineage/measles/KEN.json").json()         # raw record refs for every value\ndf = pd.read_parquet(f"{BASE}/bulk/timeseries/disease=measles/data.parquet")  # bulk, with per-row provenance\nprint(df[df.is_default_series & ~df.likely_incomplete].tail())`}</pre>

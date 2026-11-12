@@ -20,10 +20,10 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 | Locale | Language | Status | Strings | Reviewed | Awaiting review |
 |---|---|---|---|---|---|
-| en | English | source | 1851 | – | – |
-| es | Español | machine-drafted | 1851 | 0 | 1851 |
-| fr | Français | machine-drafted | 1851 | 0 | 1851 |
-| de | Deutsch | machine-drafted | 1851 | 0 | 1851 |
+| en | English | source | 1893 | – | – |
+| es | Español | machine-drafted | 1893 | 0 | 1893 |
+| fr | Français | machine-drafted | 1893 | 0 | 1893 |
+| de | Deutsch | machine-drafted | 1893 | 0 | 1893 |
 
 ## Español (es): strings by review status
 
@@ -49,11 +49,11 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Caveats and "what this means" text
 
-43 strings: 0 reviewed, 43 machine-drafted and awaiting review.
+44 strings: 0 reviewed, 44 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`
+`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`, `evtl.means`
 
 </details>
 
@@ -159,7 +159,7 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Interface strings (lower priority)
 
-1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
+1263 strings: 0 reviewed, 1263 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `es.json` not listed in a priority group above.
 
@@ -188,11 +188,11 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Caveats and "what this means" text
 
-43 strings: 0 reviewed, 43 machine-drafted and awaiting review.
+44 strings: 0 reviewed, 44 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`
+`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`, `evtl.means`
 
 </details>
 
@@ -298,7 +298,7 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
+1263 strings: 0 reviewed, 1263 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `fr.json` not listed in a priority group above.
 
@@ -327,11 +327,11 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Caveats and "what this means" text
 
-43 strings: 0 reviewed, 43 machine-drafted and awaiting review.
+44 strings: 0 reviewed, 44 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`
+`chart.incomplete`, `chart.incompleteShort`, `chart.incompleteTip`, `chart.incompleteNote`, `overview.means.rate`, `overview.means.pct`, `overview.means.caveat`, `flags.caveat`, `mappage.means.disease`, `mappage.means.density`, `mappage.means.points`, `place.means.cases`, `place.means.detections`, `pin.vintage`, `disease.globalMeans`, `disease.topCaveat`, `changes.moversCaveat`, `explorer.means`, `overlay.means`, `mapsel.means`, `sim.means.ode`, `sim.means.stochastic`, `sim.means.re`, `obs.means.final`, `obs.means.view`, `ens.means`, `branch.means`, `phase.means`, `net.means`, `meta.means`, `mappage.means.flat`, `mappage.means.missing`, `mappage.means.proj`, `regions.means`, `regions.means.unmatched`, `regions.means.conflicts`, `mappage.means.reporting`, `timeline.means`, `spread.caveatReporting`, `spread.caveatFirst`, `spread.caveatNamed`, `spread.caveatNoForecast`, `spread.caveatData`, `evtl.means`
 
 </details>
 
@@ -437,7 +437,7 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
+1263 strings: 0 reviewed, 1263 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `de.json` not listed in a priority group above.
 

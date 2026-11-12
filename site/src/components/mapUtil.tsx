@@ -1,4 +1,5 @@
 /** Map helpers with no MapLibre dependency, so pages can use legends and class breaks without loading the map chunk. */
+import { useEffect, useRef } from 'preact/hooks';
 import { smart, t } from '../lib/i18n';
 
 export const RAMP = ['#ffffcc', '#c7e9b4', '#7fcdbb', '#41b6c4', '#1d91c0', '#225ea8', '#0c2c84'];
@@ -94,13 +95,20 @@ export function MapLegend({ breaks, ramp = RAMP, title, pending, scale, zero }: 
 }
 
 /** What a click on a country shows: its name, what the map says about it, and a way through to its page. */
-export function CountryPopover({ name, context, lines, to, onClose }: { name: string; context?: string; lines: string[]; to: string; onClose: () => void }) {
+export function CountryPopover({ name, context, lines, to, onClose, children }: { name: string; context?: string; lines: string[]; to: string; onClose: () => void; children?: any }) {
+  // Opened from the keyboard or by a click, the popover takes focus; Escape closes it and returns focus to the map.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    ref.current?.querySelector<HTMLElement>('a.primary')?.focus({ preventScroll: true });
+    return () => { if (ref.current?.contains(document.activeElement) || document.activeElement === document.body) prev?.focus?.({ preventScroll: true }); };
+  }, [name]);
   return (
-    <div class="mappop" role="dialog" aria-label={name} data-testid="country-popover">
+    <div class="mappop" role="dialog" aria-label={name} data-testid="country-popover" ref={ref} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
       <div class="row"><b>{name}</b><button type="button" class="btn small" onClick={onClose} aria-label={t('action.close')}>×</button></div>
       {context && <div class="small muted">{context}</div>}
       {lines.map((l) => <div class="small" key={l}>{l}</div>)}
-      <a class="btn small primary" href={to} style={{ marginTop: '6px' }}>{t('popover.open', { name })}</a>
+      <div class="btnrow" style={{ marginTop: '6px' }}><a class="btn small primary" href={to}>{t('popover.open', { name })}</a>{children}</div>
     </div>
   );
 }

@@ -200,12 +200,13 @@ def write_feeds(ctx: Context, out: Path, limit: int = 40) -> None:
         if not items:
             return
         ents = []
-        for pub, rid, rtitle, url, eid, dis, _c, src in items[:limit]:
+        for pub, rid, rtitle, url, eid, dis, cs, src in items[:limit]:
             sname = ctx.registry[src]["short_name"]
+            where = ", ".join(ctx.places.get(c, {}).get("name", c) for c in cs[:6]) + (f" and {len(cs) - 6} more" if len(cs) > 6 else "")
             ents.append(f"<entry><id>urn:uo:notice:{escape(rid)}</id><title>{escape(rtitle)}</title><updated>{pub}T00:00:00Z</updated>"
                         f"<link rel=\"alternate\" href=\"{escape(url)}\"/><link rel=\"related\" href=\"{base}/en/outbreak/{escape(eid)}\"/>"
                         f"<author><name>{escape(sname)}</name></author>"
-                        f"<summary>{escape(sname)} notice about {escape(names.get(dis, dis))}. The link opens the original notice; this site groups it at {base}/en/outbreak/{escape(eid)}.</summary></entry>")
+                        f"<summary>{escape(sname)} notice about {escape(names.get(dis, dis))}{escape(' naming ' + where if where else '')}. The link opens the original notice; this site groups it at {base}/en/outbreak/{escape(eid)}.</summary></entry>")
         rel = path.relative_to(out).as_posix()
         xml = (f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>{escape(title)}</title>"
                f"<id>{base}{ctx.site['dataPath']}/{rel}</id><link rel=\"self\" href=\"{base}{ctx.site['dataPath']}/{rel}\"/><link href=\"{base}/\"/>"
@@ -561,6 +562,12 @@ def publish_all(ctx: Context, log) -> dict:
         "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "source_ids": sorted({s for e in idx for s in e["source_ids"]}),
         "methods": {"ranking": RANK_METHOD, "grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD,
                     "no_recent_update_days": NO_RECENT_UPDATE_DAYS}, "unmapped_names": ctx.unmapped, "events": idx})
+    # What each event looked like at every snapshot in which it changed (status, stated counts, number of notices),
+    # in one small file, so two snapshots can be compared without opening every event.
+    write_json(out / "events" / "history.json", {
+        "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived", "source_ids": sorted({s for e in idx for s in e["source_ids"]}),
+        "note": "One entry per snapshot in which the event changed. Counts are the figures read automatically from the notices.",
+        "events": {e["event_id"]: {"disease": e["disease"], "countries": e["countries"], "history": ctx.event_history.get(e["event_id"], [])} for e in idx}})
 
     # ---- feeds: recent official notices per disease and per country, as Atom files. Static files, no accounts:
     # a feed reader fetches them like any other file. Entries are the notices' own titles and links.

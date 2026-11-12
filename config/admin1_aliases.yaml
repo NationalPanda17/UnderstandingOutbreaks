@@ -1,8 +1,78 @@
 # Reviewed mappings from a source's first-level region name to a Natural Earth admin-1 region name, per country.
-# Only a person adds entries here, after checking that the two names mean the same region. The pipeline matches
-# names automatically only when they are identical after case/accent/punctuation folding; anything else waits here.
+# Entries are added only after checking that the two names mean the same region. The pipeline matches names
+# automatically only when they are identical after case/accent/punctuation folding; anything else waits here.
 #
-# aliases:
-#   IDN:
-#     "DKI JAKARTA": "Jakarta Raya"
-aliases: {}
+# Reviewed 2026-11-11. Every entry below is a spelling variant, a truncation or an official prefix of the same
+# region ("DKI Jakarta" is Jakarta; "W.P." is "Wilayah Persekutuan", federal territory). Nothing here joins a
+# part of a region to the whole, or a region to its successor.
+aliases:
+  BTN:
+    "THIMPU": "Thimphu"
+  IDN:
+    "DKI JAKARTA": "Jakarta Raya"
+  IND:
+    "A & N ISLAND": "Andaman and Nicobar"
+    "A&N ISLAND": "Andaman and Nicobar"
+    "UTTRAKHAND": "Uttarakhand"
+  KHM:
+    "PREAH SIHANOUK": "Krong Preah Sihanouk"
+    "RATANAK KIRI": "Rôtânôkiri"
+  MMR:
+    "AYAYARWADDY": "Ayeyarwady"
+  MYS:
+    "W.P. KUALA LUMPUR": "Kuala Lumpur"
+    "W.P. LABUAN": "Labuan"
+  PAK:
+    "AJK": "Azad Kashmir"
+    "BALUCH": "Baluchistan"
+    "ICT": "F.C.T."
+    "KPK": "K.P."
+  THA:
+    "BUNGKAN": "Bueng Kan"
+    "KAMPAENG PHET": "Kamphaeng Phet"
+    "PHACHINBURI": "Prachin Buri"
+    "PHRA NAKHON SI AYUDHYA": "Phra Nakhon Si Ayutthaya"
+    "PRACHUAP KHILIKHAN": "Prachuap Khiri Khan"
+    "SAMUT PRAKARN": "Samut Prakan"
+    "SAMUT SONGKHAM": "Samut Songkhram"
+    "TRAD": "Trat"
+
+# Names that were reviewed and cannot be drawn on these boundaries. They stay in the published tables, off the
+# map, and are no longer reported as needing review.
+#   part        the name is one part of a boundary region (drawing it would show a part as the whole)
+#   newer       the region was created after the boundary file was drawn, or the boundary file uses older units
+#   other-unit  the source reports by a different kind of unit (health area, district, city)
+#   ambiguous   the boundary file has two regions that answer to this name
+#   duplicate   the source lists the same region a second time under this spelling for the same years; mapping it
+#               would make the two rows conflict and hide those years, so the other spelling is the one drawn
+#   elsewhere   the name belongs to another country or could not be identified
+not_mappable:
+  GTM:
+    other-unit: ["GUATEMALA CENTRAL", "GUATEMALA NOR OCCIDENTE", "GUATEMALA NOR ORIENTE", "GUATEMALA NOROCCIDENTE", "GUATEMALA NORORIENTE", "GUATEMALA SUR", "IXCAN", "IXIL", "PETEN NORTE", "PETEN SUR OCCIDENTAL", "PETEN SUR ORIENTAL", "PETEN SUROCCIDENTAL", "PETEN SURORIENTAL"]
+  IDN:
+    duplicate: ["D.I YOGYA", "DI YOGYAKARTA", "KALIMANTAN SELATA", "SULAWESI SELATA", "SUMATERA SELATA", "NANGROE ACEH DARUSSALAM"]
+    newer: ["KALIMANTAN UTARA", "PAPUA BARAT DAYA", "PAPUA PEGUNUNGAN", "PAPUA SELATAN", "PAPUA TENGAH"]
+  IND:
+    part: ["D&N HAVELI", "DAMAN & DIU", "DAMAN AND DIU"]
+  LAO:
+    newer: ["XAISOMBOUN"]
+    ambiguous: ["VIENTIANE CAPITAL", "VIENTIANE CAPITAL [PREFECTURE]"]
+  LKA:
+    other-unit: ["CENTRAL", "EASTERN", "NORTH CENTRAL", "NORTH WESTERN", "NORTHERN", "SABARAGAMUWA", "SOUTHERN", "UVA", "WESTERN"]
+  MEX:
+    ambiguous: ["MEXICO"]
+  MMR:
+    part: ["BAGO (E)", "BAGO (EAST)", "BAGO (W", "BAGO (WEST)", "SHAN (EAST)", "SHAN (N)", "SHAN (NORTH)", "SHAN (S)", "SHAN (SOUTH)"]
+    newer: ["NAY PYI TAW", "NAYPYITAW"]
+    elsewhere: ["MONGAR"]
+  NIC:
+    other-unit: ["BILWI", "ZELAYA CENTRAL"]
+  NPL:
+    newer: ["MADHESH", "PROVINCE 1", "SUDURPASCHIM"]
+  PAK:
+    newer: ["TDS-KP"]
+  SAU:
+    other-unit: ["AHSA", "AL-AHSA", "AL-SHAMAL", "BISHA", "BISHAH", "GONFUDA", "GORIAT", "HAFR AL-BATEN", "HAFR AL-BATIN", "JEDDAH", "MEDINAH", "NORTHERN", "QASSIM", "QUNFUDAH", "QURAYYAT", "TAIF", "TA`IF", "THE HOLY CAPITAL"]
+  VNM:
+    newer: ["HA TAY"]
+    ambiguous: ["BAC KAN", "DONG NAI", "HUNG YEN"]

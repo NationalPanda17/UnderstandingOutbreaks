@@ -295,12 +295,16 @@ def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dic
                 raise SchemaChange(f"OpenDengue spatial extract: only {len(records)} region-years derived")
             product = build_dengue_product(records, read_admin1_shapes(open(f_shape.raw_path, "rb").read()), aliases)
             write_json(cache_path, {"key": key, "product": product})
-        if product["unmatched"]:
+        # Names a reviewer has already judged impossible to draw are not reported again; only new names are.
+        reviewed = {f"{c}: {n}" for c, groups in (load_yaml(CONFIG / "admin1_aliases.yaml").get("not_mappable") or {}).items()
+                    for names in groups.values() for n in names}
+        pending = [u for u in product["unmatched"] if u not in reviewed]
+        if pending:
             record_issue("unmatched-region", "Region names without a matching boundary",
                          "These first-level region names from OpenDengue did not match exactly one Natural Earth region of the "
                          "same country, so they are listed in the published tables but not drawn on maps. Add a reviewed "
-                         "mapping to `config/admin1_aliases.yaml` (never guessed automatically):\n\n"
-                         + "\n".join(f"- {u}" for u in product["unmatched"]), source_id="opendengue", dedupe_key="unmatched-regions")
+                         "mapping to `config/admin1_aliases.yaml`, or list the name under `not_mappable` there (never guessed automatically):\n\n"
+                         + "\n".join(f"- {u}" for u in pending), source_id="opendengue", dedupe_key="unmatched-regions")
         return {"dengue": {**product, "method": METHOD, "source_ids": ["opendengue", "naturalearth"],
                            "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
                            "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}}

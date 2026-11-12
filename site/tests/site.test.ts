@@ -393,3 +393,62 @@ describe('site search', async () => {
     expect(fold('Côte d’Ivoire')).toBe('cote d ivoire');
   });
 });
+
+describe('citations, event comparison and keyboard map movement', () => {
+  it('a cited figure leads with its sentence and always carries source, caveat and a snapshot-pinned link', async () => {
+    const { citeText } = await import('../src/lib/exporters');
+    vi.stubGlobal('window', { location: { href: 'https://example.org/en/?d=measles', origin: 'https://example.org' } });
+    const core = { sources: { who: { short_name: 'WHO test source', license: 'CC BY 4.0' } } } as unknown as Core;
+    const prov: Prov = { title: 'Measles', origin: 'site-derived', sourceIds: ['who'], asOf: '2026-11-10', snapshotId: '20261112T001709Z' };
+    const text = citeText(core, prov, 'Measles: world', 'Aug 2026', 'Measles, Aug 2026: 15,337.', '/en/disease/measles');
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('Measles, Aug 2026: 15,337. Data as of 2026-11-10.');
+    expect(text).toContain('Source: WHO test source; calculated by');
+    expect(text).toContain('/en/disease/measles?snapshot=20261112T001709Z');
+    expect(lines.length).toBe(4);
+    // an event's date is when the notice was published, and is labelled as such
+    expect(citeText(core, { ...prov, asOfKind: 'published' }, 't', undefined, 'S.').split('\n')[0]).toBe('S. Latest notice published 2026-11-10.');
+    // without a sentence, the view's title leads
+    expect(citeText(core, prov, 'Measles: world', 'Aug 2026').split('\n')[0]).toBe('Measles: world (Aug 2026). Data as of 2026-11-10.');
+    vi.unstubAllGlobals();
+  });
+
+  it('event comparison reports new events and exactly which fields changed between two snapshots', async () => {
+    const { diffEvents, eventStateAt } = await import('../src/workbench/logic');
+    const st = (snapshot_id: string, o: Partial<{ status: string; cases: number | null; deaths: number | null; n_reports: number; countries: string[] }> = {}) =>
+      ({ snapshot_id, status: 'reported', cases: null, deaths: null, n_reports: 1, last_report: '2026-11-01', countries: ['KEN'], ...o });
+    const events = {
+      same: { disease: 'measles', countries: ['KEN'], history: [st('20261101T000000Z')] },
+      grew: { disease: 'cholera', countries: ['KEN'], history: [st('20261101T000000Z', { cases: 10 }), st('20261105T000000Z', { cases: 25, n_reports: 2 })] },
+      born: { disease: 'mpox', countries: ['UGA'], history: [st('20261104T000000Z', { countries: ['UGA'] })] },
+      later: { disease: 'polio', countries: ['NGA'], history: [st('20261120T000000Z')] },
+    };
+    expect(eventStateAt(events.grew.history, '20261103T000000Z')?.cases).toBe(10);
+    expect(eventStateAt(events.born.history, '20261103T000000Z')).toBeNull();
+    const d = diffEvents(events, '20261102T000000Z', '20261110T000000Z');
+    expect(d.map((r) => r.event_id).sort()).toEqual(['born', 'grew']);
+    expect(d.find((r) => r.event_id === 'born')!.kind).toBe('new');
+    expect(d.find((r) => r.event_id === 'grew')!.what).toEqual(['cases', 'notices']);
+    expect(diffEvents(events, '20261110T000000Z', '20261110T000000Z')).toEqual([]);
+  });
+
+  it('arrow keys move to the nearest country in that direction and stay put at the edge', async () => {
+    const { nextInDirection } = await import('../src/components/StaticMap');
+    const pts = [{ cx: 100, cy: 100 }, { cx: 140, cy: 105 }, { cx: 300, cy: 100 }, { cx: 110, cy: 160 }, { cx: 150, cy: 20 }];
+    expect(nextInDirection(pts, 0, 'ArrowRight')).toBe(1);
+    expect(nextInDirection(pts, 1, 'ArrowRight')).toBe(2);
+    expect(nextInDirection(pts, 0, 'ArrowDown')).toBe(3);
+    expect(nextInDirection(pts, 2, 'ArrowRight')).toBe(2);
+    expect(nextInDirection(pts, 0, 'ArrowLeft')).toBe(0);
+    expect(nextInDirection(pts, 1, 'ArrowUp')).toBe(4);
+  });
+
+  it('the grouping method shown in event provenance matches the pipeline', async () => {
+    const { GROUPING } = await import('../src/components/Events');
+    const py = readFileSync(join(ROOT, '..', 'pipeline', 'uo', 'events.py'), 'utf8');
+    expect(Number(/MAX_NOTICE_COUNTRIES\s*=\s*(\d+)/.exec(py)![1])).toBe(GROUPING.max_notice_countries);
+    const gm = /GROUP_METHOD\s*=\s*\{[^}]*\}/s.exec(py)![0];
+    expect(/"version":\s*"(\d+)"/.exec(gm)![1]).toBe(GROUPING.version);
+    expect(Number(/"max_gap_days":\s*(\d+)/.exec(gm)![1])).toBe(GROUPING.max_gap_days);
+  });
+});

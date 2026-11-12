@@ -187,7 +187,7 @@ export function ChartBuilder() {
         {state === 'ready' && (
           <>
             <details class="more"><summary>{t('builder.table', { n: rows.length })}</summary>
-              <div class="tablewrap"><table class="data"><thead><tr><th>{t('pivot.col.' + x)}</th>{color && <th>{t('pivot.col.' + color)}</th>}<th class="n">{t('pivot.col.' + y)}</th></tr></thead><tbody>{rows.slice(0, 300).map((r, i) => <tr key={i}><td>{String(r[x])}</td>{color && <td>{String(r[color])}</td>}<td class="n">{smart(r[y] as number)}</td></tr>)}</tbody></table></div></details>
+              <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('pivot.col.' + x)}</th>{color && <th>{t('pivot.col.' + color)}</th>}<th class="n">{t('pivot.col.' + y)}</th></tr></thead><tbody>{rows.slice(0, 300).map((r, i) => <tr key={i}><td>{String(r[x])}</td>{color && <td>{String(r[color])}</td>}<td class="n">{smart(r[y] as number)}</td></tr>)}</tbody></table></div></details>
             <div class="btnrow"><button type="button" class="btn small" onClick={() => exp('png')}>{t('action.png')}</button><button type="button" class="btn small" onClick={() => exp('svg')}>{t('action.svg')}</button><button type="button" class="btn small" onClick={() => exp('spec')}>{t('builder.spec')}</button></div>
           </>
         )}

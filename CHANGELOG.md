@@ -2,6 +2,23 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-12 — Citing, following and comparing
+<!-- type: feature -->
+- Cite: every chart, map, headline figure, event and map country now opens a panel with a ready-to-paste sentence,
+  the original source, the date of the data, how the number was made, and a link pinned to that exact version.
+- Feeds: disease, country and outbreak pages link to their feed of official notices; feed readers can find the
+  all-notices feed from any page. Feed entries name the countries a notice covers.
+- What changed between two dates: readable dates, a one-day default, a link that keeps the chosen dates, and a new
+  table of outbreak events that are new or whose status, stated counts, notices or countries changed.
+- Outbreak list: a timeline strip showing each event from its first official notice to its latest.
+- Reporting: how up to date and how complete each country's reporting is now appears in the disease table and in
+  the map's country panel, not only on country pages.
+- Keyboard and screen readers: the map is one tab stop; arrow keys move between countries, a letter jumps to a
+  country by name, Enter opens it, and the current country is announced. Scrollable tables can be reached by
+  keyboard. An automated accessibility audit of twelve pages reports no remaining issues.
+- Dengue regions: 22 more source names are drawn after review; names that cannot be drawn on these boundaries are
+  recorded with the reason in `config/admin1_aliases.yaml`.
+
 ## 2026-11-12 — Correctness and credibility pass
 <!-- type: correction -->
 - Influenza percent positive could exceed 100% where detections and samples came from different surveillance

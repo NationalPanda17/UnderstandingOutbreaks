@@ -1,5 +1,5 @@
 /** Snapshot diff, custom data overlay, map selection, and linked views. */
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { href, setParams } from '../lib/app';
 import { getJSON, getOptional, loadTs, type EventIdx, type Overview as Ov, type PType, type TsFile } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
@@ -14,7 +14,7 @@ import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
 import { quantileBreaks } from '../components/mapUtil';
 import { SourceChip, useApp } from '../components/SourceChip';
-import { aggregateSeries, diffSnapshots, guessMapping, parseCSV, validateOverlay, type DiffRow, type OverlayMapping } from './logic';
+import { aggregateSeries, diffEvents, diffSnapshots, guessMapping, parseCSV, validateOverlay, type DiffRow, type EventState, type OverlayMapping } from './logic';
 
 function DiseaseSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { core } = useApp();
@@ -23,13 +23,34 @@ function DiseaseSelect({ value, onChange }: { value: string; onChange: (v: strin
 
 // ---------------------------------------------------------------- snapshot diff
 
-export function Diff() {
+/** A snapshot id (UTC timestamp) as a readable date and time. */
+export function snapLabel(id: string): string {
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(id);
+  return m ? `${date(`${m[1]}-${m[2]}-${m[3]}`)}, ${m[4]}:${m[5]} UTC` : id;
+}
+
+/** `plain` is the reader-facing page: readable dates, a default that has something to show, and outbreak changes. */
+export function Diff({ plain }: { plain?: boolean }) {
   const { core, route } = useApp();
   const snaps = core.manifest.snapshots;
-  const [disease, setDisease] = useState(route.params.get('d') ?? 'covid19');
-  const [a, setA] = useState(snaps[Math.max(0, snaps.length - 2)]?.id ?? '');
-  const [b, setB] = useState(snaps[snaps.length - 1]?.id ?? '');
+  const known = (id: string | null) => (id && snaps.some((s) => s.id === id) ? id : null);
+  const [disease, setDiseaseState] = useState(route.params.get('d') ?? '');
+  // Reader-facing default: the latest snapshot against the last one from an earlier day (a day's change), not the
+  // one a few minutes before it.
+  const lastId = snaps[snaps.length - 1]?.id ?? '';
+  const dayBefore = plain ? snaps.filter((s) => s.id.slice(0, 8) < lastId.slice(0, 8)).pop()?.id : undefined;
+  const [a, setAState] = useState(known(route.params.get('a')) ?? dayBefore ?? snaps[Math.max(0, snaps.length - 2)]?.id ?? '');
+  const [b, setBState] = useState(known(route.params.get('b')) ?? snaps[snaps.length - 1]?.id ?? '');
+  // The choice lives in the address, so a comparison can be linked to and cited.
+  const setDisease = (v: string) => { setDiseaseState(v); setParams({ d: v }); };
+  const setA = (v: string) => { setAState(v); setParams({ a: v }); };
+  const setB = (v: string) => { setBState(v); setParams({ b: v }); };
+  const rixQ = useAsync(() => getJSON<any>('revisions/index.json'), []);
+  // With no disease chosen, start on one that has recorded changes, so the first view is not an empty table.
+  useEffect(() => { if (!disease && rixQ.data) setDiseaseState(Object.keys(rixQ.data.countries_with_changes)[0] ?? 'covid19'); }, [rixQ.data]);
+  const order = a <= b;
   const res = useAsync(async () => {
+    if (!disease) return [] as DiffRow[];
     const rix = await getJSON<any>('revisions/index.json');
     const ia = rix.snapshots.indexOf(a); const ib = rix.snapshots.indexOf(b);
     const countries: string[] = rix.countries_with_changes[disease] ?? [];
@@ -43,23 +64,47 @@ export function Diff() {
   const prov: Prov = { title: t('diff.resultTitle', { a, b }), origin: 'site-derived', sourceIds: Array.from(new Set(['uo_site', ...bySource.map(([s]) => s).filter((s) => s !== '?')])), asOf: core.manifest.generated_at.slice(0, 10), snapshotId: b, method: { name: 'snapshot_diff', version: '1', params: { a, b, disease } } };
   return (
     <>
-      <h2>{t('diff.title')}</h2>
+      <h2>{plain ? t('datecompare.values') : t('diff.title')}</h2>
       <p class="muted">{t('diff.lead')} {t('pin.vintage')}</p>
       <section class="card">
         <div class="tools">
           <DiseaseSelect value={disease} onChange={setDisease} />
-          <label>{t('diff.from')} <select value={a} onChange={(e) => setA((e.target as HTMLSelectElement).value)}>{snaps.map((s) => <option key={s.id} value={s.id}>{s.id}</option>)}</select></label>
-          <label>{t('diff.to')} <select value={b} onChange={(e) => setB((e.target as HTMLSelectElement).value)}>{snaps.map((s) => <option key={s.id} value={s.id}>{s.id}</option>)}</select></label>
+          <label>{t('diff.from')} <select value={a} data-testid="diff-a" onChange={(e) => setA((e.target as HTMLSelectElement).value)}>{snaps.map((s) => <option key={s.id} value={s.id}>{plain ? snapLabel(s.id) : s.id}</option>)}</select></label>
+          <label>{t('diff.to')} <select value={b} data-testid="diff-b" onChange={(e) => setB((e.target as HTMLSelectElement).value)}>{snaps.map((s) => <option key={s.id} value={s.id}>{plain ? snapLabel(s.id) : s.id}</option>)}</select></label>
         </div>
+        {!order && <div class="notice warn" role="alert">{t('diff.order')}</div>}
         {snaps.length < 2 && <div class="notice">{t('diff.oneSnapshot')}</div>}
         {res.loading && <Loading />}
         <header><h3>{t('diff.count', { n: rows.length })}</h3><SourceChip prov={prov} /></header>
         {bySource.length > 0 && <p class="small">{t('diff.bySource')}: {bySource.map(([s, n]) => `${core.sources[s]?.short_name ?? s} (${n})`).join(', ')}</p>}
-        {rows.length > 0 && <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('table.series')}</th><th>{t('table.period')}</th><th class="n">{a.slice(0, 13)}</th><th class="n">{b.slice(0, 13)}</th><th class="n">{t('diff.change')}</th><th>{t('diff.kind')}</th></tr></thead>
+        {rows.length > 0 && <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('table.series')}</th><th>{t('table.period')}</th><th class="n">{plain ? snapLabel(a) : a.slice(0, 13)}</th><th class="n">{plain ? snapLabel(b) : b.slice(0, 13)}</th><th class="n">{t('diff.change')}</th><th>{t('diff.kind')}</th></tr></thead>
           <tbody>{rows.slice(0, 500).map((r) => { const m = core.seriesByKey[r.series_id.slice(0, -4)]; return <tr key={r.series_id + r.period}><th scope="row">{placeName(core, r.series_id.slice(-3))}</th><td class="small">{m ? seriesLabel(core, m, { withSource: true }) : r.series_id}</td><td>{r.period}</td><td class="n">{num(r.a)}</td><td class="n">{num(r.b)}</td><td class="n">{r.change === null ? '–' : num(r.change, { signDisplay: 'always' })}</td><td>{t('diff.kind.' + r.kind)}</td></tr>; })}</tbody></table></div>}
         <div class="btnrow" style={{ marginTop: '8px' }}><button type="button" class="btn small" disabled={!rows.length} onClick={() => exportBundle(core, prov, rows.map((r) => ({ ...r, source_id: core.seriesByKey[r.series_id.slice(0, -4)]?.source_id ?? '', snapshot_a: a, snapshot_b: b })), 'csv', 'snapshot-diff')}>{t('action.downloadCsv')}</button></div>
       </section>
+      {plain && <EventDiff a={a} b={b} />}
     </>
+  );
+}
+
+/** Outbreak events that are new or changed between two snapshots: status, stated counts, notices, countries. */
+function EventDiff({ a, b }: { a: string; b: string }) {
+  const { core, route } = useApp();
+  const hist = useAsync(() => getOptional<{ source_ids: string[]; events: Record<string, { disease: string; countries: string[]; history: EventState[] }> }>('events/history.json'), []);
+  const rows = useMemo(() => (hist.data ? diffEvents(hist.data.events, a, b) : []), [hist.data, a, b]);
+  if (!hist.data) return null;
+  const places = (cs: string[]) => (cs.length ? cs.slice(0, 4).map((c) => placeName(core, c)).join(', ') + (cs.length > 4 ? ` +${cs.length - 4}` : '') : t('event.multiCountry'));
+  const prov: Prov = { title: t('evdiff.title'), origin: 'site-derived', sourceIds: hist.data.source_ids, asOf: core.manifest.generated_at.slice(0, 10), snapshotId: b, method: { name: 'snapshot_diff', version: '1', params: { a, b } } };
+  const cell = (s: EventState | null) => (s ? `${t('status.' + s.status)} · ${s.cases === null ? '–' : num(s.cases)} / ${s.deaths === null ? '–' : num(s.deaths)} · ${t('event.nReports', { n: s.n_reports })} · ${s.countries.length ? t('event.scope.multi', { n: s.countries.length }) : t('event.scope.none')}` : '–');
+  return (
+    <section class="card" style={{ marginTop: '16px' }} data-testid="event-diff">
+      <header><h2>{t('evdiff.title')}</h2><SourceChip prov={prov} /></header>
+      <p class="sub">{t('evdiff.lead')}</p>
+      <h3>{t('evdiff.count', { n: rows.length })}</h3>
+      {rows.length > 0 && <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th scope="col">{t('evdiff.event')}</th><th scope="col">{t('diff.kind')}</th><th scope="col">{snapLabel(a)}</th><th scope="col">{snapLabel(b)}</th></tr></thead>
+        <tbody>{rows.slice(0, 200).map((r) => <tr key={r.event_id}><th scope="row"><a href={href(route, 'outbreak/' + r.event_id)}>{diseaseName(core, r.disease)} — {places(r.countries)}</a></th>
+          <td>{r.kind === 'new' ? t('diff.kind.new') : r.what.map((w) => t('evdiff.what.' + w)).join(', ')}</td><td class="small">{cell(r.before)}</td><td class="small">{cell(r.after)}</td></tr>)}</tbody></table></div>}
+      <p class="small muted">{t('evdiff.note')}</p>
+    </section>
   );
 }
 
