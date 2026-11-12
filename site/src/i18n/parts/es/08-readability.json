@@ -54,5 +54,7 @@
   "measure.specimens_processed": "Muestras analizadas",
   "measureIn.specimens_processed": "muestras analizadas",
   "period.weekOfIn": "la semana del {date}",
-  "chip.derived": "Calculado a partir de {source}"
+  "chip.derived": "Calculado a partir de {source}",
+  "period.latestComplete": "Último periodo completo: {period}.",
+  "period.pending": "{period} tiene por ahora notificaciones de {n} de unos {usual} países que suelen notificar. Aún puede cambiar, por lo que no se muestra en el mapa."
 }

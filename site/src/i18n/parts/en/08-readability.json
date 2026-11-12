@@ -54,5 +54,7 @@
   "measure.specimens_processed": "Specimens tested",
   "measureIn.specimens_processed": "specimens tested",
   "period.weekOfIn": "the week of {date}",
-  "chip.derived": "Calculated from {source}"
+  "chip.derived": "Calculated from {source}",
+  "period.latestComplete": "Latest complete period: {period}.",
+  "period.pending": "{period} has reports from {n} of about {usual} countries that usually report so far. It can still change, so it is not mapped yet."
 }

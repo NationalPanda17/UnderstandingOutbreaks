@@ -1947,5 +1947,7 @@
  "measure.specimens_processed": "Untersuchte Proben",
  "measureIn.specimens_processed": "untersuchte Proben",
  "period.weekOfIn": "die Woche vom {date}",
- "chip.derived": "Berechnet aus {source}"
+ "chip.derived": "Berechnet aus {source}",
+ "period.latestComplete": "Letzter vollständiger Zeitraum: {period}.",
+ "period.pending": "{period}: bisher Meldungen aus {n} von etwa {usual} Ländern, die üblicherweise melden. Der Zeitraum kann sich noch ändern und ist daher noch nicht auf der Karte."
 }

@@ -16,6 +16,8 @@ Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on 
 - Each card's explanations and caveats are folded behind one "How to read this" line; the site-wide caveat and the
   date of the data stay visible under the header.
 - Larger text and more spacing throughout.
+- The home map opens on influenza, the freshest series (weekly), instead of measles (monthly, about three months
+  behind). Under the title it now says which period is mapped and how far the next one has filled in.
 
 ## 2026-11-12 — Updates start on time
 <!-- type: pipeline -->

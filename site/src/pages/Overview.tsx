@@ -65,11 +65,26 @@ export function FlagList({ flags, limit }: { flags: Flag[]; limit: number }) {
   );
 }
 
+const HOME_DISEASE = 'influenza';
+
+/** Why the map shows the period it shows: the latest complete one, and how far the next one has filled in. A period
+ *  is mapped once about nine in ten of the countries that usually report have reported it. */
+export function periodNote(ov: Ov, usual: number | null | undefined): string {
+  const out = [t('period.latestComplete', { period: periodInSentence(ov.anchor, ov.period_type) })];
+  const i = ov.global.p.findIndex((p) => p >= ov.incomplete_from);
+  const n = i >= 0 ? ov.global.n?.[i] : undefined;
+  if (i >= 0 && n !== undefined && n !== null && usual) out.push(t('period.pending', { period: periodLabel(ov.global.p[i], ov.period_type), n, usual: Math.round(usual) }));
+  return out.join(' ');
+}
+
 export function Overview() {
   const { core, route } = useApp();
   const analyst = route.mode === 'analyst';
   const tsDiseases = core.diseases.filter((d) => d.has_timeseries);
-  const disease = route.params.get('d') && core.diseaseById[route.params.get('d')!]?.has_timeseries ? route.params.get('d')! : 'measles';
+  // The map opens on the freshest series the site has (influenza is weekly; measles is monthly and arrives about three
+  // months late), so the first view is as recent as official reporting allows.
+  const fallback = core.diseaseById[HOME_DISEASE]?.has_timeseries ? HOME_DISEASE : tsDiseases[0]?.id ?? 'measles';
+  const disease = route.params.get('d') && core.diseaseById[route.params.get('d')!]?.has_timeseries ? route.params.get('d')! : fallback;
   const region = route.params.get('region') ?? '';
   const type = route.params.get('type') ?? '';
   const [table, setTable] = useState(false);
@@ -187,6 +202,7 @@ export function Overview() {
             <div><h2>{title}</h2><p class="sub">{windowText}{meta && <> · {t('def.' + meta.case_definition)}</>} <DiseaseBadge d={d} /> {ov.data && <AgeBadge period={ov.data.anchor} ptype={ov.data.period_type} />}{meta?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p></div>
             {prov && <SourceChip prov={prov} />}
           </header>
+          {ov.data && <p class="sub" data-testid="period-note">{periodNote(ov.data, (meta?.lag as any)?.completeness?.usual_reporters)}</p>}
           <div class="tools" role="group" aria-label={t('overview.filters')}>
             <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value })} data-testid="disease-select">
               {tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}

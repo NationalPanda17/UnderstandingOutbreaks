@@ -494,3 +494,17 @@ describe('external timer (scheduler/)', () => {
     expect(planFor('0 0 * * *')).toBeNull();
   });
 });
+
+describe('home map period note', () => {
+  it('names the latest complete period and how far the next one has filled in', async () => {
+    await loadLocale('en');
+    const { periodNote } = await import('../src/pages/Overview');
+    const ov = { anchor: '2026-08-01', period_type: 'M', incomplete_from: '2026-09-01', global: { p: ['2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], v: [1, 2, 3, 4], n: [129, 131, 60, 2] } } as any;
+    const note = periodNote(ov, 143.2);
+    expect(note).toContain('Latest complete period: Aug 2026.');
+    expect(note).toContain('Sep 2026 has reports from 60 of about 143 countries');
+    // no later period, or no usual-reporter count: only the first sentence
+    expect(periodNote({ ...ov, incomplete_from: '2027-01-01' }, 143)).toBe('Latest complete period: Aug 2026.');
+    expect(periodNote(ov, null)).toBe('Latest complete period: Aug 2026.');
+  });
+});
