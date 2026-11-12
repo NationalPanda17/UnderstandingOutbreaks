@@ -1,9 +1,9 @@
 /** Site chrome: header with language switcher and Simple / Analyst toggle, persistent data notice, footer disclaimers. */
 import { useEffect, useState } from 'preact/hooks';
 import { Search } from './Search';
-import { LOCALES, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
+import { OFFERED, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
 import type { Core, Disease } from '../lib/data';
-import { date, t } from '../lib/i18n';
+import { date, num, periodLabel, t } from '../lib/i18n';
 import { useApp } from './SourceChip';
 
 const NAV: { path: string; key: string; cls?: string }[] = [
@@ -21,8 +21,24 @@ const NAV: { path: string; key: string; cls?: string }[] = [
 export function AgeBadge({ period, ptype }: { period: string | null | undefined; ptype: string }) {
   if (!period || ptype !== 'Y') return null;
   const year = parseInt(period.slice(0, 4), 10);
-  const n = new Date().getFullYear() - year;
-  return <span class="badge age" title={t('age.explain')}>{t('age.badge', { year: String(year), n })}</span>;
+  // Age is counted from the end of the year the figure covers, in months, so "2024" reads as what it is in late 2026.
+  const now = new Date();
+  const months = Math.max(0, (now.getUTCFullYear() - year - 1) * 12 + now.getUTCMonth() + 1);
+  return <span class="badge age" title={t('age.explain')}>{t('age.badgeMonths', { year: String(year), n: months })}</span>;
+}
+
+/** Under a headline world total: what it is built from (measles: suspected, WHO total, laboratory-confirmed; polio:
+ *  wild and vaccine-derived types), and the same total restricted to the countries that report consistently. */
+export function Breakdown({ g, ptype }: { g: { breakdown?: { dataset_id: string; case_definition: string; period: string; value: number | null; n: number }[]; panel?: { n_panel: number; value_at_anchor: number | null } }; ptype: string }) {
+  const parts = (g.breakdown ?? []).filter((b) => b.value !== null);
+  const panel = g.panel && g.panel.n_panel > 0 && g.panel.value_at_anchor !== null ? g.panel : null;
+  if (!parts.length && !panel) return null;
+  return (
+    <p class="small" data-testid="breakdown">
+      {parts.length > 0 && <>{t('breakdown.title', { period: periodLabel(parts[0].period, ptype) })} {parts.map((b, i) => <span key={b.dataset_id + b.case_definition}>{i > 0 && ' · '}{t(`part.${b.dataset_id}.${b.case_definition}`)} <b>{num(b.value)}</b> <span class="muted">({t('breakdown.n', { n: b.n })})</span></span>)}. <span class="muted">{t('breakdown.note.' + parts[0].dataset_id.split('_')[1])}</span><br /></>}
+      {panel && <span class="muted">{t('panel.card', { n: panel.n_panel, value: num(panel.value_at_anchor) })}</span>}
+    </p>
+  );
 }
 
 export function switchLocale(route: Route, loc: string): void {
@@ -61,11 +77,13 @@ export function Layout({ children }: { children: any }) {
               <button type="button" aria-pressed={route.mode === 'simple'} onClick={() => setMode('simple')} title={t('mode.simple.hint')}>{t('mode.simple')}</button>
               <button type="button" aria-pressed={route.mode === 'analyst'} onClick={() => setMode('analyst')} title={t('mode.analyst.hint')}>{t('mode.analyst')}</button>
             </span>
+            {(OFFERED.length > 1 || !OFFERED.includes(route.locale)) && (
             <label><span class="sr">{t('lang.label')}</span>
               <select aria-label={t('lang.label')} value={route.locale} onChange={(e) => switchLocale(route, (e.target as HTMLSelectElement).value)} data-testid="lang-switch">
-                {SITE.locales.filter((l) => LOCALES.includes(l.code)).map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>)}
+                {SITE.locales.filter((l) => OFFERED.includes(l.code) || l.code === route.locale).map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}{OFFERED.includes(l.code) ? '' : ' (draft)'}</option>)}
               </select>
             </label>
+            )}
           </div>
         </div>
         <div class="wrap strip">
@@ -85,6 +103,7 @@ export function Layout({ children }: { children: any }) {
               <div class="small muted">{t('pin.vintage')}</div>
             </div>
           )}
+          {!OFFERED.includes(route.locale) && <div class="notice warn" role="note" data-testid="draft-locale">{t('lang.draftNotice')} <a href={href(route, route.parts.join('/'), {}, { locale: SITE.defaultLocale, keepAll: true })} lang="en">Read this page in English</a></div>}
           {unknownPin && <div class="notice warn" role="alert">{t('pin.unknown', { id: route.snapshot! })}</div>}
           {route.mode === 'analyst' && first !== 'learn' && <SnapshotPicker />}
           {children}
@@ -114,6 +133,7 @@ export function Layout({ children }: { children: any }) {
               <li>{t('footer.licenseContent')}</li>
               <li>{t('footer.licenseData')}</li>
               <li>{t('footer.privacy')}</li>
+              <li><a href={href(route, 'status')}>{t('status.title')}</a></li>
               <li><a href={href(route, 'about') + '#contact'}>{t('contact.report')}</a></li>
             </ul>
           </div>
@@ -128,6 +148,9 @@ export function Layout({ children }: { children: any }) {
 export function SnapshotPicker() {
   const { core, route } = useApp();
   const snaps = core.manifest.snapshots;
+  // Until snapshots are at least two days apart there is nothing meaningful to step back to: say when tracking began.
+  const spanDays = snaps.length > 1 ? (Date.parse(snaps[snaps.length - 1].created_at) - Date.parse(snaps[0].created_at)) / 86400000 : 0;
+  if (spanDays < 2) return <div class="tools small muted" data-testid="snapshot-began">{t('revisions.began', { date: date(snaps[0]?.created_at, 'long') })}</div>;
   return (
     <div class="tools" data-testid="snapshot-picker">
       <label>{t('pin.pick')}{' '}

@@ -418,7 +418,7 @@ def test_event_status_recency_indicator_and_unmapped_handling():
 def test_rank_formula_is_the_documented_weighted_sum():
     ev = {"days_since_last_report": 0, "cases": {"value": 99999}, "deaths": {"value": 9999}, "countries": ["A"] * 5, "status": "reported", "source_weight": 1.0}
     r = E.rank_event(ev)
-    assert r["score"] == pytest.approx(1.0, abs=1e-4) and r["method_version"] == "1"
+    assert r["score"] == pytest.approx(1.0, abs=1e-4) and r["method_version"] == "2"
     assert sum(E.RANK_METHOD["weights"].values()) == pytest.approx(1.0)
     older = E.rank_event({**ev, "days_since_last_report": 30})
     assert older["components"]["recency"] == pytest.approx(np.exp(-1), abs=1e-4) and older["score"] < r["score"]
@@ -654,3 +654,88 @@ def test_notice_check_filters_general_feeds_like_the_pipeline():
     ds = {"id": "t", "source_id": "ecdc", "connector": "rss_notices", "url": "https://example.org/feed", "require_disease": True}
     reps = recent_reports(ds, ev.DiseaseNormalizer(load_diseases()), dt.date(2026, 11, 3), get=lambda url, **k: (rss, {}))
     assert [r["title"] for r in reps] == ["Measles outbreak update"]
+
+
+# ---------------------------------------------------------------- correctness guards added with the Nov 2026 audit
+
+def test_flunet_blank_detections_beside_samples_are_zero_but_never_without_samples():
+    import json
+    from uo.connectors import parse_flunet
+    ds = {"id": "who_flunet_weekly", "source_id": "who_flunet", "disease": "influenza"}
+    rows = [
+        {"COUNTRY_CODE": "AAA", "ISO_WEEKSTARTDATE": "2026-01-05T00:00:00Z", "ORIGIN_SOURCE": "SENTINEL", "SPEC_PROCESSED_NB": 80, "INF_ALL": None, "INF_NEGATIVE": 80},
+        {"COUNTRY_CODE": "AAA", "ISO_WEEKSTARTDATE": "2026-01-12T00:00:00Z", "ORIGIN_SOURCE": "SENTINEL", "SPEC_PROCESSED_NB": 80, "INF_ALL": None},
+        {"COUNTRY_CODE": "AAA", "ISO_WEEKSTARTDATE": "2026-01-19T00:00:00Z", "ORIGIN_SOURCE": "SENTINEL", "SPEC_PROCESSED_NB": None, "INF_ALL": None},
+        {"COUNTRY_CODE": "AAA", "ISO_WEEKSTARTDATE": "2026-01-26T00:00:00Z", "ORIGIN_SOURCE": "SENTINEL", "SPEC_PROCESSED_NB": 0, "INF_ALL": None},
+        {"COUNTRY_CODE": "AAA", "ISO_WEEKSTARTDATE": "2026-02-02T00:00:00Z", "ORIGIN_SOURCE": "SENTINEL", "SPEC_PROCESSED_NB": 80, "INF_ALL": None, "INF_NEGATIVE": 60},
+    ]
+    df = parse_flunet(ds, json.dumps({"value": rows}).encode(), "f@1", {})
+    det = df[df["metric"] == "detections"].set_index("period")["value"].to_dict()
+    assert det == {"2026-01-05": 0.0, "2026-01-12": 0.0}   # no samples, zero samples, or a contradicting negative count: stays missing
+
+
+def test_percent_positive_pairs_systems_and_never_exceeds_100():
+    import pandas as pd
+    from uo import timeseries as T
+    def row(system, metric, value, period="2026-01-05"):
+        return {"dataset_id": "who_flunet_weekly", "iso3": "BEL", "period": period, "surveillance_system": system, "metric": metric, "value": value}
+    df = pd.DataFrame([
+        row("non_sentinel", "detections", 1209),            # detections only: cannot be divided by another system's samples
+        row("sentinel", "specimens_processed", 4), row("sentinel", "detections", 0),
+        row("not_defined", "specimens_processed", 10), row("not_defined", "detections", 25),   # more detections than samples: not computable
+        row("sentinel", "specimens_processed", 200, "2026-01-12"), row("sentinel", "detections", 40, "2026-01-12"),
+    ])
+    pr = T.flu_paired(df).set_index("period")
+    assert (pr["det"].fillna(0) <= pr["spec"].fillna(0)).all()
+    assert pr.loc["2026-01-05", ["det", "spec", "n_excluded"]].tolist() == [0, 4, 1]
+    assert pr.loc["2026-01-12", ["det", "spec"]].tolist() == [40, 200]
+
+
+def test_positivity_flag_needs_the_weeks_own_interval_to_clear_the_threshold():
+    p = _weeks(30)
+    base = [8.0] * 29
+    params = {**S.FLAG_PARAMS, **S.POSITIVITY_FLAG_PARAMS}
+    # 21.7% from 92 samples (20 positive): above the threshold, but its 95% interval reaches well below it
+    small = S.compute_flags(p, base + [21.74], "W", "2099-01-01", False, params, reported=set(p), samples={p[-1]: (20, 92)})
+    assert small[-1]["status"] == "suppressed-within-sampling-uncertainty" and small[-1]["interval95"][0] < small[-1]["threshold"]
+    big = S.compute_flags(p, base + [21.74], "W", "2099-01-01", False, params, reported=set(p), samples={p[-1]: (2174, 10000)})
+    assert big[-1]["status"] == "flagged" and big[-1]["interval95"][0] > big[-1]["threshold"]
+    assert S.POSITIVITY_FLAG_PARAMS["min_specimens"] >= 100
+
+
+def test_batch_reporting_label_only_after_a_week_with_no_report():
+    p = _weeks(30)
+    params = {**S.FLAG_PARAMS, **S.POSITIVITY_FLAG_PARAMS}
+    vals = [8.0] * 28 + [40.0]
+    periods = p[:28] + [p[29]]           # week 28 has no percentage (too few samples or no report)
+    smp = {p[29]: (4000, 10000)}
+    low = S.compute_flags(periods, vals, "W", "2099-01-01", False, params, reported=set(p), samples=smp)
+    assert low[-1]["status"] == "suppressed-previous-week-too-few-samples"
+    gone = S.compute_flags(periods, vals, "W", "2099-01-01", False, params, reported=set(periods), samples=smp)
+    assert gone[-1]["status"] == "suppressed-possible-batch-reporting"
+    zero = S.compute_flags(p, [8.0] * 28 + [0.0, 40.0], "W", "2099-01-01", False, params, reported=set(p), samples=smp)
+    assert zero[-1]["status"] == "flagged"   # 0% the week before is a real value, not a sign of batching
+
+
+def test_completeness_lag_counts_thin_recent_periods():
+    p = _weeks(30)
+    n = {x: 100 for x in p}
+    n[p[-1]], n[p[-2]], n[p[-3]] = 20, 60, 71     # 71% of the usual reporters is still incomplete
+    out = S.completeness_lag(n, p[-1], "W")
+    assert out["lag_periods"] == 3 and out["share_at_first_complete"] == 1.0
+    assert S.completeness_lag({x: 100 for x in p}, p[-1], "W")["lag_periods"] == 0
+
+
+def test_a_notice_listing_many_countries_does_not_glue_or_inflate_events():
+    import datetime as dt
+    from uo import events as E
+    def rep(i, pub, countries):
+        return {"report_id": f"t:{i}", "disease": "measles", "published": pub, "countries": countries, "disease_name_in_source": "Measles",
+                "title": "t", "url": "https://example.org", "source_id": "who_don", "dataset_id": "who_don_api", "last_modified": "", "fetch_id": "f",
+                "raw_record_ref": "r", "counts": {}, "status_stated": None, "status_quote": None, "locations": [], "text": "", "source_weight": 1.0,
+                "route_quotes": [], "onset_quotes": [], "origin_type": "source-reported"}
+    world = [f"C{i:02d}" for i in range(40)]
+    evs = E.group_events([rep(1, "2026-01-05", ["C01"]), rep(2, "2026-01-20", ["C30"]), rep(3, "2026-02-01", world)], {}, dt.date(2026, 3, 1))
+    assert max(len(e["countries"]) for e in evs) == 1                      # the global notice adds no country to any event
+    assert len([e for e in evs if e["countries"]]) == 2                    # and does not merge the two outbreaks
+    assert E.GROUP_METHOD["max_notice_countries"] <= 12

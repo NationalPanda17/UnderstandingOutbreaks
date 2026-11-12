@@ -135,7 +135,8 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
                 fetches = connectors.fetch_dataset(ds, registry)
                 _save_fetches(dsid, fetches)
                 st["last_checked"] = iso(now)
-            raw_hash = "+".join(f.raw_file_hash[:16] for f in fetches)
+            # parser_version is part of the key so that a change to how a file is read re-parses unchanged raw files
+            raw_hash = "+".join(f.raw_file_hash[:16] for f in fetches) + (f"|p{ds['parser_version']}" if ds.get("parser_version") else "")
             if prev is not None and st.get("raw_hash") == raw_hash and st.get("parser_ok"):
                 df = prev  # change detection: identical raw content, nothing to re-validate
             else:

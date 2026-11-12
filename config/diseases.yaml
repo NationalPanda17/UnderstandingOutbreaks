@@ -48,6 +48,11 @@ diseases:
     cadence: monthly
     datasets: [who_measles_monthly, who_wiise_measles, owid_measles]
     default_series: {dataset: who_measles_monthly, metric: cases, case_definition: notified, surveillance_system: case_based_surveillance}
+    # Shown under the headline number so the reader sees what it is built from.
+    headline_breakdown:
+      - {dataset: who_measles_monthly, case_definition: suspected}
+      - {dataset: who_measles_monthly, case_definition: notified}
+      - {dataset: who_measles_monthly, case_definition: confirmed}
     rate_metric: true
     aliases: [measles, rougeole, measles virus]
   - id: cholera
@@ -80,7 +85,16 @@ diseases:
     seasonal: false
     cadence: yearly
     datasets: [who_wiise_polio, owid_polio]
-    default_series: {dataset: who_wiise_polio, metric: cases, case_definition: notified, surveillance_system: national_notification}
+    # Our World in Data's series (wild and vaccine-derived paralytic cases, compiled from WHO and GPEI) is the default.
+    # The WHO WIISE country-submitted series disagrees with it in ways that point to mixed contents: it shows 22
+    # cases for Andorra and 30 for Albania in 2014 (both certified polio-free), 0 for Afghanistan in 2019 (29 wild
+    # cases in the GPEI-based series) and, for Afghanistan 2020, only the vaccine-derived cases. It stays available.
+    default_series: {dataset: owid_polio, metric: cases, case_definition: notified, surveillance_system: national_notification}
+    headline_breakdown:
+      - {dataset: owid_polio_wild, case_definition: notified}
+      - {dataset: owid_polio_cvdpv1, case_definition: notified}
+      - {dataset: owid_polio_cvdpv2, case_definition: notified}
+      - {dataset: owid_polio_cvdpv3, case_definition: notified}
     rate_metric: true
     aliases: [polio, poliomyelitis, poliovirus, wild poliovirus, wild poliovirus type 1, wpv1, circulating vaccine-derived poliovirus, circulating vaccine-derived poliovirus type 2, cvdpv2, cvdpv1, cvdpv, vaccine-derived poliovirus]
   # ---- Event-based diseases (no code needed; mapping only) ----

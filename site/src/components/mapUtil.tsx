@@ -51,6 +51,12 @@ export function quantileBreaks(vals: number[], classes = 6): number[] {
   }
   return out;
 }
+/** Fixed class breaks, the same on every map, period and view of a measure, so a colour always means the same range.
+ *  Rates per 100,000 go up in tenfold steps (rates span five orders of magnitude between diseases and countries);
+ *  percentages of samples positive use steps that roughly double. */
+export function fixedBreaks(mapMetric: string | undefined): number[] {
+  return mapMetric === 'percent_positive' ? [2, 5, 10, 20, 40] : [0.01, 0.1, 1, 10, 100];
+}
 export function colorFor(v: number | null | undefined, breaks: number[], ramp: string[]): string | null {
   if (v === null || v === undefined || !Number.isFinite(v)) return null;
   if (v <= 0) return ramp[0];
@@ -72,7 +78,7 @@ export function classifyMissing(grid: Record<string, (number | null)[]>, ti: num
   return out;
 }
 
-export function MapLegend({ breaks, ramp = RAMP, title, pending, scale, zero }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean; scale?: 'view' | 'fixed' | 'own'; zero?: string }) {
+export function MapLegend({ breaks, ramp = RAMP, title, pending, scale, zero }: { breaks: number[]; ramp?: string[]; title: string; pending?: boolean; scale?: 'view' | 'fixed' | 'own' | 'shared'; zero?: string }) {
   const stops = [0, ...breaks];
   return (
     <div class="maplegend" aria-label={title}>

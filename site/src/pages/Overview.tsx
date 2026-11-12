@@ -7,12 +7,26 @@ import { date, num, periodLabel, smart, t } from '../lib/i18n';
 import { provBlock, type Prov } from '../lib/prov';
 import { mapMetricLabel, placeName } from '../lib/series';
 import { Sparkline } from '../components/Chart';
-import { EventRow } from '../components/Events';
-import { AgeBadge, DiseaseBadge, ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
+import { EventRow, eventPlaces } from '../components/Events';
+import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
 import { CiteButton } from '../components/Cite';
 import { LazyMap } from '../components/LazyMap';
-import { CountryPopover, MapLegend, quantileBreaks, type MapPoint } from '../components/mapUtil';
+import { CountryPopover, MapLegend, fixedBreaks, type MapPoint } from '../components/mapUtil';
 import { Dialog, SourceChip, useApp } from '../components/SourceChip';
+
+/** What the map says about one country, spelled out: the value, how many periods of the window it rests on, and for
+ *  influenza how many samples. A value that cannot be computed says why instead of showing a number. */
+export function windowLines(pk: Ov['latest'][string], metricLabel: string, ptype: string): string[] {
+  const out: string[] = [];
+  if (pk.metric_value !== null) out.push(`${metricLabel}: ${smart(pk.metric_value)}`);
+  else out.push(pk.not_computable ? t('map.notComputable.' + pk.not_computable) : t('map.noDataWindow'));
+  if (pk.specimens !== undefined && pk.specimens !== null && pk.detections_paired !== undefined && pk.detections_paired !== null) out.push(t('map.paired', { k: num(pk.detections_paired), n: num(pk.specimens) }));
+  if (pk.value !== null) out.push(`${t('table.count')}: ${num(pk.value)}`);
+  const w = pk.window_periods ?? 1;
+  if (w > 1) out.push(pk.scaled_from_periods ? t('map.weeksScaled', { n: pk.n_periods, w }) : t('map.weeksOf', { n: pk.n_periods, w }));
+  void ptype;
+  return out;
+}
 
 export function overviewProv(core: Core, ov: Ov, snapshot: string | null): Prov {
   const meta = core.seriesByKey[ov.skey];
@@ -80,7 +94,7 @@ export function Overview() {
     if (ov.data) for (const [iso3, r] of Object.entries(ov.data.latest)) if (inRegion(iso3)) out[iso3] = r.metric_value;
     return out;
   }, [ov.data, region]);
-  const breaks = useMemo(() => quantileBreaks(Object.values(values).filter((x): x is number => x !== null)), [values]);
+  const breaks = useMemo(() => fixedBreaks(core.diseaseById[disease]?.map_metric), [disease]);
   const ranked = useMemo(() => Object.entries(values).filter(([, v]) => v !== null).sort((a, b) => (b[1] as number) - (a[1] as number)), [values]);
   const names = useMemo(() => { const n: Record<string, string> = {}; for (const k of Object.keys(core.places)) n[k] = placeName(core, k); for (const s of Object.values(core.sources)) n['src:' + s.id] = s.short_name; return n; }, [core, route.locale]);
 
@@ -125,8 +139,8 @@ export function Overview() {
   const popover = picked ? (
     <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
       lines={pk ? [
-        pk.metric_value !== null ? `${metricLabel}: ${smart(pk.metric_value)}` : t('map.noDataWindow'),
-        ...(pk.value !== null ? [`${t('table.count')}: ${num(pk.value)}`] : []),
+        ...windowLines(pk, metricLabel, ov.data!.period_type),
+        ...(meta ? [`${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)})`] : []),
         ...(pk.last_period ? [`${t('table.lastPeriod')}: ${periodLabel(pk.last_period, ov.data!.period_type)}`] : []),
       ] : [t('map.miss.never')]} />
   ) : null;
@@ -145,6 +159,16 @@ export function Overview() {
           <option value="">{t('filter.allTypes')}</option><option value="ts">{t('badge.timeseries')}</option><option value="ev">{t('badge.events-only')}</option>
         </select></label>
       </div>
+
+      {active.length > 0 && (
+        <section class="card hero" data-testid="hero">
+          <div class="small muted">{t('hero.label')}</div>
+          <ul class="list">{active.slice(0, 1).map((e) => <EventRow key={e.event_id} e={e} />)}</ul>
+          {active.length > 1 && <p class="small">{t('hero.also')} {active.slice(1, 4).map((e, i) => <span key={e.event_id}>{i > 0 && ' · '}<a href={href(route, 'outbreak/' + e.event_id)}>{diseaseName(core, e.disease)} — {eventPlaces(core, e)}</a></span>)}</p>}
+          <p class="small muted">{t('hero.note')}</p>
+        </section>
+      )}
+      <FirstUse id="welcome" title={t('welcome.title')}>{t('welcome.body')}</FirstUse>
 
       <div class="grid side">
         <section class="card" id="overview-map">
@@ -168,7 +192,7 @@ export function Overview() {
               points={points} pointMode="markers" onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
               onSelect={(iso3) => setPicked(iso3)} ariaLabel={t('map.aria', { title })} apiRef={mapApi} /></div>
           )}
-          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} scale="view" />}
+          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} scale="shared" />}
           {ov.data && !table && <p class="small"><label><input type="checkbox" checked={showEvents} onChange={(e) => setParams({ ev: (e.target as HTMLInputElement).checked ? null : '0' })} /> {t('overview.showEvents')}</label>{showEvents && points.length > 0 && <span class="muted"> · {t('overview.eventsOnMap')}</span>}</p>}
           {ov.data && table && (
             <div class="tablewrap" tabIndex={0}><table class="data">
@@ -236,6 +260,7 @@ export function Overview() {
             <section class="card" key={o.disease}>
               <div class="row"><h3 style={{ margin: 0 }}><a href={href(route, 'disease/' + o.disease)}>{diseaseName(core, o.disease)}</a></h3><Sparkline p={p} v={v} incompleteFrom={o.incomplete_from} label={t('overview.sparkAria', { disease: diseaseName(core, o.disease) })} /></div>
               <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{last && nAt !== null && o.global.n_total ? ` · ${t('total.nOfN', { n: nAt, N: o.global.n_total })}` : ''} {last && <AgeBadge period={last[0]} ptype={o.period_type} />}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
+              <Breakdown g={o.global} ptype={o.period_type} />
               <SourceChip compact prov={{ title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived', sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } }} />
             </section>
           );

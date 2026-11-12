@@ -10,7 +10,7 @@ import { placeName } from '../lib/series';
 import { ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
 import { CiteButton } from '../components/Cite';
 import { LazyMap } from '../components/LazyMap';
-import { CountryPopover, DENSITY_RAMP, MapLegend, REPORT_RAMP, REGION_VIEWS, classifyMissing, quantileBreaks, type MapPoint, type Missing } from '../components/mapUtil';
+import { CountryPopover, DENSITY_RAMP, MapLegend, REPORT_RAMP, REGION_VIEWS, classifyMissing, fixedBreaks, type MapPoint, type Missing } from '../components/mapUtil';
 import { SourceChip, useApp } from '../components/SourceChip';
 
 export function MapPage() {
@@ -85,7 +85,7 @@ export function MapPage() {
     if (layer === 'density') return [10, 50, 100, 250, 500];
     if (layer === 'reporting') return [25, 50, 75, 90];
     if (!ov.data) return [];
-    return quantileBreaks(Object.values(ov.data.grid.values).flat().filter((x): x is number => x !== null && x > 0));
+    return fixedBreaks(ov.data.map_metric);
   }, [layer, ov.data]);
   const evs = (events.data?.events ?? []).filter((e) => e.days_since_last_report <= recentDays && (!evDisease || e.disease === evDisease));
   const points: MapPoint[] = pm === 'off' ? [] : evs.flatMap((e) => e.locations.filter((l) => l.lon !== null).map((l, i) => ({
@@ -101,7 +101,7 @@ export function MapPage() {
     if (gridBy === 'diseases') return (allOv.data ?? []).map((o) => {
       const vals: Record<string, number | null> = {};
       for (const [iso3, r] of Object.entries(o.latest)) vals[iso3] = r.metric_value;
-      return { key: o.disease, title: diseaseName(core, o.disease), note: periodLabel(o.anchor, o.period_type), values: vals, breaks: quantileBreaks(Object.values(vals).filter((x): x is number => x !== null)) };
+      return { key: o.disease, title: diseaseName(core, o.disease), note: periodLabel(o.anchor, o.period_type), values: vals, breaks: fixedBreaks(o.map_metric) };
     });
     if (!ov.data) return [];
     const idx: number[] = [];
@@ -140,7 +140,8 @@ export function MapPage() {
   const mapContext = layer === 'reporting' && reporting.data ? `${diseaseName(core, disease)} · ${periodLabel(reporting.data.window[0], reporting.data.period_type)} – ${periodLabel(reporting.data.window[1], reporting.data.period_type)}` : layer === 'disease' && period ? `${diseaseName(core, disease)} · ${periodLabel(period, ov.data!.period_type)}` : layer === 'density' ? t('map.density') : '';
   const popover = picked ? (
     <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
-      lines={[values[picked] !== null && values[picked] !== undefined ? `${metric}: ${smart(values[picked] as number)}` : (missingLabel[picked] ?? t('chart.noData'))]} />
+      lines={[values[picked] !== null && values[picked] !== undefined ? `${metric}: ${smart(values[picked] as number)}` : (missingLabel[picked] ?? t('chart.noData')),
+        ...(layer === 'disease' && ov.data && core.seriesByKey[ov.data.skey] ? [`${t('metric.' + core.seriesByKey[ov.data.skey].metric)} (${t('def.' + core.seriesByKey[ov.data.skey].case_definition)})`] : [])]} />
   ) : null;
   return (
     <>
@@ -199,7 +200,7 @@ export function MapPage() {
             onPanel={gridBy === 'time' ? (k: string) => setParams({ t: k, v: null }) : (k: string) => setParams({ d: k, g: null, v: null, t: null })} />
         )}
         {!table && view !== 'map' && !stat && <Loading />}
-        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layerRamp} title={metric} pending={layer === 'disease'} scale={layer === 'disease' ? 'fixed' : undefined} zero={layer === 'disease' ? undefined : '0'} />}
+        {!table && layer !== 'none' && !(view === 'grid' && gridBy === 'diseases') && <MapLegend breaks={breaks} ramp={layerRamp} title={metric} pending={layer === 'disease'} scale={layer === 'disease' ? 'shared' : undefined} zero={layer === 'disease' ? undefined : '0'} />}
         {table && (
           <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metric}</th></tr></thead>
             <tbody>{ranked.map(([k, v]) => <tr key={k}><th scope="row"><a href={href(route, 'place/' + k, { d: disease })}>{names[k]}</a></th><td class="n">{smart(v as number)}</td></tr>)}</tbody></table>

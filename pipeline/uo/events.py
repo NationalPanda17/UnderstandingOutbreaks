@@ -20,10 +20,19 @@ import xml.etree.ElementTree as ET
 
 from .core import Fetch, PipelineError, SchemaChange, archive_raw, http_get
 
-RANK_METHOD = {"name": "active_rank", "version": "1",
-               "weights": {"recency": 0.45, "cases": 0.25, "deaths": 0.10, "countries": 0.10, "source_type": 0.10},
-               "recency_half_scale_days": 30, "active_window_days": 180}
-GROUP_METHOD = {"name": "group_by_disease_place_gap", "version": "2", "max_gap_days": 120, "merge_countryless": True}
+# v2: the kind of source counts for more (0.20, was 0.10) and breadth for less (0.05, was 0.10), so that a standing
+# travel notice, which is re-dated often and states no counts, does not sit above a WHO outbreak notice with counts.
+# recency = exp(-days / recency_efold_days): an e-folding scale (the score falls to 37% after that many days), not a
+# half-life. cases and deaths are log10-scaled and reach their maximum at 100,000 and 10,000. An event with no
+# country listed scores 0 on breadth.
+RANK_METHOD = {"name": "active_rank", "version": "2",
+               "weights": {"recency": 0.40, "cases": 0.25, "deaths": 0.10, "countries": 0.05, "source_type": 0.20},
+               "recency_efold_days": 30, "cases_saturate_at": 100000, "deaths_saturate_at": 10000, "countries_saturate_at": 5,
+               "active_window_days": 180}
+# A single notice listing more countries than this is treated as a regional or global notice (see group_events).
+MAX_NOTICE_COUNTRIES = 10
+GROUP_METHOD = {"name": "group_by_disease_place_gap", "version": "3", "max_gap_days": 120, "merge_countryless": True,
+                "max_notice_countries": MAX_NOTICE_COUNTRIES}
 # Event cards show a case or death count only when it can be read as one number: at most this many countries,
 # and a stated case definition. Otherwise the figures stay on the event page, each with its quoted source phrase.
 COUNT_HEADLINE_MAX_COUNTRIES = 3
@@ -398,6 +407,11 @@ def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) ->
     groups: list[dict] = []
     for r in sorted(reports, key=lambda x: (x["published"], x["report_id"])):
         d = dt.date.fromisoformat(r["published"])
+        # v3: a notice that lists more countries than MAX_NOTICE_COUNTRIES is a regional or global notice, not a
+        # report about each of them. It must not glue separate outbreaks together or add its whole list to an
+        # event, so for grouping it counts as naming no country. The report keeps its list and is marked broad.
+        r["broad"] = len(r["countries"]) > MAX_NOTICE_COUNTRIES
+        rc = [] if r["broad"] else r["countries"]
         matches = []
         for g in groups:
             if g["disease"] != r["disease"]:
@@ -406,7 +420,7 @@ def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) ->
                 continue
             if r["disease"] == "other" and fold(g["name_in_source"]) != fold(r["disease_name_in_source"]):
                 continue
-            if (set(g["countries"]) & set(r["countries"])) or (not g["countries"] and not r["countries"]):
+            if (set(g["countries"]) & set(rc)) or (not g["countries"] and not rc):
                 matches.append(g)
         target = matches[0] if matches else None
         for extra in matches[1:]:  # a notice naming places from two open groups joins them into the earlier one
@@ -421,7 +435,7 @@ def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) ->
             groups.append(target)
         target["reports"].append(r)
         target["last_report"] = r["published"]
-        for c in r["countries"]:
+        for c in rc:
             if c not in target["countries"]:
                 target["countries"].append(c)
     # v2: fold countryless groups into the single country group they overlap ('other' is never merged this way)
@@ -448,11 +462,11 @@ def group_events(reports: list[dict], id_map: dict[str, str], today: dt.date) ->
     # groups that keep the id of their earliest report go first, so a merge never steals another event's id
     for g in sorted(groups, key=lambda g: (g["reports"][0]["published"], g["reports"][0]["report_id"])):
         existing = [id_map[r["report_id"]] for r in g["reports"] if r["report_id"] in id_map]
-        own = id_map.get(next((r["report_id"] for r in g["reports"] if r["countries"]), g["reports"][0]["report_id"]))
+        own = id_map.get(next((r["report_id"] for r in g["reports"] if r["countries"] and not r.get("broad")), g["reports"][0]["report_id"]))
         eid = own if own and own not in used else next((e for e in existing if e not in used), None)
         if eid is None:
             first = g["reports"][0]
-            place = (first["countries"][0] if first["countries"] else "multi").lower()
+            place = (first["countries"][0] if first["countries"] and not first.get("broad") else "multi").lower()
             h = hashlib.sha1(first["report_id"].encode()).hexdigest()[:6]
             eid = f"{g['disease'].replace('_', '-')}-{place}-{first['published'][:7].replace('-', '')}-{h}"
         used.add(eid)
@@ -484,6 +498,8 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
     counts_report = next((r for r in reversed(reps) if r["counts"]), None)
     locs, seen = [], set()
     for r in reps:
+        if r.get("broad"):
+            continue  # a regional or global notice does not place the event in every country it lists
         for l in r["locations"]:
             k = (l["iso3"], l["precision"], l["name"])
             if k not in seen:
@@ -518,7 +534,7 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
         "source_ids": sorted({r["source_id"] for r in reps}), "quality_flags": qf, "origin_type": "site-derived",
         "methods": {"grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD, "summary": SUMMARY_METHOD, "counts": COUNT_METHOD},
         "reports": [{k: r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
-                                       "fetch_id", "raw_record_ref", "countries", "counts", "status_stated", "status_quote",
+                                       "fetch_id", "raw_record_ref", "countries", "broad", "counts", "status_stated", "status_quote",
                                        "disease_name_in_source", "route_quotes", "onset_quotes")} | {"origin_type": "source-reported"} for r in reps],
         "source_weight": max(r["source_weight"] for r in reps),
     }
@@ -530,7 +546,7 @@ def rank_event(ev: dict) -> dict:
     """Transparent ordering score for the active list (method ``active_rank`` v1). It orders a list; it is not a severity rating."""
     w = RANK_METHOD["weights"]
     comp = {
-        "recency": math.exp(-ev["days_since_last_report"] / RANK_METHOD["recency_half_scale_days"]),
+        "recency": math.exp(-ev["days_since_last_report"] / RANK_METHOD["recency_efold_days"]),
         "cases": min(1.0, math.log10(1 + ev["cases"]["value"]) / 5) if ev.get("cases") else 0.0,
         "deaths": min(1.0, math.log10(1 + ev["deaths"]["value"]) / 4) if ev.get("deaths") else 0.0,
         "countries": min(1.0, len(ev["countries"]) / 5),

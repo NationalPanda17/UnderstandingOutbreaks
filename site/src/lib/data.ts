@@ -36,9 +36,9 @@ export interface EventIdx {
 export interface Overview {
   disease: string; skey: string; period_type: PType; map_metric: string; anchor: string; incomplete_from: string; data_edge: string; snapshot_id: string; source_ids: string[];
   method: { name: string; version: string; window_periods: number };
-  latest: Record<string, { window: [string, string]; n_periods: number; value: number | null; metric_value: number | null; last_period: string | null; trend: { latest_complete: string | null; value?: number; change_pct?: number | null; prev_period?: string | null } }>;
+  latest: Record<string, { window: [string, string]; n_periods: number; window_periods?: number; scaled_from_periods?: number; specimens?: number | null; detections_paired?: number | null; not_computable?: string; value: number | null; metric_value: number | null; last_period: string | null; trend: { latest_complete: string | null; value?: number; change_pct?: number | null; prev_period?: string | null } }>;
   grid: { periods: string[]; values: Record<string, (number | null)[]> };
-  global: { p: string[]; v: number[]; n: number[]; n_total?: number };
+  global: { p: string[]; v: number[]; n: number[]; n_total?: number; breakdown?: { skey: string; dataset_id: string; source_id: string; case_definition: string; detail: string; period: string; value: number | null; n: number }[]; panel?: { n_panel: number; value_at_anchor: number | null; prev_at_anchor: number | null } };
   global_panel?: { p: string[]; v: (number | null)[]; n_panel: number; min_coverage: number };
 }
 export interface Flag {

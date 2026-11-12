@@ -20,10 +20,10 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 | Locale | Language | Status | Strings | Reviewed | Awaiting review |
 |---|---|---|---|---|---|
-| en | English | source | 1789 | – | – |
-| es | Español | machine-drafted | 1789 | 0 | 1789 |
-| fr | Français | machine-drafted | 1789 | 0 | 1789 |
-| de | Deutsch | machine-drafted | 1789 | 0 | 1789 |
+| en | English | source | 1851 | – | – |
+| es | Español | machine-drafted | 1851 | 0 | 1851 |
+| fr | Français | machine-drafted | 1851 | 0 | 1851 |
+| de | Deutsch | machine-drafted | 1851 | 0 | 1851 |
 
 ## Español (es): strings by review status
 
@@ -39,11 +39,11 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Event summaries and status wording
 
-20 strings: 0 reviewed, 20 machine-drafted and awaiting review.
+33 strings: 0 reviewed, 33 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`
+`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`, `status.title`, `status.lead`, `status.summary`, `status.dataset`, `status.state`, `status.checked`, `status.changed`, `status.latest`, `status.cadence`, `status.ok`, `status.quarantined`, `status.note`, `status.source`
 
 </details>
 
@@ -59,11 +59,11 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Signal-flag explanations
 
-27 strings: 0 reviewed, 27 machine-drafted and awaiting review.
+29 strings: 0 reviewed, 29 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`
+`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`, `flagstatus.suppressed-within-sampling-uncertainty`, `flagstatus.suppressed-previous-week-too-few-samples`
 
 </details>
 
@@ -79,11 +79,11 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Reporter's guide
 
-22 strings: 0 reviewed, 22 machine-drafted and awaiting review.
+31 strings: 0 reviewed, 31 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`
+`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`, `guide.see`, `guide.link.rates`, `guide.link.lag`, `guide.link.scope`, `guide.link.reconcile`, `guide.link.definitions`, `guide.link.revisions`, `guide.link.provenance`, `guide.link.flags`
 
 </details>
 
@@ -149,17 +149,17 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Methodology, about, citation and quality text
 
-69 strings: 0 reviewed, 69 machine-drafted and awaiting review.
+72 strings: 0 reviewed, 72 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`
+`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`, `methodology.paramsCounts`, `methodology.paramsFlu`, `methodology.paramsEvents`
 
 </details>
 
 ### Interface strings (lower priority)
 
-1187 strings: 0 reviewed, 1187 machine-drafted and awaiting review.
+1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `es.json` not listed in a priority group above.
 
@@ -178,11 +178,11 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Event summaries and status wording
 
-20 strings: 0 reviewed, 20 machine-drafted and awaiting review.
+33 strings: 0 reviewed, 33 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`
+`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`, `status.title`, `status.lead`, `status.summary`, `status.dataset`, `status.state`, `status.checked`, `status.changed`, `status.latest`, `status.cadence`, `status.ok`, `status.quarantined`, `status.note`, `status.source`
 
 </details>
 
@@ -198,11 +198,11 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Signal-flag explanations
 
-27 strings: 0 reviewed, 27 machine-drafted and awaiting review.
+29 strings: 0 reviewed, 29 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`
+`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`, `flagstatus.suppressed-within-sampling-uncertainty`, `flagstatus.suppressed-previous-week-too-few-samples`
 
 </details>
 
@@ -218,11 +218,11 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Reporter's guide
 
-22 strings: 0 reviewed, 22 machine-drafted and awaiting review.
+31 strings: 0 reviewed, 31 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`
+`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`, `guide.see`, `guide.link.rates`, `guide.link.lag`, `guide.link.scope`, `guide.link.reconcile`, `guide.link.definitions`, `guide.link.revisions`, `guide.link.provenance`, `guide.link.flags`
 
 </details>
 
@@ -288,17 +288,17 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Methodology, about, citation and quality text
 
-69 strings: 0 reviewed, 69 machine-drafted and awaiting review.
+72 strings: 0 reviewed, 72 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`
+`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`, `methodology.paramsCounts`, `methodology.paramsFlu`, `methodology.paramsEvents`
 
 </details>
 
 ### Interface strings (lower priority)
 
-1187 strings: 0 reviewed, 1187 machine-drafted and awaiting review.
+1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `fr.json` not listed in a priority group above.
 
@@ -317,11 +317,11 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Event summaries and status wording
 
-20 strings: 0 reviewed, 20 machine-drafted and awaiting review.
+33 strings: 0 reviewed, 33 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`
+`status.reported`, `status.ongoing`, `status.declared_over`, `status.no_recent_update`, `status.reported.explain`, `status.ongoing.explain`, `status.declared_over.explain`, `status.no_recent_update.explain`, `statusbasis.source-stated`, `statusbasis.source-published`, `statusbasis.recency-indicator`, `event.automated`, `event.summaryNote`, `event.sum.intro`, `event.sum.cases`, `event.sum.deaths`, `event.sum.noCounts`, `outbreak.statusQuote`, `outbreak.countsNote`, `outbreak.precisionNote`, `status.title`, `status.lead`, `status.summary`, `status.dataset`, `status.state`, `status.checked`, `status.changed`, `status.latest`, `status.cadence`, `status.ok`, `status.quarantined`, `status.note`, `status.source`
 
 </details>
 
@@ -337,11 +337,11 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Signal-flag explanations
 
-27 strings: 0 reviewed, 27 machine-drafted and awaiting review.
+29 strings: 0 reviewed, 29 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`
+`flags.title`, `flags.neutral`, `flags.text`, `flags.more`, `flags.count`, `flags.detail`, `flags.none`, `flags.show`, `flags.method`, `flags.learn`, `flags.baselineMean`, `flags.threshold`, `flags.baselineWindow`, `flags.status`, `flags.seasonal`, `flagstatus.flagged`, `flagstatus.suppressed-holiday-period`, `flagstatus.suppressed-possible-batch-reporting`, `flagstatus.suppressed-seasonal-baseline-unavailable`, `flagstatus.suppressed-within-seasonal-range`, `method.rolling_baseline_c2`, `tour.flag.title`, `tour.flag.s1`, `tour.flag.s2`, `tour.flag.s3`, `tour.flag.s4`, `flags.detailPct`, `flagstatus.suppressed-within-sampling-uncertainty`, `flagstatus.suppressed-previous-week-too-few-samples`
 
 </details>
 
@@ -357,11 +357,11 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Reporter's guide
 
-22 strings: 0 reviewed, 22 machine-drafted and awaiting review.
+31 strings: 0 reviewed, 31 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`
+`guide.lead`, `guide.attribution`, `guide.attributionText`, `guide.evidence`, `guide.percapita.title`, `guide.percapita.p1`, `guide.lag.title`, `guide.lag.p1`, `guide.undercount.title`, `guide.undercount.p1`, `guide.compare.title`, `guide.compare.p1`, `guide.definitions.title`, `guide.definitions.p1`, `guide.uncertainty.title`, `guide.uncertainty.p1`, `guide.simulations.title`, `guide.simulations.p1`, `guide.trace.title`, `guide.trace.p1`, `guide.cite.title`, `guide.cite.p1`, `guide.see`, `guide.link.rates`, `guide.link.lag`, `guide.link.scope`, `guide.link.reconcile`, `guide.link.definitions`, `guide.link.revisions`, `guide.link.provenance`, `guide.link.flags`
 
 </details>
 
@@ -427,17 +427,17 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Methodology, about, citation and quality text
 
-69 strings: 0 reviewed, 69 machine-drafted and awaiting review.
+72 strings: 0 reviewed, 72 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`
+`cite.lead`, `cite.version`, `cite.noDoi`, `cite.sourcesTitle`, `methodology.lead`, `methodology.toc`, `methodology.params`, `methodology.paramsNote`, `methodology.changelog`, `about.title`, `cite.how.p1`, `cite.how.p2`, `quality.notes.p1`, `quality.notes.p2`, `methodology.provenance.title`, `methodology.provenance.p1`, `methodology.provenance.p2`, `methodology.normalization.title`, `methodology.normalization.p1`, `methodology.normalization.p2`, `methodology.defaults.title`, `methodology.defaults.p1`, `methodology.defaults.p2`, `methodology.aggregation.title`, `methodology.aggregation.p1`, `methodology.revisions.title`, `methodology.revisions.p1`, `methodology.revisions.p2`, `methodology.lag.title`, `methodology.lag.p1`, `methodology.lag.p2`, `methodology.reconcile.title`, `methodology.reconcile.p1`, `methodology.flags.title`, `methodology.flags.p1`, `methodology.flags.p2`, `methodology.flags.p3`, `methodology.events.title`, `methodology.events.p1`, `methodology.events.p2`, `methodology.geocoding.title`, `methodology.geocoding.p1`, `methodology.geocoding.p2`, `methodology.ranking.title`, `methodology.ranking.p1`, `methodology.transforms.title`, `methodology.transforms.p1`, `methodology.simulation.title`, `methodology.simulation.p1`, `methodology.simulation.p2`, `methodology.quality.title`, `methodology.quality.p1`, `methodology.limits.title`, `methodology.limits.p1`, `methodology.compare.title`, `methodology.compare.p1`, `about.what.title`, `about.what.p1`, `about.audiences.title`, `about.audiences.p1`, `about.trust.title`, `about.trust.p1`, `about.open.title`, `about.open.p1`, `about.privacy.title`, `about.privacy.p1`, `about.languages.title`, `about.languages.p1`, `about.privacy.p2`, `methodology.paramsCounts`, `methodology.paramsFlu`, `methodology.paramsEvents`
 
 </details>
 
 ### Interface strings (lower priority)
 
-1187 strings: 0 reviewed, 1187 machine-drafted and awaiting review.
+1222 strings: 0 reviewed, 1222 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `de.json` not listed in a priority group above.
 

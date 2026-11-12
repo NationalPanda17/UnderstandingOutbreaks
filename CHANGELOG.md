@@ -2,6 +2,19 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-12 — Correctness and credibility pass
+<!-- type: correction -->
+- Influenza percent positive could exceed 100% where detections and samples came from different surveillance
+  systems. It is now computed only within systems that report both, and shown as not computable otherwise.
+- Weeks with samples tested and no influenza found were stored as missing; they are now zeros.
+- Influenza flags need at least 100 samples and must clear the threshold after allowing for sampling uncertainty.
+- Recent periods with fewer countries reporting than usual are now marked incomplete.
+- A single notice naming hundreds of countries no longer creates a world-sized event.
+- Polio: the headline now uses the series that includes both wild and vaccine-derived cases, with the split shown.
+- Maps use one fixed colour scale per measure; partial windows are scaled and show how many weeks were reported.
+- Machine-drafted Spanish, French and German are no longer offered in the language menu until reviewed.
+- New: source status page, fuller method parameters, links in the reporter's guide.
+
 ## 2026-11-11 — More frequent updates
 <!-- type: feature -->
 - The site now checks the official notice feeds every hour and runs a full update as soon as a new notice is listed.

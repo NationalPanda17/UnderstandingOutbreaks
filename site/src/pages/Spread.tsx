@@ -21,7 +21,7 @@ import { loadReporting, reportingText } from '../components/ReportingHealth';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { FitMap } from '../components/StaticMap';
 
-interface Report { report_id: string; source_id: string; title: string; url: string; published: string; fetch_id: string; countries: string[]; counts?: { cases?: { quote: string; case_definition: string }; deaths?: { quote: string } }; route_quotes?: string[]; onset_quotes?: string[] }
+interface Report { report_id: string; source_id: string; title: string; url: string; published: string; fetch_id: string; countries: string[]; broad?: boolean; counts?: { cases?: { quote: string; case_definition: string }; deaths?: { quote: string } }; route_quotes?: string[]; onset_quotes?: string[] }
 interface Loc { iso3: string; precision: string; lon: number | null; lat: number | null; name: string; report_id?: string; note?: string }
 
 const SHOWN = '#8f7fc0'; const NEWEST = '#451c7e'; const ADJ = 'url(#fm-adj)';
@@ -79,7 +79,7 @@ function Explorer({ id }: { id: string }) {
     const reports = (e.reports as Report[]).slice().sort((a, b) => (a.published < b.published ? -1 : a.published > b.published ? 1 : 0));
     const byId: Record<string, Report> = {}; for (const r of reports) byId[r.report_id] = r;
     const first: Record<string, Report> = {};
-    for (const r of reports) for (const c of r.countries) if (!first[c]) first[c] = r;
+    for (const r of reports) if (!r.broad) for (const c of r.countries) if (!first[c]) first[c] = r;
     // A place the site located from a notice that lists no country field still has a notice behind it.
     for (const l of e.locations as Loc[]) if (l.report_id && byId[l.report_id] && (!first[l.iso3] || byId[l.report_id].published < first[l.iso3].published)) first[l.iso3] = byId[l.report_id];
     const dates = Array.from(new Set(reports.map((r) => r.published)));

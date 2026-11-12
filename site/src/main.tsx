@@ -10,7 +10,7 @@ import { AppCtx } from './components/SourceChip';
 import { TourHost } from './components/Tour';
 import { DiseasePage, Diseases } from './pages/DiseasePages';
 import { Explorer } from './pages/Explorer';
-import { About, Changelog, Changes, Cite, GlossaryPage, Methodology, Quality, ReportersGuide, Researchers, Sources } from './pages/InfoPages';
+import { About, Changelog, Changes, Cite, GlossaryPage, Methodology, Quality, ReportersGuide, Researchers, SourceStatus, Sources } from './pages/InfoPages';
 import { MapPage } from './pages/MapPage';
 import { Outbreak, Outbreaks } from './pages/OutbreakPages';
 import { Overview } from './pages/Overview';
@@ -47,6 +47,7 @@ function Page({ parts }: { parts: string[] }) {
     case 'cite': return <Cite />;
     case 'researchers': return <Researchers />;
     case 'watchlists': return <Watchlists />;
+    case 'status': return <SourceStatus />;
     case 'compare': return <Lazy key="cmp" load={() => import('./workbench/ComparePlain')} parts={parts.slice(1)} />;
     case 'spread': return <Lazy key={'sp' + (parts[1] ?? '')} load={() => import('./pages/Spread')} parts={parts.slice(1)} />;
     case 'workbench': return <Lazy key="wb" load={() => import('./workbench/index')} parts={parts.slice(1)} />;

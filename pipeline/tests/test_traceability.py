@@ -192,3 +192,34 @@ def test_workflows_only_open_issues_never_pull_requests():
     for f in files:
         text = f.read_text()
         assert not re.search(r"gh pr (create|merge)|create-pull-request|pull-requests:\s*write|auto-merge|automerge", text), f.name
+
+
+# ---------------------------------------------------------------- published-data guards (the build fails on these)
+
+def test_published_percent_positive_is_never_above_100_and_rests_on_paired_samples():
+    o = J("overview/influenza.json")
+    for iso3, r in o["latest"].items():
+        if r.get("metric_value") is not None:
+            assert 0 <= r["metric_value"] <= 100, (iso3, r["metric_value"])
+            assert r["detections_paired"] <= r["specimens"] and r["specimens"] >= 50, iso3
+    for iso3, row in o["grid"]["values"].items():
+        assert all(v is None or 0 <= v <= 100 for v in row), iso3
+    for f in J("flags/influenza.json")["flags"]:
+        assert f["detections"] <= f["specimens"] and 0 <= f["value"] <= 100, (f["iso3"], f["period"])
+
+
+def test_published_events_have_no_oversized_groups_or_overlapping_open_events():
+    import itertools
+    from uo import events as E
+    idx = J("events/index.json")["events"]
+    cap = E.MAX_NOTICE_COUNTRIES
+    for e in idx:
+        ev = J(f"events/{e['event_id']}.json")
+        named = max((len(r["countries"]) for r in ev["reports"] if not r.get("broad")), default=0)
+        assert named <= cap, (e["event_id"], named)
+        assert len(e["countries"]) <= 3 * cap, (e["event_id"], len(e["countries"]))
+    gap = E.GROUP_METHOD["max_gap_days"]
+    live = [e for e in idx if e["status"] != "declared_over" and e["days_since_last_report"] <= gap and e["disease"] != "other"]
+    clash = [(a["event_id"], b["event_id"]) for a, b in itertools.combinations(live, 2)
+             if a["disease"] == b["disease"] and set(a["countries"]) & set(b["countries"])]
+    assert not clash, f"two open events for the same disease and country: {clash[:5]}"

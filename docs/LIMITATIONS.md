@@ -63,3 +63,22 @@
   has not been found; the About page says so.
 - Named maintainers and a contact address appear on the About page only when set in `config/site.json`
   (`identity.maintainers`, `identity.contact`, `identity.errorReportUrl`, `repoUrl`). They are empty by default.
+
+## Polio series
+
+- The WHO WIISE country-submitted polio series contains values that do not match the GPEI-based series and that we
+  cannot explain from the file: 22 cases for Andorra and 30 for Albania in 2014 (both certified polio-free), 0 for
+  Afghanistan in 2019 (29 wild cases in the GPEI-based series), and for Afghanistan in 2020 a value equal to the
+  vaccine-derived cases only. The values are published exactly as WIISE gives them (the lineage endpoint resolves
+  each to its raw record) and the reconciliation page lists the disagreements; 76 of 99 are zero against a positive
+  number. The default series is therefore the Our World in Data compilation, which ends in 2023.
+- WHO POLIS and the GPEI case tables would be the primary source and would separate WPV1 from other wild types.
+  POLIS requires an access token and the GPEI pages publish through an interactive report without a data file, so
+  neither is ingested.
+
+## Influenza percent positive
+
+- Countries that report detections and samples through different systems have no computable percent positive and
+  are drawn as such, even when they report many detections.
+- Reading blank detections as zero assumes FluNet's convention holds for every country. About one row in ten of
+  those affected has neither a negative count nor subtype fields to confirm it.

@@ -1,6 +1,6 @@
 /** Informational pages: what changed, data quality, changelog, methodology, about, glossary, reporter's guide, sources, cite, researchers. */
 import { useEffect, useState } from 'preact/hooks';
-import { SITE, absoluteUrl, href } from '../lib/app';
+import { SITE, absoluteUrl, dataUrl, href } from '../lib/app';
 import { getJSON, getOptional, type EventIdx, type Flag } from '../lib/data';
 import { copyText } from '../lib/exporters';
 import { date, hasKey, num, periodLabel, t } from '../lib/i18n';
@@ -114,6 +114,7 @@ const METHOD_SECTIONS = ['scope', 'provenance', 'normalization', 'defaults', 'ag
 export function Methodology() {
   const { route } = useApp();
   const flags = useAsync(() => getOptional<any>('flags/recent.json'), []);
+  const flu = useAsync(() => getOptional<any>('flags/influenza.json'), []);
   const ev = useAsync(() => getOptional<any>('events/index.json'), []);
   return (
     <div class="prose">
@@ -124,7 +125,9 @@ export function Methodology() {
       <Sections base="methodology" ids={METHOD_SECTIONS} />
       <h2>{t('methodology.params')}</h2>
       <p>{t('methodology.paramsNote')}</p>
-      {flags.data && <pre>{JSON.stringify({ method: flags.data.method, params: flags.data.params }, null, 2)}</pre>}
+      {flags.data && <><h3>{t('methodology.paramsCounts')}</h3><pre>{JSON.stringify({ method: flags.data.method, params: flags.data.params }, null, 2)}</pre></>}
+      {flu.data && <><h3>{t('methodology.paramsFlu')}</h3><pre data-testid="params-flu">{JSON.stringify({ method: flu.data.method, basis: flu.data.basis, params: flu.data.params }, null, 2)}</pre></>}
+      {ev.data?.methods && <><h3>{t('methodology.paramsEvents')}</h3><pre>{JSON.stringify(ev.data.methods, null, 2)}</pre></>}
       {ev.data && <pre>{JSON.stringify(ev.data.methods, null, 2)}</pre>}
       <p><a href={href(route, 'changelog')}>{t('methodology.changelog')}</a> · <a href={href(route, 'learn/not-predictions')}>{t('learn.notPredictions')}</a></p>
     </div>
@@ -172,6 +175,19 @@ export function GlossaryPage() {
   );
 }
 
+/** Each point of the guide links to where this site shows or documents it, so the guidance can be checked. */
+const GUIDE: [string, [string, string][]][] = [
+  ['percapita', [['methodology#aggregation', 'guide.link.rates'], ['map', 'nav.map']]],
+  ['lag', [['methodology#lag', 'guide.link.lag'], ['data-quality', 'nav.quality']]],
+  ['undercount', [['glossary', 'nav.glossary'], ['methodology#scope', 'guide.link.scope']]],
+  ['compare', [['sources', 'nav.sources'], ['methodology#reconcile', 'guide.link.reconcile']]],
+  ['definitions', [['glossary', 'nav.glossary'], ['methodology#normalization', 'guide.link.definitions']]],
+  ['uncertainty', [['changes', 'nav.changes'], ['methodology#revisions', 'guide.link.revisions']]],
+  ['simulations', [['learn/not-predictions', 'learn.notPredictions']]],
+  ['trace', [['methodology#provenance', 'guide.link.provenance'], ['sources', 'nav.sources']]],
+  ['cite', [['cite', 'nav.cite'], ['methodology#flags', 'guide.link.flags']]],
+];
+
 export function ReportersGuide() {
   const { route } = useApp();
   const [copied, setCopied] = useState(false);
@@ -180,7 +196,11 @@ export function ReportersGuide() {
     <div class="prose">
       <h1>{t('nav.reporters')}</h1>
       <p class="lead">{t('guide.lead')}</p>
-      <Sections base="guide" ids={['percapita', 'lag', 'undercount', 'compare', 'definitions', 'uncertainty', 'simulations', 'trace', 'cite']} />
+      {GUIDE.map(([id, links]) => (
+        <section key={id} id={id}><h2>{t(`guide.${id}.title`)}</h2><Paras base={`guide.${id}`} />
+          <p class="small" data-testid="guide-links">{t('guide.see')} {links.map(([path, key], i) => <span key={path}>{i > 0 && ' · '}<a href={href(route, path)}>{t(key)}</a></span>)}</p>
+        </section>
+      ))}
       <h2>{t('guide.attribution')}</h2>
       <pre style={{ whiteSpace: 'pre-wrap' }}>{attribution}</pre>
       <button type="button" class="btn" onClick={async () => setCopied(await copyText(attribution))}>{copied ? t('action.copied') : t('action.copy')}</button>
@@ -271,6 +291,35 @@ export function Researchers() {
       <h3>R</h3>
       <pre>{`library(jsonlite); library(arrow)\nBASE <- "${base}"\nsources <- fromJSON(paste0(BASE, "/sources.json"))$sources\nts <- fromJSON(paste0(BASE, "/ts/measles/KEN.json"))\ntmp <- tempfile(fileext = ".parquet"); download.file(paste0(BASE, "/bulk/timeseries/disease=measles/data.parquet"), tmp, mode = "wb")\ndf <- read_parquet(tmp)\ntail(subset(df, is_default_series & !likely_incomplete))`}</pre>
       <p class="small muted">{t('researchers.snapshots', { n: m.snapshots.length })} <a href={`${SITE.dataPath}/manifest.json`}>manifest.json</a></p>
+    </>
+  );
+}
+
+/** Source status: one row per dataset, read from manifest.json, so anyone can see what was checked when and what is stale. */
+export function SourceStatus() {
+  const { core, route } = useApp();
+  const rows = Object.values(core.manifest.datasets as Record<string, any>).sort((a, b) => (a.disease ?? '').localeCompare(b.disease ?? '') || a.dataset_id.localeCompare(b.dataset_id));
+  const bad = rows.filter((r) => r.state !== 'ok').length; const stale = rows.filter((r) => r.stale).length;
+  return (
+    <>
+      <h1>{t('status.title')}</h1>
+      <p class="lead">{t('status.lead', { date: date(core.manifest.generated_at, 'long') })}</p>
+      <p data-testid="status-summary">{t('status.summary', { n: rows.length, bad, stale })}</p>
+      <div class="tablewrap" tabIndex={0}><table class="data">
+        <thead><tr><th scope="col">{t('status.dataset')}</th><th scope="col">{t('status.source')}</th><th scope="col">{t('status.state')}</th><th scope="col">{t('status.checked')}</th><th scope="col">{t('status.changed')}</th><th scope="col">{t('status.latest')}</th><th scope="col">{t('status.cadence')}</th></tr></thead>
+        <tbody>{rows.map((r) => (
+          <tr key={r.dataset_id}>
+            <th scope="row"><code>{r.dataset_id}</code>{r.disease && <div class="small muted">{diseaseName(core, r.disease)}</div>}</th>
+            <td>{core.sources[r.source_id]?.short_name ?? r.source_id}</td>
+            <td>{r.state === 'ok' ? t('status.ok') : <span class="badge stale">{t('status.quarantined')}</span>}{r.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}{r.error && <div class="small muted">{r.error}</div>}</td>
+            <td>{r.last_checked ? date(r.last_checked) : '–'}</td>
+            <td>{r.last_changed ? date(r.last_changed) : '–'}</td>
+            <td>{r.latest_period ?? '–'}</td>
+            <td>{r.expected_cadence ? t('cadence.' + r.expected_cadence) : '–'}</td>
+          </tr>
+        ))}</tbody>
+      </table></div>
+      <p class="small muted">{t('status.note')} <a href={href(route, 'data-quality')}>{t('nav.quality')}</a> · <a href={dataUrl('manifest.json')}>manifest.json</a></p>
     </>
   );
 }

@@ -1,7 +1,7 @@
 /* Understanding Outbreaks: calm, light-first, one accent colour, no alarmist reds. System fonts only (no third-party requests). */
 :root {
   --accent: #0b6e75; --accent-ink: #084d52; --accent-soft: #e3f1f2;
-  --ink: #17272b; --ink-2: #4a5b5f; --ink-3: #6d7c80; --line: #d9e1e3; --line-2: #eef2f3;
+  --ink: #17272b; --ink-2: #4a5b5f; --ink-3: #5f6e72; --line: #d9e1e3; --line-2: #eef2f3;
   --bg: #fbfcfc; --card: #ffffff; --note: #f6f3e7; --note-line: #e2d9b5; --sim: #6a3d9a; --sim-soft: #f1eafa;
   --radius: 10px; --shadow: 0 1px 2px rgba(20, 40, 45, .06), 0 2px 8px rgba(20, 40, 45, .04);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
@@ -192,3 +192,5 @@ header.site .strip .asof { white-space: nowrap; font-weight: 600; color: var(--i
   header.site .strip .modehint { display: none; }
   header.site .strip { justify-content: flex-end; }
 }
+.card.hero { border-left: 4px solid var(--accent); margin-bottom: 16px; }
+.card.hero .list { margin: 4px 0; }

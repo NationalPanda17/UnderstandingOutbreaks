@@ -18,7 +18,8 @@ export function sourceNames(core: Core, prov: Prov): string {
 export function SourceChip({ prov, compact }: { prov: Prov; compact?: boolean }) {
   const { core } = useApp();
   const [open, setOpen] = useState(false);
-  const label = `${t('origin.' + prov.origin)} · ${sourceNames(core, prov)}${prov.asOf ? ' · ' + t('chip.asOf', { date: date(prov.asOf) }) : ''}`;
+  const basis = prov.series?.length ? core.seriesByKey[prov.series[0].skey]?.date_basis : undefined;
+  const label = `${t('origin.' + prov.origin)} · ${sourceNames(core, prov)}${prov.asOf ? ' · ' + t('chip.asOf', { date: date(prov.asOf) }) : ''}${basis ? ' · ' + t('datebasis.short.' + basis) : ''}`;
   return (
     <>
       <button type="button" class="chip" data-origin={prov.origin} data-testid="source-chip" onClick={() => setOpen(true)}

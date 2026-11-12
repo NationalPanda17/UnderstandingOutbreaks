@@ -14,11 +14,12 @@ datasets:
     date_basis: source_period
     date_basis_field: "ISO_WEEKSTARTDATE (ISO week)"
     lag_default_periods: 2
+    parser_version: 2   # blank detections beside processed samples are read as zero
     source_id: who_flunet
     connector: flunet
     disease: influenza
     raw_ext: json
-    url: "https://xmart-api-public.who.int/FLUMART/VIW_FNT?$format=json&$filter=ISO_YEAR%20ge%20{start_year}&$select=COUNTRY_CODE,ISO_WEEKSTARTDATE,ORIGIN_SOURCE,SPEC_PROCESSED_NB,INF_A,INF_B,INF_ALL"
+    url: "https://xmart-api-public.who.int/FLUMART/VIW_FNT?$format=json&$filter=ISO_YEAR%20ge%20{start_year}&$select=COUNTRY_CODE,ISO_WEEKSTARTDATE,ORIGIN_SOURCE,SPEC_PROCESSED_NB,INF_A,INF_B,INF_ALL,INF_NEGATIVE"
     start_year: 2019
     deep_link: "https://xmart-api-public.who.int/FLUMART/VIW_FNT?$format=json&$filter=COUNTRY_CODE%20eq%20'{iso3}'%20and%20ISO_YEAR%20ge%202019"
     link_kind: deep

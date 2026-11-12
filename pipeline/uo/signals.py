@@ -33,7 +33,44 @@ FLAG_PARAMS = {
 # Overrides used when the flagged quantity is a percentage of samples positive (influenza) rather than a count:
 # the value must be at least 10 percent, from a period with at least 50 samples tested. The other rules are
 # unchanged (the sd floor of sqrt(mean) then works in percentage points, which keeps small wobbles from flagging).
-POSITIVITY_FLAG_PARAMS = {"min_count": {"W": 10.0, "M": 10.0}, "min_specimens": 50, "unit": "percent_positive"}
+POSITIVITY_FLAG_PARAMS = {"min_count": {"W": 10.0, "M": 10.0}, "min_specimens": 100, "unit": "percent_positive",
+                          "wilson_z": 1.96,  # the lower end of the week's own 95% interval must also clear the threshold
+                          "method_version": "2"}
+
+
+def wilson(k: float, n: float, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a proportion k/n, as fractions."""
+    if not n or n <= 0:
+        return (0.0, 1.0)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(max(p * (1 - p), 0.0) / n + z * z / (4 * n * n)) / d
+    return (max(0.0, c - h), min(1.0, c + h))
+
+
+def completeness_lag(n_by_period: dict[str, int], edge: str, ptype: str, share: float = 0.9, ref_from: int = 16,
+                     ref_to: int = 5, cap: int = 8) -> dict | None:
+    """How many of the newest periods still have clearly fewer reporters than usual (``reporter_completeness`` v1).
+
+    "Usual" is the median number of reporting places over the periods ``ref_from`` to ``ref_to`` before the newest
+    one. Walking back from the newest period, a period counts as incomplete while it has fewer than ``share`` of
+    the usual reporters. The result is the number of such periods (at most ``cap``) and the share seen in the
+    first period treated as complete.
+    """
+    ref = [n_by_period.get(period_add(edge, ptype, -i), 0) for i in range(ref_to, ref_from + 1)]
+    ref = [x for x in ref if x > 0]
+    if len(ref) < 6:
+        return None
+    usual = float(np.median(ref))
+    if usual < 5:
+        return None
+    lag = 0
+    while lag < cap and n_by_period.get(period_add(edge, ptype, -lag), 0) < share * usual:
+        lag += 1
+    first_ok = n_by_period.get(period_add(edge, ptype, -lag), 0)
+    return {"lag_periods": lag, "usual_reporters": round(usual, 1), "share_required": share,
+            "share_at_first_complete": round(first_ok / usual, 3), "method": "reporter_completeness", "method_version": "1"}
 
 
 # ----------------------------------------------------------------------------- reporting lag
@@ -95,7 +132,8 @@ def regular_grid(periods: list[str], values: list[float], ptype: str) -> tuple[l
 
 
 def compute_flags(periods: list[str], values: list[float], ptype: str, incomplete_start: str, seasonal: bool,
-                  params: dict | None = None) -> list[dict]:
+                  params: dict | None = None, reported: set[str] | None = None,
+                  samples: dict[str, tuple[float, float]] | None = None) -> list[dict]:
     """Rolling-baseline flags for one series (method ``rolling_baseline_c2`` v1, in the spirit of EARS C2).
 
     A period t is flagged when all of the following hold:
@@ -107,6 +145,13 @@ def compute_flags(periods: list[str], values: list[float], ptype: str, incomplet
         period (a typical sign of batch reporting);
       * for seasonal diseases, it also exceeds mean + seasonal_k * sd of the same time of year in earlier years.
     Suppressed candidates are returned too, with ``status`` explaining why, so the decision is inspectable.
+
+    Percentage series (``params['unit'] == 'percent_positive'``) differ in three ways. ``values`` holds only the
+    weeks with enough samples, so ``reported`` lists every week that had a report at all: "possible batch reporting"
+    is used only after a week with no report, and a candidate that follows a reported week with too few samples
+    gets its own reason. A zero in the week before is a real 0%, not a sign of batching. And ``samples`` gives
+    (detections, samples) per week so the week's own Wilson interval can be tested: the lower end of that interval
+    must also be above the threshold, or the candidate is recorded as within sampling uncertainty.
     """
     P = {**FLAG_PARAMS, **(params or {})}
     if ptype not in P["min_count"]:
@@ -135,8 +180,21 @@ def compute_flags(periods: list[str], values: list[float], ptype: str, incomplet
         if ptype == "W" and dt.date.fromisoformat(grid[t]).isocalendar()[1] in P["holiday_iso_weeks"]:
             status = "suppressed-holiday-period"
         prev = y[t - 1]
-        if status == "flagged" and (np.isnan(prev) or prev == 0) and mean > 0:
-            status = "suppressed-possible-batch-reporting"
+        pct = P.get("unit") == "percent_positive"
+        interval = None
+        if pct and samples and grid[t] in samples:
+            k_, n_ = samples[grid[t]]
+            lo, hi = wilson(k_, n_, P.get("wilson_z", 1.96))
+            interval = [round(100 * lo, 2), round(100 * hi, 2)]
+            if status == "flagged" and 100 * lo <= thr:
+                status = "suppressed-within-sampling-uncertainty"
+        if status == "flagged" and mean > 0:
+            if pct:
+                if np.isnan(prev):
+                    was_reported = reported is not None and grid[t - 1] in reported
+                    status = "suppressed-previous-week-too-few-samples" if was_reported else "suppressed-possible-batch-reporting"
+            elif np.isnan(prev) or prev == 0:
+                status = "suppressed-possible-batch-reporting"
         seasonal_info = None
         if status == "flagged" and seasonal:
             w = P["seasonal_window"]
@@ -161,7 +219,8 @@ def compute_flags(periods: list[str], values: list[float], ptype: str, incomplet
             "period": grid[t], "value": float(y[t]), "status": status,
             "baseline_mean": round(mean, 2), "baseline_sd": round(sd, 2), "threshold": round(thr, 2),
             "baseline_periods": [grid[b0], grid[b1 - 1]], "baseline_points": int(len(ok)),
-            "seasonal": seasonal_info, "method": FLAG_METHOD["name"], "method_version": FLAG_METHOD["version"],
+            "seasonal": seasonal_info, "method": FLAG_METHOD["name"], "method_version": P.get("method_version", FLAG_METHOD["version"]),
+            **({"interval95": interval} if interval else {}),
         })
     return out
 

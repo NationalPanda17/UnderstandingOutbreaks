@@ -116,6 +116,15 @@ def lag_table(ctx: Context) -> dict[str, dict]:
         cur = ts.current_period(today, ptype)
         edge = min(g["period"].max(), cur)
         est["data_edge"] = edge
+        # The newest periods are also incomplete for as long as clearly fewer places than usual have reported them.
+        # The lag is the larger of the revision-based estimate and this count of thin recent periods.
+        if ptype in ("W", "M"):
+            comp = signals.completeness_lag(g.groupby("period")["iso3"].nunique().to_dict(), edge, ptype)
+            if comp:
+                est["completeness"] = comp
+                if comp["lag_periods"] > est["lag_periods"]:
+                    est["lag_periods"] = comp["lag_periods"]
+                    est["basis"] = "reporter-completeness"
         est["incomplete_from"] = ts.period_add(edge, ptype, 1 - est["lag_periods"])
         out[f"{dsid}|{ptype}"] = est
     return out
@@ -339,11 +348,13 @@ def publish_all(ctx: Context, log) -> dict:
         dd = df[df["skey"] == dk]
         piv = dd.pivot_table(index="period", columns="iso3", values="value", aggfunc="first")
         pct = entry["map_metric"] == "percent_positive"
-        spec = None
+        spec = pdet = None
         if pct:
-            sk = dmeta[(dmeta["metric"] == "specimens_processed") & (dmeta["surveillance_system"] == "all_reported")]["skey"]
-            if len(sk):
-                spec = df[df["skey"] == sk.iloc[0]].pivot_table(index="period", columns="iso3", values="value", aggfunc="first")
+            # Percent positive uses only detections and samples reported by the same system in the same week.
+            pr = ts.flu_paired(df)
+            if len(pr):
+                spec = pr.pivot_table(index="period", columns="iso3", values="spec", aggfunc="first")
+                pdet = pr.pivot_table(index="period", columns="iso3", values="det", aggfunc="first")
         latest = {}
         for iso3 in piv.columns:
             col = piv[iso3]
@@ -351,18 +362,33 @@ def publish_all(ctx: Context, log) -> dict:
             present = [v for v in vals if not (isinstance(v, float) and np.isnan(v))]
             series_p = col.dropna()
             tr = signals.trend_summary(series_p.index.tolist(), series_p.tolist(), ptype, incf)
-            rec = {"window": [win[0], win[-1]], "n_periods": len(present), "value": None, "metric_value": None, "trend": tr,
+            rec = {"window": [win[0], win[-1]], "n_periods": len(present), "window_periods": w, "value": None, "metric_value": None, "trend": tr,
                    "last_period": series_p.index.max() if len(series_p) else None}
             if len(present) * 2 >= w and present:
                 tot = float(sum(present))
                 rec["value"] = ts.safe(tot)
-                if pct and spec is not None and iso3 in spec.columns:
-                    sp = [spec[iso3].get(p, np.nan) for p in win]
-                    sps = float(np.nansum(sp))
-                    if sps >= 20:
-                        rec["metric_value"] = round(100.0 * tot / sps, 2)
-                elif not pct and pop.get(iso3):
-                    rec["metric_value"] = round(tot / pop[iso3] * 1e5, 4)
+                if pct:
+                    if spec is not None and iso3 in spec.columns:
+                        sp = np.array([spec[iso3].get(p, np.nan) for p in win], dtype=float)
+                        dt_ = np.array([pdet[iso3].get(p, np.nan) for p in win], dtype=float)
+                        okw = ~np.isnan(sp) & ~np.isnan(dt_)
+                        sps = float(sp[okw].sum())
+                        rec["specimens"] = ts.safe(sps)
+                        rec["n_periods_paired"] = int(okw.sum())
+                        if sps >= 50:
+                            rec["detections_paired"] = ts.safe(float(dt_[okw].sum()))
+                            rec["metric_value"] = round(100.0 * float(dt_[okw].sum()) / sps, 2)
+                        else:
+                            rec["not_computable"] = "too-few-paired-samples"
+                    else:
+                        rec["not_computable"] = "no-system-reports-both"
+                elif pop.get(iso3):
+                    # A window with missing weeks is scaled to the full window (average per reported week times the
+                    # number of weeks), so a country with two of four weeks is not drawn at half its rate.
+                    full = tot * w / len(present)
+                    rec["metric_value"] = round(full / pop[iso3] * 1e5, 4)
+                    if len(present) < w:
+                        rec["scaled_from_periods"] = len(present)
             latest[iso3] = rec
             if tr.get("change_pct") is not None and tr["latest_complete"] >= ts.period_add(anchor, ptype, -2):
                 movers.append({"disease": did, "iso3": iso3, "skey": dk, "period": tr["latest_complete"], "value": tr["value"],
@@ -380,7 +406,8 @@ def publish_all(ctx: Context, log) -> dict:
                     row.append(None)
                 elif pct:
                     s = spec[iso3].get(p, np.nan) if spec is not None and iso3 in spec.columns else np.nan
-                    row.append(round(100.0 * v / s, 2) if s and not np.isnan(s) and s >= 5 else None)
+                    k = pdet[iso3].get(p, np.nan) if pdet is not None and iso3 in pdet.columns else np.nan
+                    row.append(round(100.0 * k / s, 2) if not np.isnan(s) and not np.isnan(k) and s >= 20 else None)
                 else:
                     row.append(round(v / pop[iso3] * 1e5, 4) if pop.get(iso3) else None)
             if any(x is not None for x in row):
@@ -417,6 +444,23 @@ def publish_all(ctx: Context, log) -> dict:
             "source_ids": [mrow["source_id"]], "snapshot_id": ctx.snapshot_id, "typical_lag_periods": lg.get("lag_periods"),
             "method": {"name": "reporting_health", "version": "1", "window_periods": len(rw)}, "places": rh})
         glob_out = {"p": glob.index.tolist(), "v": [ts.safe(v) for v in glob["v"]], "n": [int(n) for n in glob["n"]], "n_total": n_total}
+        # What the headline is built from: world sums of the related series for the same period (measles: suspected,
+        # WHO total, laboratory-confirmed; polio: wild and each vaccine-derived type). Each part keeps its own
+        # country count, because the parts are not always reported by the same countries.
+        breakdown = []
+        for b in d.get("headline_breakdown", []):
+            hit = dmeta[(dmeta["dataset_id"] == b["dataset"]) & (dmeta["case_definition"] == b["case_definition"])
+                        & (dmeta["period_type"] == ptype) & (dmeta["metric"] == mrow["metric"])]
+            if not len(hit):
+                continue
+            hk = hit.sort_values("n_places", ascending=False).iloc[0]
+            part = df[(df["skey"] == hk["skey"]) & (df["period"] == anchor)]
+            breakdown.append({"skey": hk["skey"], "dataset_id": b["dataset"], "source_id": hk["source_id"], "case_definition": b["case_definition"],
+                              "detail": hk["case_definition_detail"], "period": anchor,
+                              "value": ts.safe(float(part["value"].sum())) if len(part) else None, "n": int(part["iso3"].nunique())})
+        glob_out["breakdown"] = breakdown
+        glob_out["panel"] = {"n_panel": panel["n_panel"], "value_at_anchor": panel["v"][panel["p"].index(anchor)] if anchor in panel["p"] else None,
+                             "prev_at_anchor": panel["v"][panel["p"].index(anchor) - 1] if anchor in panel["p"] and panel["p"].index(anchor) > 0 else None}
         ov_summary.append({"disease": did, "skey": dk, "origin_type": "site-derived", "source_ids": sorted({mrow["source_id"], "worldbank"} if not pct else {mrow["source_id"]}),
                            "snapshot_id": ctx.snapshot_id, "period_type": ptype, "incomplete_from": incf, "anchor": anchor, "global": glob_out})
         write_json(out / "overview" / f"{did}.json", {
@@ -438,18 +482,23 @@ def publish_all(ctx: Context, log) -> dict:
         if ptype in signals.FLAG_PARAMS["min_count"]:
             for iso3 in piv.columns:
                 s = piv[iso3].dropna()
-                extra = {}
+                extra, reported, samples = {}, None, None
                 if flag_basis == "percent_positive":
                     if iso3 not in spec.columns:
                         continue
-                    sp = spec[iso3].reindex(s.index)
+                    reported = set(s.index)
+                    sp, k = spec[iso3].dropna(), pdet[iso3].dropna()
+                    idx = sp.index.intersection(k.index)
+                    sp, k = sp[idx], k[idx]
                     ok = sp >= flag_params["min_specimens"]
-                    extra = {p: {"detections": ts.safe(float(s[p])), "specimens": ts.safe(float(sp[p]))} for p in s.index[ok]}
-                    s = (100.0 * s[ok] / sp[ok]).round(2)
-                for f in signals.compute_flags(s.index.tolist(), s.tolist(), ptype, incf, bool(d.get("seasonal")), flag_params if flag_basis != "count" else None):
+                    samples = {p: (float(k[p]), float(sp[p])) for p in idx[ok]}
+                    extra = {p: {"detections": ts.safe(float(k[p])), "specimens": ts.safe(float(sp[p]))} for p in idx[ok]}
+                    s = (100.0 * k[ok] / sp[ok]).round(2)
+                for f in signals.compute_flags(s.index.tolist(), s.tolist(), ptype, incf, bool(d.get("seasonal")), flag_params if flag_basis != "count" else None,
+                                               reported=reported, samples=samples):
                     fl_rows.append({"disease": did, "iso3": iso3, "skey": dk, "series_id": f"{dk}.{iso3}", **f, "basis": flag_basis, **extra.get(f["period"], {}),
                                     "origin_type": "site-derived", "source_ids": [mrow["source_id"]], "params_version": "1"})
-        write_json(out / "flags" / f"{did}.json", {"disease": did, "method": signals.FLAG_METHOD, "params": flag_params, "basis": flag_basis,
+        write_json(out / "flags" / f"{did}.json", {"disease": did, "method": {**signals.FLAG_METHOD, "version": flag_params.get("method_version", signals.FLAG_METHOD["version"])}, "params": flag_params, "basis": flag_basis,
                                                     "origin_type": "site-derived", "snapshot_id": ctx.snapshot_id, "flags": fl_rows})
         all_flags += fl_rows
 

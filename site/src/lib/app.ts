@@ -6,6 +6,9 @@ import site from '../../../config/site.json';
 // The hosted basemap only answers the live site's origin, so local development draws boundaries without it.
 export const SITE = import.meta.env.DEV ? { ...site, r2BaseUrl: '/r2', toolAssetsBaseUrl: '/r2/tools', basemapUrl: '' } : site;
 export const LOCALES = site.locales.map((l) => l.code);
+/** Languages offered to readers. A machine-drafted translation is not offered until a person has reviewed it: it is
+ *  left out of the language menu and never chosen automatically. Its addresses keep working, with a notice. */
+export const OFFERED = site.locales.filter((l) => l.status !== 'machine-drafted').map((l) => l.code);
 export type Mode = 'simple' | 'analyst';
 
 export interface Route {
@@ -112,7 +115,7 @@ export function applyRemembered(): void {
   if (!segs.length || !LOCALES.includes(segs[0])) {
     const remembered = storage.get('locale');
     const nav = (navigator.language || '').slice(0, 2).toLowerCase();
-    const loc = remembered && LOCALES.includes(remembered) ? remembered : LOCALES.includes(nav) ? nav : site.defaultLocale;
+    const loc = remembered && OFFERED.includes(remembered) ? remembered : OFFERED.includes(nav) ? nav : site.defaultLocale;
     path = `/${loc}${window.location.pathname === '/' ? '/' : window.location.pathname}`;
     changed = true;
   }

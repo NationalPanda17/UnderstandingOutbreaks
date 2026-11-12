@@ -151,7 +151,7 @@ export function Place({ iso3 }: { iso3: string }) {
             <section class="card" style={{ marginTop: '16px' }}>
               <h2>{t('revisions.title')}</h2>
               <p class="sub">{t('pin.vintage')}</p>
-              {revised.length === 0 ? <p class="muted small">{t('revisions.none', { n: core.manifest.snapshots.length })}</p> : (
+              {revised.length === 0 ? <p class="muted small">{t('revisions.none', { n: core.manifest.snapshots.length })} {t('revisions.began', { date: date(core.manifest.snapshots[0]?.created_at, 'long') })}</p> : (
                 <div class="tablewrap"><table class="data"><thead><tr><th>{t('table.period')}</th><th>{t('table.series')}</th><th>{t('revisions.history')}</th></tr></thead>
                   <tbody>{revised.slice(-80).reverse().map((r) => <tr key={r.skey + r.period}><th scope="row">{r.period}</th><td>{seriesLabel(core, core.seriesByKey[r.skey], { withSource: true })}</td><td>{r.h.map(([si, v]) => `${revs.data!.snapshots[si]?.slice(0, 8)}: ${v === null ? t('revisions.removed') : num(v)}`).join(' → ')}</td></tr>)}</tbody></table></div>
               )}

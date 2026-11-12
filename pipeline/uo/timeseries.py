@@ -57,6 +57,35 @@ def derive_flu_all_systems(df: pd.DataFrame) -> pd.DataFrame:
     return g[df.columns]
 
 
+def flu_paired(df: pd.DataFrame) -> pd.DataFrame:
+    """Detections and samples that can be divided by each other (method ``paired_positivity`` v1).
+
+    A share of samples positive only means something when the detections and the samples come from the same
+    surveillance system in the same week. Some countries report detections through one system and samples through
+    another, which is how a naive ratio of the two national sums can exceed 100%. For each country and week this
+    keeps only the systems that reported both numbers, drops a system-week whose detections exceed its samples
+    (not computable), and sums what is left. Columns: iso3, period, det, spec, n_systems, n_excluded.
+    """
+    src = df[(df["dataset_id"] == "who_flunet_weekly") & (df["surveillance_system"] != "all_reported")
+             & df["metric"].isin(["detections", "specimens_processed"])]
+    cols = ["iso3", "period", "det", "spec", "n_systems", "n_excluded"]
+    if src.empty:
+        return pd.DataFrame(columns=cols)
+    w = src.pivot_table(index=["iso3", "period", "surveillance_system"], columns="metric", values="value", aggfunc="first").reset_index()
+    for c in ("detections", "specimens_processed"):
+        if c not in w.columns:
+            w[c] = np.nan
+    both = w[w["detections"].notna() & w["specimens_processed"].notna() & (w["specimens_processed"] > 0)].copy()
+    both["bad"] = both["detections"] > both["specimens_processed"]
+    good = both[~both["bad"]]
+    g = good.groupby(["iso3", "period"], as_index=False).agg(det=("detections", "sum"), spec=("specimens_processed", "sum"), n_systems=("surveillance_system", "nunique"))
+    bad = both[both["bad"]].groupby(["iso3", "period"], as_index=False).agg(n_excluded=("surveillance_system", "nunique"))
+    g = g.merge(bad, on=["iso3", "period"], how="outer")
+    g["n_excluded"] = g["n_excluded"].fillna(0).astype(int)
+    g["n_systems"] = g["n_systems"].fillna(0).astype(int)
+    return g[cols]
+
+
 DENGUE_PRIORITY = {"notified": 0, "confirmed": 1, "probable": 2, "suspected": 3, "unknown": 4}
 
 

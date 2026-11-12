@@ -79,11 +79,17 @@ def parse_flunet(ds: dict, content: bytes, fetch_id: str, ref: dict) -> pd.DataF
         system = FLUNET_SYSTEMS.get(sysraw, "not_defined")
         period = str(r["ISO_WEEKSTARTDATE"])[:10]
         refstr = f"COUNTRY_CODE={iso3};ISO_WEEKSTARTDATE={period};ORIGIN_SOURCE={sysraw}"
-        for metric, col, cdef, detail in (("detections", "INF_ALL", "confirmed", "laboratory-confirmed influenza detections"),
-                                          ("specimens_processed", "SPEC_PROCESSED_NB", "not_applicable", "specimens processed")):
-            v = _num(r.get(col))
-            if v is not None:
-                rows.append((iso3, period, "W", metric, v, cdef, detail, system, refstr))
+        spec, det, neg = _num(r.get("SPEC_PROCESSED_NB")), _num(r.get("INF_ALL")), _num(r.get("INF_NEGATIVE"))
+        # FluNet leaves INF_ALL blank, never 0, when a laboratory tested samples and found no influenza: the file
+        # holds no zero at all, and wherever INF_NEGATIVE is filled in on such a row it equals the number of samples
+        # processed. So a blank count of detections beside a positive number of samples is read as zero. It stays
+        # missing when no samples were processed, or when the negative count says some samples were not negative.
+        if det is None and spec is not None and spec > 0 and (neg is None or neg >= spec):
+            det = 0.0
+        if det is not None:
+            rows.append((iso3, period, "W", "detections", det, "confirmed", "laboratory-confirmed influenza detections", system, refstr))
+        if spec is not None:
+            rows.append((iso3, period, "W", "specimens_processed", spec, "not_applicable", "specimens processed", system, refstr))
     # The API occasionally returns byte-identical duplicate rows. Identical rows are collapsed; rows that
     # disagree are left in place so that validation fails and a person looks at them.
     return _rows(ds, fetch_id, list(dict.fromkeys(rows)))

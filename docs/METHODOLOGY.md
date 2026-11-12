@@ -82,6 +82,13 @@ in periods at the snapshot of the last revision; the lag is the 90th percentile 
 default and at most 12. Until 4 snapshots and 30 revised values exist, the configured default is used and labelled
 "configured default" (weekly 2, mpox 4, monthly 2, yearly 0).
 
+`reporter_completeness` v1 (`signals.completeness_lag`), weekly and monthly sources: "usual" is the median number of
+places reporting per period over the periods 16 to 5 before the newest one. Walking back from the newest period, a
+period counts as incomplete while fewer than 90% of the usual number have reported (at most 8 periods). The lag used
+is the larger of this count and the revision-based estimate, and the series metadata says which one applied
+(`lag.basis`, `lag.completeness`). This is what marks a week with 71% of the usual influenza reporters as incomplete
+even though the configured default would not.
+
 The last `lag` periods up to the source's data edge are marked likely incomplete. They are shaded on charts, hatched
 in tables, excluded from trend values, percentage changes, map windows, movers and signal flags, and can be hidden.
 
@@ -103,6 +110,30 @@ each country's default weekly or monthly series:
 - not in holiday weeks (ISO weeks 52, 53, 1), and not when the previous period is missing or zero (batch reporting);
 - seasonal diseases (influenza) must also exceed `mean + 3 × sd` of the same time of year (± 2 periods) in at least
   2 earlier years.
+
+Influenza is flagged on the percentage of samples positive (`rolling_baseline_c2` v2 for this basis):
+
+- `paired_positivity` v1 (`timeseries.flu_paired`): detections and samples are divided only when the same
+  surveillance system reported both for the same week. A system that reports detections without samples does not
+  enter the ratio, and a system-week with more detections than samples is dropped as not computable. Dividing the
+  national sum of detections by the national sum of samples mixed systems and produced values above 100%.
+- FluNet leaves the detections field blank, never 0, when samples were tested and none was positive (the file
+  contains no zero; wherever the negative count is filled in on such rows it equals the samples processed). A blank
+  detections field beside a positive number of samples is therefore read as zero. It stays missing when no samples
+  were processed or when the negative count is lower than the samples processed.
+- A week needs at least 100 paired samples and at least 10% positive. The lower end of the week's own 95% Wilson
+  interval must also be above the threshold; otherwise the candidate is recorded as
+  `suppressed-within-sampling-uncertainty`.
+- "Possible batch reporting" applies only after a week with no report. A candidate that follows a reported week with
+  too few samples is recorded as `suppressed-previous-week-too-few-samples`. A 0% week is a value, not a gap.
+- The map value for a country is paired detections ÷ paired samples over the window, shown only from 50 paired
+  samples; otherwise the country is drawn as "not computable" with the reason.
+
+The seasonal rule is strict on purpose. During a normal season nearly every candidate is set aside as
+`suppressed-within-seasonal-range`, because a rise at that time of year is expected (for example about 30% positive
+in Canada in week 48). A week is flagged only when it is well above the same weeks of earlier seasons, or when the
+rise is outside the season. The alternative, flagging every seasonal rise, would flag most temperate countries every
+winter.
 
 Suppressed candidates are published with the reason, so every decision can be inspected. Flags are informational
 labels with a fixed neutral wording. They produce false positives (reporting changes, testing drives, backlogs) and
@@ -151,6 +182,13 @@ first-level region, for the countries where OpenDengue reports at that level.
   dropped unless they are a region's only polygon). They are approximate and imply no position on any territory.
 
 ## Maps
+
+Class breaks are fixed and shared by every map, period and view of a measure: rates per 100,000 use tenfold steps
+(0.01, 0.1, 1, 10, 100) and percent positive uses 2, 5, 10, 20, 40. A colour therefore always means the same range.
+(Earlier versions used sextiles of whatever was on screen, so the top class could span 0.76 to 168 per 100,000.)
+
+A weekly window with missing weeks is scaled to the full window (mean of the reported weeks × number of weeks) and
+needs at least half the weeks; the number of weeks reported is shown with the value.
 
 - **Why a place has no value.** For a given period a place is either "not yet reported" (it has reported to this
   source before, and this period is later than its last report; dotted) or "no report for this period" (hatched).
@@ -202,9 +240,19 @@ transmission, and it is built only from the event file the pipeline already publ
 
 ## List order of outbreaks
 
-`active_rank` v1: `0.45 × exp(−days/30) + 0.25 × min(1, log10(1+cases)/5) + 0.10 × min(1, log10(1+deaths)/4) +
-0.10 × min(1, countries/5) + 0.10 × source type` (1.0 WHO Disease Outbreak News, 0.6 travel notices). Events not
-declared over with a notice in the last 180 days are "active". The score orders a list; it is not a severity rating.
+`active_rank` v2: `0.40 × recency + 0.25 × cases + 0.10 × deaths + 0.05 × countries + 0.20 × source type`.
+
+- `recency = exp(−days since last notice / 30)`. This is an e-folding scale (37% after 30 days), not a half-life.
+- `cases = min(1, log10(1 + cases) / 5)` and `deaths = min(1, log10(1 + deaths) / 4)`: they saturate at 100,000 cases
+  and 10,000 deaths.
+- `countries = min(1, countries / 5)`. An event whose notices name no single country scores 0 here.
+- `source type`: 1.0 WHO Disease Outbreak News, 0.8 ECDC epidemiological updates, 0.6 CDC travel notices
+  (`source_type_weight` in `config/datasets.yaml`).
+- v2 raised the weight of source type (0.10 → 0.20) and lowered breadth (0.10 → 0.05), so a standing travel notice,
+  which is re-dated often and states no counts, no longer sits above a WHO outbreak notice with counts.
+
+Events not declared over with a notice in the last 180 days are "active". The score orders a list; it is not a
+severity rating.
 
 ## Workbench transforms
 

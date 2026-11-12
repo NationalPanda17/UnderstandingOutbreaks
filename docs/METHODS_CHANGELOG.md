@@ -3,6 +3,30 @@
 Versioned log of method changes. Each entry starts with `## YYYY-MM-DD — title`. Method versions appear in every trace
 panel and export, so a change here must come with a version bump in the code.
 
+## 2026-11-12 — Correctness pass: influenza positivity, lag, event grouping v3, ranking v2, polio default
+<!-- type: methodology -->
+- `paired_positivity` v1: percent positive divides detections by samples only within a surveillance system that
+  reported both; a system-week with more detections than samples is not computable. Values above 100% (for example
+  1,209 detections over 4 samples) can no longer occur, and a test now fails the build if one is published.
+- FluNet blank detections beside processed samples are read as zero (parser version 2). The first run after this
+  change records the added zeros as new values in the revision history.
+- Influenza flags, `rolling_baseline_c2` v2 on percent positive: minimum 100 samples (was 50); the lower end of the
+  week's 95% Wilson interval must clear the threshold; "possible batch reporting" only after a week with no report,
+  with a separate reason after a week with too few samples.
+- `reporter_completeness` v1: recent weekly and monthly periods with fewer than 90% of the usual reporters are
+  marked likely incomplete, in addition to the revision-based lag.
+- Map windows with missing weeks are scaled to the full window and show the week count. Map legends use fixed,
+  shared class breaks.
+- `group_by_disease_place_gap` v3: a notice listing more than 10 countries is treated as a regional or global
+  notice. It no longer adds its countries to an event or merges separate outbreaks (a single measles notice had
+  produced a 237-country event).
+- `active_rank` v2: weights 0.40 recency, 0.25 cases, 0.10 deaths, 0.05 countries, 0.20 source type.
+- Polio default series changed from WHO WIISE to Our World in Data (wild plus vaccine-derived paralytic cases), with
+  the wild and vaccine-derived parts shown under the headline. WIISE stays available as its own series; see
+  LIMITATIONS for the anomalies that led to the change.
+- Headline totals show what they are built from (measles: suspected, WHO total, laboratory-confirmed) and the same
+  total for the constant panel of consistently reporting countries.
+
 ## 2026-11-11 — Event grouping v2, headline-count rule, positivity flags, constant panel, date basis
 <!-- type: methodology -->
 - `group_by_disease_place_gap` v2: notices that name no country are folded into the single country-level event of

@@ -56,9 +56,10 @@ export function EventRow({ e, showScore }: { e: EventIdx; showScore?: boolean })
       </div>
       <div class="small muted">
         {t('event.lastUpdate', { date: date(e.last_report) })}
-        {e.cases && !e.counts_suppressed && <> · {t('event.reportedCases', { n: num(e.cases.value) })} <span class="badge">{t('def.' + e.cases.case_definition)}</span></>}
+        {' · '}<span data-testid="event-scope">{e.countries.length === 1 ? t('event.scope.one', { place: placeName(core, e.countries[0]) }) : e.countries.length > 1 ? t('event.scope.multi', { n: e.countries.length }) : t('event.scope.none')}</span>
+        {e.cases && !e.counts_suppressed && <> · {t('event.reportedCases', { n: num(e.cases.value) })} <span class="badge">{t('def.' + e.cases.case_definition)}</span> <span>{t('chip.asOf', { date: date(e.cases.as_of) })}</span></>}
         {e.deaths && !e.counts_suppressed && <> · {t('event.reportedDeaths', { n: num(e.deaths.value) })}</>}
-        {(e.cases || e.deaths) && !e.counts_suppressed && <> <span class="badge auto" title={t('event.autoExplain')}>{t('event.auto')}</span></>}
+        {(e.cases || e.deaths) && !e.counts_suppressed && <> <span class="badge auto" title={t('event.autoExplain')}>{t('event.autoCheck')}</span></>}
         {e.counts_suppressed && <> · {t('event.countsHidden.' + e.counts_suppressed)}</>}
         {' · '}{t('event.nReports', { n: e.n_reports })}
         {showScore && <> · {t('rank.score')}: {e.rank.score.toFixed(3)}</>}

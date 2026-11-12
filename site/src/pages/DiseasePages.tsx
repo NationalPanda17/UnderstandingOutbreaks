@@ -8,7 +8,7 @@ import { ChartCard } from '../components/ChartCard';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { useState } from 'preact/hooks';
-import { AgeBadge, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
+import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { WatchButton } from './Watchlists';
 
@@ -72,6 +72,7 @@ export function DiseasePage({ id }: { id: string }) {
             prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
             yLabel={t('metric.' + meta.metric)} means={t('disease.globalMeans')} embed={{ kind: 'chart', params: { d: id, global: '1' } }} tours={['epicurve', 'recentlow']} />
           <p class="small muted">{nLatest !== undefined && o.global.n_total ? t('total.nOfNPeriod', { n: nLatest, N: o.global.n_total, period: periodLabel(o.anchor, o.period_type) }) : ''} <AgeBadge period={o.anchor} ptype={o.period_type} /> {panelOn && panel && t('panel.explain', { n: panel.n_panel, pct: Math.round(panel.min_coverage * 100) })}</p>
+          <Breakdown g={o.global} ptype={o.period_type} />
           {meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <section class="card" style={{ marginTop: '16px' }}>
             <header><h2>{t('disease.top', { metric: mapMetricLabel(core, id, o.method.window_periods, o.period_type) })}</h2>
