@@ -30,6 +30,10 @@ written with the failing source, the error, the last good snapshot and a schema 
   notice ids with the list the last run published (`events/report_ids.json`). If a feed lists a notice the site does
   not have, it starts a full run. The check writes no data. A source it cannot read is skipped; the full run is what
   reports source failures.
+- **What starts the runs.** GitHub starts scheduled workflows on a best-effort basis and was observed starting them
+  up to seven hours late. A small external timer (`scheduler/`, a Cloudflare Worker with cron triggers) therefore
+  starts both workflows at the times above. The schedules in the workflow files remain as a fallback; a fallback
+  full update is skipped when another full update ran in the previous three hours.
 - So a new official notice normally appears on the site within about an hour and a quarter of the source listing
   it. Edits to a notice already on the site are picked up by the next six-hourly run.
 

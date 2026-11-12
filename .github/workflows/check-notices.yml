@@ -3,6 +3,7 @@ name: Check for new notices
 # When a feed lists a notice the live site does not have yet, it starts the full "Update data and deploy" workflow.
 # It changes nothing itself: no data is written, no pull request is opened. The hours of the six-hourly full update
 # are left out, since that run reads the same feeds.
+# An external timer (scheduler/) starts this on time; the schedule below is the fallback for when it is unavailable.
 on:
   schedule:
     - cron: "47 0-4,6-10,12-16,18-22 * * *"

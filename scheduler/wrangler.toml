@@ -1,0 +1,16 @@
+# External timer that starts the data workflows on time. See README.md in this folder.
+name = "uo-scheduler"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false          # no public address: the Worker only runs on its cron triggers
+
+[triggers]
+# UTC. Must match PLAN in src/index.js and the schedules in .github/workflows (a test checks all three).
+crons = [
+  "47 0-4,6-10,12-16,18-22 * * *",
+  "17 5 * * *",
+  "17 11,17,23 * * *",
+]
+
+[observability]
+enabled = true               # each run and any error is kept in the Worker's logs

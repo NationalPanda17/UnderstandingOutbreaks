@@ -1,5 +1,5 @@
 name: Update data and deploy
-# Scheduled data update, every six hours. The 05:17 UTC run always rebuilds and deploys; the other three stop after
+# Data update, every six hours. An external timer (scheduler/) starts it on time; the schedules below are the fallback. The 05:17 UTC run always rebuilds and deploys; the other three stop after
 # the pipeline step when nothing changed (no new or revised value, no change to an outbreak), so an unchanged run
 # publishes nothing and saves no snapshot. A manual run, and a run started by the hourly notice check, always deploy
 # (a manual run can ask for the stop-when-unchanged behaviour with the only_if_changed input).
@@ -42,7 +42,34 @@ env:
   AWS_RETRY_MODE: adaptive
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 jobs:
+  # The schedules above are the fallback: an external timer (scheduler/) starts this workflow on time, because
+  # GitHub's scheduler can be hours late. A run started by GitHub's own timer is skipped when another full update
+  # ran in the previous three hours, so a late fallback run does not repeat the work.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.g.outputs.go }}
+    steps:
+      - id: g
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          go=true
+          if [ "${{ github.event.schedule }}" = "17 5 * * *" ] || [ "${{ github.event.schedule }}" = "17 11,17,23 * * *" ]; then
+            last=$(gh api "repos/${{ github.repository }}/actions/workflows/update-data.yml/runs?per_page=15" \
+              --jq '[.workflow_runs[] | select(.id != ${{ github.run_id }} and .conclusion != "failure" and .conclusion != "cancelled" and .conclusion != "skipped") | .created_at][0] // ""' || echo "")
+            if [ -n "$last" ]; then
+              age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
+              if [ "$age" -lt 10800 ]; then
+                go=false
+                echo "Another full update started $((age / 60)) minutes ago, so this fallback run is skipped." >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
   update:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

@@ -452,3 +452,40 @@ describe('citations, event comparison and keyboard map movement', () => {
     expect(Number(/"max_gap_days":\s*(\d+)/.exec(gm)![1])).toBe(GROUPING.max_gap_days);
   });
 });
+
+describe('external timer (scheduler/)', () => {
+  const SCHED = join(ROOT, '..', 'scheduler');
+  const WF = join(ROOT, '..', '.github', 'workflows');
+  it('its cron triggers, its plan and the fallback schedules in the workflows are the same', async () => {
+    // @ts-ignore plain JavaScript module outside the site's TypeScript project
+    const { PLAN } = await import('../../scheduler/src/index.js');
+    const crons = (text: string) => Array.from(text.matchAll(/"((?:[\d*,/-]+ ){4}[\d*,/-]+)"/g)).map((m) => m[1]);
+    const toml = crons(readFileSync(join(SCHED, 'wrangler.toml'), 'utf8')).sort();
+    expect(toml).toEqual(Object.keys(PLAN).sort());
+    for (const [cron, plan] of Object.entries(PLAN) as [string, { workflow: string; inputs: Record<string, string> }][]) {
+      const wf = readFileSync(join(WF, plan.workflow), 'utf8');
+      expect(crons(wf.slice(0, wf.indexOf('workflow_dispatch')))).toContain(cron);
+      for (const input of Object.keys(plan.inputs)) expect(wf).toContain(`${input}:`);
+    }
+  });
+
+  it('starts the planned workflow on main, retries a server error once, and reports a refused token without retrying', async () => {
+    // @ts-ignore plain JavaScript module outside the site's TypeScript project
+    const { dispatch, planFor } = await import('../../scheduler/src/index.js');
+    const env = { GITHUB_TOKEN: 'test-token', GITHUB_REPOSITORY: 'example/repo' };
+    const calls: { url: string; init: any }[] = [];
+    const answer = (statuses: number[]) => async (url: string, init: any) => { calls.push({ url, init }); const s = statuses.shift()!; return { status: s, text: async () => 'body' } as any; };
+    expect(await dispatch(env, planFor('17 11,17,23 * * *'), answer([204]))).toBe(204);
+    expect(calls[0].url).toBe('https://api.github.com/repos/example/repo/actions/workflows/update-data.yml/dispatches');
+    expect(JSON.parse(calls[0].init.body)).toEqual({ ref: 'main', inputs: { only_if_changed: 'true' } });
+    expect(calls[0].init.headers.authorization).toBe('Bearer test-token');
+    calls.length = 0;
+    expect(await dispatch(env, planFor('17 5 * * *'), answer([502, 204]))).toBe(204);
+    expect(calls.length).toBe(2);
+    calls.length = 0;
+    await expect(dispatch(env, planFor('17 5 * * *'), answer([401, 204]))).rejects.toThrow(/did not start update-data.yml: 401/);
+    expect(calls.length).toBe(1);
+    await expect(dispatch({}, planFor('17 5 * * *'), answer([204]))).rejects.toThrow(/not configured/);
+    expect(planFor('0 0 * * *')).toBeNull();
+  });
+});

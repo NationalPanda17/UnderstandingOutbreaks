@@ -2,6 +2,11 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-12 — Updates start on time
+<!-- type: pipeline -->
+- GitHub was starting the hourly notice check and the six-hourly update hours late or not at all. A small external
+  timer now starts them at the published times; GitHub's own schedule remains as a fallback.
+
 ## 2026-11-12 — Citing, following and comparing
 <!-- type: feature -->
 - Cite: every chart, map, headline figure, event and map country now opens a panel with a ready-to-paste sentence,

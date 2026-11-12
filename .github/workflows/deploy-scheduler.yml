@@ -1,0 +1,36 @@
+name: Deploy scheduler
+# Deploys the external timer (scheduler/): a Cloudflare Worker whose cron triggers start the data workflows on time,
+# because GitHub's own scheduler can be hours late. The Worker only asks GitHub to start a workflow.
+# Runs by hand, and when a file in scheduler/ changes. It changes no data and opens no pull requests.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scheduler/**", ".github/workflows/deploy-scheduler.yml"]
+permissions:
+  contents: read
+concurrency: { group: deploy-scheduler, cancel-in-progress: false }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SCHEDULER_GITHUB_TOKEN: ${{ secrets.SCHEDULER_GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Deploy the Worker and its cron triggers
+        working-directory: scheduler
+        run: npx --yes wrangler@4 deploy --var "GITHUB_REPOSITORY:${{ github.repository }}"
+      - name: Pass the GitHub token to the Worker as an encrypted secret
+        if: env.SCHEDULER_GITHUB_TOKEN != ''
+        working-directory: scheduler
+        run: printf '%s' "$SCHEDULER_GITHUB_TOKEN" | npx --yes wrangler@4 secret put GITHUB_TOKEN
+      - name: Token not set yet
+        if: env.SCHEDULER_GITHUB_TOKEN == ''
+        run: |
+          echo "The Worker is deployed but cannot start workflows yet: add the SCHEDULER_GITHUB_TOKEN secret (see scheduler/README.md) and run this workflow again." >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::SCHEDULER_GITHUB_TOKEN is not set; the scheduler is deployed but inactive."
