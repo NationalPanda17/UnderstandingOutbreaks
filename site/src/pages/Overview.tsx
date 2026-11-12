@@ -65,7 +65,8 @@ export function FlagList({ flags, limit }: { flags: Flag[]; limit: number }) {
   );
 }
 
-const HOME_DISEASE = 'influenza';
+/** The disease the home map and the full map open on: the freshest series the site has. */
+export const HOME_DISEASE = 'influenza';
 
 /** Why the map shows the period it shows: the latest complete one, and how far the next one has filled in. A period
  *  is mapped once about nine in ten of the countries that usually report have reported it. */

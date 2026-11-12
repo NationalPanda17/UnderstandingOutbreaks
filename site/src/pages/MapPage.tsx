@@ -9,6 +9,7 @@ import { provBlock, type Prov } from '../lib/prov';
 import { placeName, measureLabel } from '../lib/series';
 import { ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
 import { CiteButton } from '../components/Cite';
+import { HOME_DISEASE } from './Overview';
 import { LazyMap } from '../components/LazyMap';
 import { CountryPopover, DENSITY_RAMP, MapLegend, REPORT_RAMP, REGION_VIEWS, classifyMissing, fixedBreaks, type MapPoint, type Missing } from '../components/mapUtil';
 import { SourceChip, useApp } from '../components/SourceChip';
@@ -18,7 +19,8 @@ export function MapPage() {
   const analyst = route.mode === 'analyst';
   const tsDiseases = core.diseases.filter((d) => d.has_timeseries);
   const q = route.params;
-  const disease = q.get('d') && core.diseaseById[q.get('d')!]?.has_timeseries ? q.get('d')! : 'measles';
+  // Same default as the home map: the freshest series (influenza is weekly).
+  const disease = q.get('d') && core.diseaseById[q.get('d')!]?.has_timeseries ? q.get('d')! : core.diseaseById[HOME_DISEASE]?.has_timeseries ? HOME_DISEASE : tsDiseases[0]?.id ?? 'measles';
   const layer = (['density', 'none', 'reporting'].includes(q.get('layer') ?? '') ? q.get('layer') : 'disease') as 'disease' | 'density' | 'none' | 'reporting';
   const pm = (['markers', 'clusters', 'heat', 'off'].includes(q.get('pm') ?? '') ? q.get('pm') : 'clusters') as 'markers' | 'clusters' | 'heat' | 'off';
   const evDisease = q.get('ed') ?? '';
