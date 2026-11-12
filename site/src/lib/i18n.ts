@@ -73,6 +73,17 @@ export function date(iso: string | null | undefined, style: 'medium' | 'long' | 
   return new Intl.DateTimeFormat(current, { dateStyle: style, timeZone: 'UTC' }).format(d);
 }
 
+/** A period inside a sentence: "the week of Oct 5, 2026", "Aug 2026", "2024". */
+export function periodInSentence(period: string, ptype: string): string {
+  return ptype === 'W' ? t('period.weekOfIn', { date: date(period) }) : periodLabel(period, ptype);
+}
+
+/** A snapshot id (a UTC timestamp such as 20261112T001709Z) as a readable date and time. Readers never need the raw id. */
+export function snapLabel(id: string | null | undefined): string {
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(id ?? '');
+  return m ? `${date(`${m[1]}-${m[2]}-${m[3]}`)}, ${m[4]}:${m[5]} UTC` : (id ?? '');
+}
+
 export function periodLabel(period: string, ptype: string): string {
   const d = new Date(period + 'T00:00:00Z');
   if (ptype === 'Y') return String(d.getUTCFullYear());
@@ -83,8 +94,18 @@ export function periodLabel(period: string, ptype: string): string {
 let regionNames: Intl.DisplayNames | null = null;
 let regionLocale = '';
 /** Country name in the viewer's language via Intl; falls back to the source's English name. */
+/** Plain names where the standard list reads like a database field ("Congo - Kinshasa", "Myanmar (Burma)"). */
+const PLAIN_NAMES: Record<string, Record<string, string>> = {
+  en: { CD: 'DR Congo', CG: 'Republic of the Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' },
+  es: { CD: 'RD del Congo', CG: 'República del Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' },
+  fr: { CD: 'RD Congo', CG: 'République du Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' },
+  de: { CD: 'DR Kongo', CG: 'Republik Kongo', MM: 'Myanmar', HK: 'Hongkong', MO: 'Macau' },
+};
+
 export function countryName(iso2: string | undefined, fallbackName: string): string {
   if (!iso2) return fallbackName;
+  const plain = PLAIN_NAMES[current.slice(0, 2)]?.[iso2];
+  if (plain) return plain;
   try {
     if (!regionNames || regionLocale !== current) { regionNames = new Intl.DisplayNames([current], { type: 'region' }); regionLocale = current; }
     return regionNames.of(iso2) ?? fallbackName;

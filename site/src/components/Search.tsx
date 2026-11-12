@@ -13,7 +13,7 @@ const PAGES: [string, string][] = [['', 'nav.overview'], ['outbreaks', 'nav.outb
   ['researchers', 'nav.researchers'], ['about', 'nav.about'], ['methodology', 'nav.methodology'], ['sources', 'nav.sources'], ['data-quality', 'nav.quality'], ['changelog', 'nav.changelog'],
   ['glossary', 'nav.glossary'], ['reporters-guide', 'nav.reporters'], ['cite', 'nav.cite'], ['watchlists', 'nav.watchlists'], ['workbench', 'workbench.title'], ['explorer', 'search.page.explorer']];
 
-export function Search() {
+export function Search({ hero }: { hero?: boolean }) {
   const { core, route } = useApp();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -43,9 +43,9 @@ export function Search() {
   const go = (i: number) => { const r = results[i]; if (!r) return; setOpen(false); setQ(''); navigate(href(route, r.path, r.params)); };
   const show = open && q.trim().length > 0;
   return (
-    <div class="search" role="search">
-      <label class="sr" for="site-search">{t('search.label')}</label>
-      <input id="site-search" type="search" value={q} placeholder={t('search.placeholder')} autocomplete="off" spellcheck={false}
+    <div class={'search' + (hero ? ' hero' : '')} role="search">
+      <label class={hero ? 'searchlabel' : 'sr'} for="site-search">{hero ? t('search.heroLabel') : t('search.label')}</label>
+      <input id="site-search" type="search" value={q} placeholder={hero ? t('search.heroPlaceholder') : t('search.placeholder')} autocomplete="off" spellcheck={false}
         {...({ role: 'combobox' } as any)} aria-expanded={show} aria-controls="site-search-list" aria-autocomplete="list" aria-activedescendant={show && results[sel] ? 'site-search-' + sel : undefined}
         onFocus={() => { loadEvents(); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)}
         onInput={(e) => { setQ((e.target as HTMLInputElement).value); setSel(0); setOpen(true); }}

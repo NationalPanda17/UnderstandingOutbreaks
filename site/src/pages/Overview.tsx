@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { absoluteUrl, href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type Core, type EventIdx, type Flag, type Overview as Ov } from '../lib/data';
 import { caption, copyText, exportImage, imageMeta, serializeSvg } from '../lib/exporters';
-import { date, num, periodLabel, smart, t } from '../lib/i18n';
+import { date, num, periodInSentence, periodLabel, smart, t } from '../lib/i18n';
 import { provBlock, type Prov } from '../lib/prov';
-import { mapMetricLabel, placeName } from '../lib/series';
+import { mapMetricLabel, placeName, measureLabel, measureInSentence } from '../lib/series';
 import { Sparkline } from '../components/Chart';
 import { EventRow, eventPlaces } from '../components/Events';
-import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, FirstUse, Loading, diseaseName, useAsync } from '../components/Layout';
+import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, HowToRead, Loading, diseaseName, useAsync } from '../components/Layout';
+import { Search } from '../components/Search';
 import { CiteButton, globalStatement } from '../components/Cite';
 import { loadReporting, reportingShort } from '../components/ReportingHealth';
 import { LazyMap } from '../components/LazyMap';
@@ -110,6 +111,12 @@ export function Overview() {
     id: e.event_id, lon: l.lon as number, lat: l.lat as number, label: `${diseaseName(core, e.disease)} — ${l.name}`, precision: l.precision, sources: e.source_ids,
     radius: e.days_since_last_report <= 30 ? 7.5 : 5.5, sub: t('event.lastUpdate', { date: e.last_report }),
   })));
+  const headline = (sparks.data ?? []).map((o) => {
+    const i = o.global.p.map((p, k) => (p < o.incomplete_from && o.global.v[k] !== null ? k : -1)).filter((k) => k >= 0).pop();
+    const m = core.seriesByKey[o.skey];
+    return i === undefined || !m ? null : { o, m, last: [o.global.p[i], o.global.v[i] as number] as [string, number], nAt: o.global.n?.[i] ?? null };
+  }).filter((x): x is NonNullable<typeof x> => !!x)
+    .sort((x, y) => 'WMY'.indexOf(x.o.period_type) - 'WMY'.indexOf(y.o.period_type) || (x.last[0] < y.last[0] ? 1 : -1)).slice(0, 3);
   if (ov.error) return <ErrorBox error={ov.error} />;
   const d = core.diseaseById[disease];
   const baseProv = ov.data ? overviewProv(core, ov.data, route.snapshot) : null;
@@ -142,7 +149,7 @@ export function Overview() {
     <CountryPopover name={names[picked] ?? picked} context={mapContext} to={href(route, 'place/' + picked, { d: disease })} onClose={() => setPicked(null)}
       lines={pk ? [
         ...windowLines(pk, metricLabel, ov.data!.period_type),
-        ...(meta ? [`${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)})`] : []),
+        ...(meta ? [`${measureLabel(meta.metric, meta.case_definition)}`] : []),
         ...(pk.last_period ? [`${t('table.lastPeriod')}: ${periodLabel(pk.last_period, ov.data!.period_type)}`] : []),
         ...(rep.data && reportingShort(rep.data, picked) ? [`${t('health.title')}: ${reportingShort(rep.data, picked)}`] : []),
       ] : [t('map.miss.never')]}>
@@ -153,28 +160,26 @@ export function Overview() {
   return (
     <>
       <h1>{t('overview.title')}</h1>
-      <p class="lead">{t('overview.lead')}</p>
-      <div class="tools" role="group" aria-label={t('overview.filters')}>
-        <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value })} data-testid="disease-select">
-          {tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}
-        </select></label>
-        <label>{t('filter.region')} <select value={region} onChange={(e) => setParams({ region: (e.target as HTMLSelectElement).value || null })}>
-          <option value="">{t('filter.allRegions')}</option>{regions.map((r) => <option key={r} value={r}>{t('region.' + r)}</option>)}
-        </select></label>
-        <label>{t('filter.dataType')} <select value={type} onChange={(e) => setParams({ type: (e.target as HTMLSelectElement).value || null })}>
-          <option value="">{t('filter.allTypes')}</option><option value="ts">{t('badge.timeseries')}</option><option value="ev">{t('badge.events-only')}</option>
-        </select></label>
-      </div>
+      <p class="lead">{t('overview.leadShort')}</p>
+      <Search hero />
 
-      {active.length > 0 && (
-        <section class="card hero" data-testid="hero">
-          <div class="small muted">{t('hero.label')}</div>
-          <ul class="list">{active.slice(0, 1).map((e) => <EventRow key={e.event_id} e={e} />)}</ul>
-          {active.length > 1 && <p class="small">{t('hero.also')} {active.slice(1, 4).map((e, i) => <span key={e.event_id}>{i > 0 && ' · '}<a href={href(route, 'outbreak/' + e.event_id)}>{diseaseName(core, e.disease)} — {eventPlaces(core, e)}</a></span>)}</p>}
-          <p class="small muted">{t('hero.note')}</p>
-        </section>
-      )}
-      <FirstUse id="welcome" title={t('welcome.title')}>{t('welcome.body')}</FirstUse>
+      {/* What the official reports say right now, in sentences built from the data. Every sentence links to its page. */}
+      <section class="card summary" data-testid="hero" aria-labelledby="summary-h">
+        <h2 id="summary-h">{t('summary.title')}</h2>
+        <ul class="summarylist">
+          {active.slice(0, 3).map((e) => (
+            <li key={e.event_id} data-testid="summary-event"><a href={href(route, 'outbreak/' + e.event_id)}><b>{diseaseName(core, e.disease)}</b> — {eventPlaces(core, e)}</a>: {t('summary.event', { date: date(e.last_report, 'long'), n: e.n_reports })}</li>
+          ))}
+          {headline.map(({ o, last, nAt, m }) => (
+            <li key={o.disease} data-testid="summary-disease"><a href={href(route, 'disease/' + o.disease)}><b>{diseaseName(core, o.disease)}</b></a>: {nAt !== null && o.global.n_total
+              ? t('summary.disease', { value: num(last[1]), measure: measureInSentence(m.metric, m.case_definition), period: periodInSentence(last[0], o.period_type), n: nAt, N: o.global.n_total })
+              : t('summary.diseaseNoN', { value: num(last[1]), measure: measureInSentence(m.metric, m.case_definition), period: periodInSentence(last[0], o.period_type) })}</li>
+          ))}
+        </ul>
+        {events.loading && !active.length && <Loading />}
+        <p class="summarylinks"><a href={href(route, 'outbreaks')}>{t('overview.allOutbreaks', { n: events.data?.n_events ?? 0 })}</a> · <a href={href(route, 'changes')}>{t('nav.changes')}</a></p>
+        <HowToRead><p>{t('summary.note')}</p><p>{t('hero.note')}</p></HowToRead>
+      </section>
 
       <div class="grid side">
         <section class="card" id="overview-map">
@@ -182,6 +187,17 @@ export function Overview() {
             <div><h2>{title}</h2><p class="sub">{windowText}{meta && <> · {t('def.' + meta.case_definition)}</>} <DiseaseBadge d={d} /> {ov.data && <AgeBadge period={ov.data.anchor} ptype={ov.data.period_type} />}{meta?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p></div>
             {prov && <SourceChip prov={prov} />}
           </header>
+          <div class="tools" role="group" aria-label={t('overview.filters')}>
+            <label>{t('filter.disease')} <select value={disease} onChange={(e) => setParams({ d: (e.target as HTMLSelectElement).value })} data-testid="disease-select">
+              {tsDiseases.map((x) => <option key={x.id} value={x.id}>{diseaseName(core, x.id)}</option>)}
+            </select></label>
+            <label>{t('filter.region')} <select value={region} onChange={(e) => setParams({ region: (e.target as HTMLSelectElement).value || null })}>
+              <option value="">{t('filter.allRegions')}</option>{regions.map((r) => <option key={r} value={r}>{t('region.' + r)}</option>)}
+            </select></label>
+            {analyst && <label>{t('filter.dataType')} <select value={type} onChange={(e) => setParams({ type: (e.target as HTMLSelectElement).value || null })}>
+              <option value="">{t('filter.allTypes')}</option><option value="ts">{t('badge.timeseries')}</option><option value="ev">{t('badge.events-only')}</option>
+            </select></label>}
+          </div>
           {ov.loading && <Loading />}
           {ov.data && !table && !interactive && stat && (
             <div style={{ position: 'relative' }}>
@@ -192,14 +208,13 @@ export function Overview() {
             </div>
           )}
           {ov.data && !table && !interactive && !stat && <Loading />}
-          {ov.data && !table && !interactive && stat && <p class="mapattr">{t('map.attr.boundaries')} {t('map.attr.population')}{points.length ? ' ' + t('map.attr.gazetteer') : ''}</p>}
           {ov.data && !table && interactive && (
             <div style={{ position: 'relative' }}>{popover}<LazyMap context={mapContext} values={values} breaks={breaks} names={names} valueLabel={metricLabel} sourceLabel={prov ? prov.sourceIds.map((s) => core.sources[s]?.short_name).join(', ') : ''}
               points={points} pointMode="markers" onPoint={(id) => navigate(href(route, 'outbreak/' + id))}
               onSelect={(iso3) => setPicked(iso3)} ariaLabel={t('map.aria', { title })} apiRef={mapApi} /></div>
           )}
-          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} scale="shared" />}
-          {ov.data && !table && <p class="small"><label><input type="checkbox" checked={showEvents} onChange={(e) => setParams({ ev: (e.target as HTMLInputElement).checked ? null : '0' })} /> {t('overview.showEvents')}</label>{showEvents && points.length > 0 && <span class="muted"> · {t('overview.eventsOnMap')}</span>}</p>}
+          {ov.data && !table && <MapLegend breaks={breaks} title={metricLabel} />}
+          {ov.data && !table && <p class="small"><label><input type="checkbox" checked={showEvents} onChange={(e) => setParams({ ev: (e.target as HTMLInputElement).checked ? null : '0' })} /> {t('overview.showEvents')}</label></p>}
           {ov.data && table && (
             <div class="tablewrap" tabIndex={0}><table class="data">
               <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{metricLabel}</th><th scope="col" class="n">{t('table.count')}</th><th scope="col">{t('table.lastPeriod')}</th></tr></thead>
@@ -209,7 +224,12 @@ export function Overview() {
               </tbody>
             </table></div>
           )}
-          <p class="means">{t(d.map_metric === 'percent_positive' ? 'overview.means.pct' : 'overview.means.rate', { window: windowText })} {t('overview.means.caveat')}</p>
+          <HowToRead>
+            <p>{t(d.map_metric === 'percent_positive' ? 'overview.means.pct' : 'overview.means.rate', { window: windowText })} {t('overview.means.caveat')}</p>
+            <p>{t('legend.scale.shared')}</p>
+            {showEvents && points.length > 0 && <p>{t('overview.eventsOnMap')}</p>}
+            <p>{t('map.attr.boundaries')} {t('map.attr.population')}{points.length ? ' ' + t('map.attr.gazetteer') : ''}</p>
+          </HowToRead>
           {meta && meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <div class="btnrow">
             <button type="button" class="btn small" onClick={() => setTable(!table)}>{table ? t('action.viewMap') : t('action.viewData')}</button>
@@ -265,11 +285,11 @@ export function Overview() {
           return (
             <section class="card" key={o.disease}>
               <div class="row"><h3 style={{ margin: 0 }}><a href={href(route, 'disease/' + o.disease)}>{diseaseName(core, o.disease)}</a></h3><Sparkline p={p} v={v} incompleteFrom={o.incomplete_from} label={t('overview.sparkAria', { disease: diseaseName(core, o.disease) })} /></div>
-              <p class="small muted">{m && `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{last && nAt !== null && o.global.n_total ? ` · ${t('total.nOfN', { n: nAt, N: o.global.n_total })}` : ''} {last && <AgeBadge period={last[0]} ptype={o.period_type} />}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
+              <p class="small muted">{m && `${measureLabel(m.metric, m.case_definition)}`} · {last ? `${periodLabel(last[0], o.period_type)}: ${num(last[1])}` : t('chart.noData')}{last && nAt !== null && o.global.n_total ? ` · ${t('total.nOfN', { n: nAt, N: o.global.n_total })}` : ''} {last && <AgeBadge period={last[0]} ptype={o.period_type} />}{m?.stale && <> <span class="badge stale">{t('badge.stale')}</span></>}</p>
               <Breakdown g={o.global} ptype={o.period_type} />
               {(() => { const sp = { title: t('overview.sparkTitle', { disease: diseaseName(core, o.disease) }), origin: 'site-derived' as const, sourceIds: o.source_ids.filter((s) => s !== 'worldbank'), asOf: m?.retrieved_at?.slice(0, 10) ?? null, snapshotId: o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' } };
                 return <div class="chipline"><SourceChip compact prov={sp} />{last && m && <> <CiteButton inline prov={sp} title={sp.title} url={href(route, 'disease/' + o.disease)}
-                  statement={globalStatement(diseaseName(core, o.disease), periodLabel(last[0], o.period_type), num(last[1]), `${t('metric.' + m.metric)} (${t('def.' + m.case_definition)})`, nAt, o.global.n_total)} /></>}</div>; })()}
+                  statement={globalStatement(diseaseName(core, o.disease), periodLabel(last[0], o.period_type), num(last[1]), `${measureLabel(m.metric, m.case_definition)}`, nAt, o.global.n_total)} /></>}</div>; })()}
             </section>
           );
         })}

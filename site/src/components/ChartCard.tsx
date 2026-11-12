@@ -5,7 +5,8 @@ import { SITE, absoluteUrl, href, setParams } from '../lib/app';
 import { codeFor, type ViewSpec } from '../lib/codegen';
 import { altText, caption, copyText, exportBundle, exportChartPack, exportImage, imageMeta, seriesRows, serializeSvg } from '../lib/exporters';
 import { CiteButton } from './Cite';
-import { date, num, periodLabel, smart, t } from '../lib/i18n';
+import { DetailToggle, HowToRead } from './Layout';
+import { date, num, periodLabel, smart, t, snapLabel } from '../lib/i18n';
 import { provBlock, suggestedCitation, type Prov } from '../lib/prov';
 import { activeTransformKeys, applyTransforms, transformsFromParam, transformsToParam, yearOverYear, type SeriesData, type TransformState } from '../lib/transforms';
 import { Chart, PALETTE } from './Chart';
@@ -148,7 +149,7 @@ export function ChartCard(props: ChartCardProps) {
         <p class="small muted" data-testid="incomplete-note"><span class="badge inc">{t('chart.incompleteShort')}</span> {t('chart.incompleteNote')}{' '}
           {props.learnLink !== false && <a href={href(route, 'learn/lesson/reporting-lag')}>{t('chart.whyLow')}</a>}</p>
       )}
-      {props.means && <p class="means">{props.means}</p>}
+      {props.means && <HowToRead><p>{props.means}</p></HowToRead>}
 
       <div class="btnrow" role="group" aria-label={t('chart.actions')}>
         <button type="button" class="btn small" onClick={() => setView(view === 'table' ? 'line' : 'table')}>{view === 'table' ? t('action.viewChart') : t('action.viewData')}</button>
@@ -157,6 +158,7 @@ export function ChartCard(props: ChartCardProps) {
         <CiteButton prov={prov} title={title} subtitle={subtitle} />
         <button type="button" class="btn small" onClick={doPack} data-testid="chart-pack">{t('action.chartPack')}</button>
         {props.embed && <button type="button" class="btn small" onClick={() => setDialog('embed')}>{t('action.embed')}</button>}
+        {!analyst && !window.location.pathname.startsWith('/embed/') && <DetailToggle compact />}
         {analyst && (
           <>
             <button type="button" class="btn small" onClick={() => exportBundle(core, prov, seriesRows(core, shown.filter((s) => !s.userSupplied), prov), 'csv', title)}>{t('action.downloadCsv')}</button>
@@ -175,7 +177,7 @@ export function ChartCard(props: ChartCardProps) {
           <p>{t('embed.intro')}</p>
           <pre data-testid="embed-snippet">{`<iframe src="${embedUrl()}" title="${title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`}</pre>
           <button type="button" class="btn" onClick={async () => { await copyText(`<iframe src="${embedUrl()}" title="${title.replace(/"/g, '&quot;')}" width="100%" height="520" style="border:1px solid #d9e1e3;border-radius:8px" loading="lazy" referrerpolicy="no-referrer"></iframe>`); flash('embed'); }}>{copied === 'embed' ? t('action.copied') : t('action.copy')}</button>
-          <p class="small muted">{t('embed.pinned', { snapshot: prov.snapshotId })}</p>
+          <p class="small muted">{t('embed.pinned', { snapshot: snapLabel(prov.snapshotId) })}</p>
           <p class="small muted">{t('embed.privacy')}</p>
         </Dialog>
       )}

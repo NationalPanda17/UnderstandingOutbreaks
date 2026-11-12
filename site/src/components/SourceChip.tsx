@@ -3,7 +3,7 @@ import { createContext } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { SITE, dataUrl, type Route } from '../lib/app';
 import { getOptional, type Core, type Fetch } from '../lib/data';
-import { date, t } from '../lib/i18n';
+import { date, t, snapLabel } from '../lib/i18n';
 import { chainFor, originIcon, sourceLinks, suggestedCitation, type Prov } from '../lib/prov';
 import { copyText } from '../lib/exporters';
 
@@ -15,17 +15,34 @@ export function sourceNames(core: Core, prov: Prov): string {
   return names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ');
 }
 
+/** Supporting inputs (population, place names, boundaries, this site's own calculations): never the headline source. */
+const SUPPORTING = new Set(['worldbank', 'geonames', 'naturalearth', 'uo_site']);
+/** The source a reader would name: the first reporting source, with a count of the others. */
+export function primarySource(core: Core, prov: Prov): string {
+  const main = prov.sourceIds.filter((s) => !SUPPORTING.has(s));
+  const ids = main.length ? main : prov.sourceIds;
+  const first = core.sources[ids[0]]?.short_name ?? ids[0] ?? '';
+  return ids.length > 1 ? `${first} +${ids.length - 1}` : first;
+}
+
 export function SourceChip({ prov, compact }: { prov: Prov; compact?: boolean }) {
   const { core } = useApp();
   const [open, setOpen] = useState(false);
   const basis = prov.series?.length ? core.seriesByKey[prov.series[0].skey]?.date_basis : undefined;
-  const label = `${t('origin.' + prov.origin)} · ${sourceNames(core, prov)}${prov.asOf ? ' · ' + t('chip.asOf', { date: date(prov.asOf) }) : ''}${basis ? ' · ' + t('datebasis.short.' + basis) : ''}`;
+  // Shown on the chip: who published it and how recent it is. The full label (kind of figure, every source, what the
+  // dates mean) is the chip's accessible name and tooltip, and the panel it opens.
+  const full = `${t('origin.' + prov.origin)} · ${sourceNames(core, prov)}${prov.asOf ? ' · ' + t('chip.asOf', { date: date(prov.asOf) }) : ''}${basis ? ' · ' + t('datebasis.short.' + basis) : ''}`;
+  // Reported figures read "Source: …"; figures this site calculated read "Calculated from …". Simulated, user-supplied
+  // and test data keep their full label: what they are must never be one click away.
+  const plainOrigin = prov.origin === 'source-reported' || prov.origin === 'site-derived';
+  const label = plainOrigin && prov.sourceIds.length
+    ? `${t(prov.origin === 'site-derived' ? 'chip.derived' : 'chip.source', { source: primarySource(core, prov) })}${prov.asOf ? ' · ' + date(prov.asOf) : ''}` : full;
   return (
     <>
       <button type="button" class="chip" data-origin={prov.origin} data-testid="source-chip" onClick={() => setOpen(true)}
-        aria-haspopup="dialog" title={t('chip.trace')} aria-label={`${t('chip.trace')}: ${label}`}>
+        aria-haspopup="dialog" title={`${t('chip.trace')}: ${full}`} aria-label={label === full ? `${t('chip.trace')}: ${full}` : `${label}. ${t('chip.trace')}: ${full}`}>
         <span class="ico" aria-hidden="true">{originIcon(prov.origin)}</span>
-        <span class="txt">{compact ? sourceNames(core, prov) : label}</span>
+        <span class="txt">{compact && plainOrigin ? primarySource(core, prov) : compact ? sourceNames(core, prov) : label}</span>
       </button>
       {open && <TracePanel prov={prov} onClose={() => setOpen(false)} />}
     </>
@@ -73,7 +90,7 @@ export function PlainSteps({ prov }: { prov: Prov }) {
       <b>{t('plain.title')}</b>
       <ol>
         <li>{t(prov.origin === 'simulated' ? 'plain.simulated' : prov.origin === 'user-supplied' ? 'plain.user' : 'plain.published', { sources: sourceNames(core, prov) })}</li>
-        {prov.origin !== 'simulated' && prov.origin !== 'user-supplied' && <li>{prov.asOf ? t(prov.asOfKind === 'published' ? 'plain.publishedOn' : 'plain.retrieved', { date: date(prov.asOf, 'long'), snapshot: prov.snapshotId }) : t('plain.snapshotOnly', { snapshot: prov.snapshotId })}</li>}
+        {prov.origin !== 'simulated' && prov.origin !== 'user-supplied' && <li>{prov.asOf ? t(prov.asOfKind === 'published' ? 'plain.publishedOn' : 'plain.retrieved', { date: date(prov.asOf, 'long'), snapshot: snapLabel(prov.snapshotId) }) : t('plain.snapshotOnly', { snapshot: snapLabel(prov.snapshotId) })}</li>}
         <li>{prov.method ? <>{t('plain.calculated')} {t('method.' + prov.method.name)}</> : (prov.transforms?.length ? t('plain.transformed') : t('plain.asReported'))}{prov.method && !!prov.transforms?.length && <> {t('plain.transformed')}</>}</li>
       </ol>
     </div>
@@ -117,7 +134,7 @@ export function TracePanel({ prov, onClose }: { prov: Prov; onClose: () => void 
       <PlainSteps prov={prov} />
       <dl>
         <dt>{t('trace.asOf')}</dt><dd>{prov.asOf ? date(prov.asOf, 'long') : t('trace.notApplicable')}</dd>
-        <dt>{t('trace.snapshot')}</dt><dd><code>{prov.snapshotId}</code></dd>
+        <dt>{t('trace.version')}</dt><dd>{snapLabel(prov.snapshotId)}{full && <> <code class="small">{prov.snapshotId}</code></>}</dd>
         {!!prov.caseDefinitions?.length && (<><dt>{t('trace.caseDefinition')}</dt><dd>{prov.caseDefinitions.map((c) => t('def.' + c)).join('; ')}</dd></>)}
         {prov.method && (<><dt>{t('trace.method')}</dt><dd><code>{prov.method.name}</code> v{prov.method.version} — {t('method.' + prov.method.name)}</dd></>)}
         {prov.sim && (<><dt>{t('trace.simulation')}</dt><dd>{t('trace.simLine', { engine: prov.sim.engineVersion, spec: prov.sim.specVersion, solver: prov.sim.solver, seed: prov.sim.seed === null ? '–' : String(prov.sim.seed) })}</dd></>)}

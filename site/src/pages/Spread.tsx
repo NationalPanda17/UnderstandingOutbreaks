@@ -11,7 +11,7 @@ import { href, setParams } from '../lib/app';
 import { getJSON, getOptional, loadTs, type EventIdx } from '../lib/data';
 import { CAVEAT, buildBundle, copyText, download, pinnedUrl, slugify, zip, type Row } from '../lib/exporters';
 import { date, num, t } from '../lib/i18n';
-import { placeName, toSeries } from '../lib/series';
+import { placeName, toSeries, measureLabel } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { Chart } from '../components/Chart';
 import { ContextLinks } from '../components/ContextLinks';
@@ -301,7 +301,7 @@ function Explorer({ id }: { id: string }) {
         <h2>{t('spread.seriesTitle')}</h2>
         {tsData.loading ? <Loading /> : !cut.some((s) => s.p.length) ? <p class="muted">{t('spread.noLinked')}</p> : (
           <>
-            <p class="sub">{t('spread.seriesSub')}{meta ? ` ${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)}), ${core.sources[meta.source_id]?.short_name ?? meta.source_id}.` : ''}</p>
+            <p class="sub">{t('spread.seriesSub')}{meta ? ` ${measureLabel(meta.metric, meta.case_definition)}, ${core.sources[meta.source_id]?.short_name ?? meta.source_id}.` : ''}</p>
             <label class="small"><input type="checkbox" checked={sameScale} onChange={(x) => setSameScale((x.target as HTMLInputElement).checked)} /> {t('spread.sameScale')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px', marginTop: '8px' }}>
               {cut.filter((s) => s.p.length).map((s) => (

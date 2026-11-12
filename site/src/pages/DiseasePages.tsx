@@ -2,7 +2,7 @@
 import { href } from '../lib/app';
 import { getJSON, getOptional, type EventIdx, type Overview as Ov, type PType } from '../lib/data';
 import { num, periodLabel, smart, t } from '../lib/i18n';
-import { mapMetricLabel, placeName, seriesLabel } from '../lib/series';
+import { mapMetricLabel, placeName, seriesLabel, measureLabel } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { CiteButton, globalStatement } from '../components/Cite';
@@ -78,7 +78,7 @@ export function DiseasePage({ id }: { id: string }) {
           <p class="small muted">{nLatest !== undefined && o.global.n_total ? t('total.nOfNPeriod', { n: nLatest, N: o.global.n_total, period: periodLabel(o.anchor, o.period_type) }) : ''} <AgeBadge period={o.anchor} ptype={o.period_type} /> {panelOn && panel && t('panel.explain', { n: panel.n_panel, pct: Math.round(panel.min_coverage * 100) })}
             {(() => { const i = o.global.p.indexOf(o.anchor); const v = i >= 0 ? o.global.v[i] : null; if (v === null || v === undefined) return null;
               return <> <CiteButton inline title={t('disease.globalTitle', { name })} prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
-                statement={globalStatement(name, periodLabel(o.anchor, o.period_type), num(v), `${t('metric.' + meta.metric)} (${t('def.' + meta.case_definition)})`, nLatest, o.global.n_total)} /></>; })()}</p>
+                statement={globalStatement(name, periodLabel(o.anchor, o.period_type), num(v), `${measureLabel(meta.metric, meta.case_definition)}`, nLatest, o.global.n_total)} /></>; })()}</p>
           <Breakdown g={o.global} ptype={o.period_type} />
           {meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <section class="card" style={{ marginTop: '16px' }}>

@@ -37,7 +37,7 @@
   "map.kbd.role": "map",
   "map.kbd.hint": "Keyboard: arrow keys move between countries, a letter jumps to a country by name, Enter opens it.",
   "map.kbd.enter": "press Enter for details",
-  "plain.publishedOn": "The latest notice was published on {date}. This site stored the notices as snapshot {snapshot}.",
+  "plain.publishedOn": "The latest notice was published on {date}. You are looking at the version this site saved on {snapshot}.",
   "citep.latestNotice": "Latest notice",
   "title.compare": "What changed between two dates",
   "datecompare.values": "Reported values that changed"

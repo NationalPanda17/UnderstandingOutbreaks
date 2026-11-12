@@ -284,14 +284,19 @@ describe.skipIf(!hasData)('trace panels render for every visualization type', ()
     it(name, async () => {
       const el = mount(prov);
       const chip = el.querySelector('[data-testid="source-chip"]') as HTMLButtonElement;
-      expect(chip).toBeTruthy(); expect(chip.dataset.origin).toBe(prov.origin); expect(chip.textContent).toContain(t('origin.' + prov.origin));
-      for (const s of prov.sourceIds.slice(0, 2)) expect(chip.textContent).toContain(core.sources[s].short_name);
+      expect(chip).toBeTruthy(); expect(chip.dataset.origin).toBe(prov.origin);
+      // the chip's accessible name carries the kind of figure and the sources; the visible text leads with the reporting source
+      expect(chip.getAttribute('aria-label')).toContain(t('origin.' + prov.origin));
+      for (const s of prov.sourceIds.slice(0, 2)) expect(chip.getAttribute('aria-label')).toContain(core.sources[s].short_name);
+      if (prov.sourceIds.length) expect(chip.textContent).toContain(core.sources[prov.sourceIds[0]].short_name);
+      if (prov.origin === 'simulated' || prov.origin === 'user-supplied') expect(chip.textContent).toContain(t('origin.' + prov.origin));
+      if (prov.origin === 'site-derived') expect(chip.textContent).toContain(t('chip.derived', { source: '' }).trim());
       chip.click(); await new Promise((r) => setTimeout(r, 20));
       const panel = document.querySelector('[role="dialog"]') as HTMLElement;
       expect(panel).toBeTruthy(); expect(panel.textContent).toContain(t('trace.title')); expect(panel.textContent).toContain(t('origin.' + prov.origin + '.explain'));
       for (const s of prov.sourceIds) { expect(panel.textContent).toContain(core.sources[s].name); expect(panel.textContent).toContain(core.sources[s].license); }
       if (prov.sourceIds.length) expect(panel.querySelectorAll('a[href^="http"], a[href^="/"]').length).toBeGreaterThan(0);
-      expect(panel.textContent).toContain(prov.snapshotId);
+      expect(panel.textContent).toContain(prov.snapshotId); // the route is the detailed view, which shows the raw id beside the date
       (panel.querySelector('button') as HTMLButtonElement).click(); await new Promise((r) => setTimeout(r, 10)); el.remove();
     });
   }

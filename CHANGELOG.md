@@ -2,6 +2,21 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-12 — Clearer pages
+<!-- type: release -->
+- Home page: one sentence, a large "Find a country or disease" box, then a summary in plain sentences built from the
+  data (the latest official outbreak notices and the latest complete world totals), each linking to its page.
+- Navigation fits on one row; reference pages are under "More". The Simple / Analyst switch left the header:
+  "More options" on the page and on each chart turns the detailed view on where it is needed.
+- Country pages open with one sentence and three figures: the latest complete period, the last year, and how up to
+  date the country's reporting is.
+- Plain labels: "Reported cases" instead of "Cases (notified (reported))", "DR Congo" instead of "Congo - Kinshasa",
+  and source chips that read "Source: …" or "Calculated from …".
+- Data versions are shown as dates and times, not as snapshot identifiers.
+- Each card's explanations and caveats are folded behind one "How to read this" line; the site-wide caveat and the
+  date of the data stay visible under the header.
+- Larger text and more spacing throughout.
+
 ## 2026-11-12 — Updates start on time
 <!-- type: pipeline -->
 - GitHub was starting the hourly notice check and the six-hourly update hours late or not at all. A small external

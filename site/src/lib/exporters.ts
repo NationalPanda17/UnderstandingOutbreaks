@@ -3,6 +3,7 @@
  * Rule: no export leaves the site without provenance. Mixed-source tables keep per-row source_id and source_url.
  */
 import { SITE, absoluteUrl } from './app';
+import { snapLabel } from './i18n';
 import type { Core } from './data';
 import { deepLink } from './data';
 import { provBlock, suggestedCitation, type Prov } from './prov';
@@ -152,7 +153,7 @@ export function citeText(core: Core, prov: Prov, title: string, subtitle?: strin
       : `${title}${subtitle ? ' (' + subtitle + ')' : ''}.${prov.asOf ? ' Data as of ' + prov.asOf + '.' : ''}`,
     `${sim ? 'Illustrative simulation: not a forecast, not fitted to data. References' : 'Source'}: ${src}${prov.origin === 'site-derived' ? `; calculated by ${SITE.name}` : ''}. Via ${SITE.name} (${SITE.shortUrl}).${lic ? ' License: ' + lic + '.' : ''}`,
     sim ? '' : CAVEAT,
-    `Link to exactly this view (snapshot ${prov.snapshotId}): ${citeUrl(prov.snapshotId, url)}`,
+    `Link to exactly this version (data of ${snapLabel(prov.snapshotId)}): ${citeUrl(prov.snapshotId, url)}`,
   ].filter(Boolean).join('\n');
 }
 

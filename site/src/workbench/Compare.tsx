@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { href, setParams } from '../lib/app';
 import { getJSON, getOptional, loadTs, type EventIdx, type Overview as Ov, type PType, type TsFile } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
-import { date, num, periodLabel, smart, t } from '../lib/i18n';
+import { date, num, periodLabel, smart, snapLabel, t } from '../lib/i18n';
 import { seriesProv, type Prov } from '../lib/prov';
 import { placeName, seriesLabel, toSeries } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
@@ -22,12 +22,6 @@ function DiseaseSelect({ value, onChange }: { value: string; onChange: (v: strin
 }
 
 // ---------------------------------------------------------------- snapshot diff
-
-/** A snapshot id (UTC timestamp) as a readable date and time. */
-export function snapLabel(id: string): string {
-  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(id);
-  return m ? `${date(`${m[1]}-${m[2]}-${m[3]}`)}, ${m[4]}:${m[5]} UTC` : id;
-}
 
 /** `plain` is the reader-facing page: readable dates, a default that has something to show, and outbreak changes. */
 export function Diff({ plain }: { plain?: boolean }) {

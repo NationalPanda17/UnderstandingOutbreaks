@@ -2,19 +2,50 @@
 import { useMemo } from 'preact/hooks';
 import { href, setParams } from '../lib/app';
 import { getJSON, getOptional, loadRevisions, loadTs, type EventIdx, type Flag, type TsFile } from '../lib/data';
-import { date, num, periodLabel, smart, t } from '../lib/i18n';
+import { date, num, periodInSentence, periodLabel, smart, t } from '../lib/i18n';
 import { seriesProv } from '../lib/prov';
-import { comparableKeys, placeName, seriesLabel, toSeries } from '../lib/series';
+import { comparableKeys, measureInSentence, measureLabel, placeName, seriesLabel, toSeries } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { Regions } from '../components/Regions';
-import { ReportingChip } from '../components/ReportingHealth';
+import { loadReporting, reportingText } from '../components/ReportingHealth';
 import { FeedLink } from '../components/FeedLink';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { WatchButton } from './Watchlists';
+
+/** The country page opens with the answer: one sentence and three figures for the chosen disease, from the latest
+ *  complete period (recent periods that are still filling in are left out), then the chart. */
+function PlaceSummary({ name, disease, iso3, s }: { name: string; disease: string; iso3: string; s: SeriesData }) {
+  const { core } = useApp();
+  const rep = useAsync(() => loadReporting(disease), [disease]);
+  const meta = core.seriesByKey[s.skey!];
+  const done = s.p.map((p, i) => ((!s.incompleteFrom || p < s.incompleteFrom) && s.v[i] !== null ? i : -1)).filter((i) => i >= 0);
+  if (!meta || !done.length) return null;
+  const i = done[done.length - 1];
+  const span = s.ptype === 'W' ? 52 : s.ptype === 'M' ? 12 : 1;
+  const win = done.filter((k) => k > i - span);
+  const total = win.reduce((a, k) => a + (s.v[k] as number), 0);
+  const pop = core.places[iso3]?.population ?? null;
+  const rate = pop ? (total / pop) * 100000 : null;
+  const r = rep.data?.places[iso3];
+  const source = core.sources[meta.source_id]?.short_name ?? meta.source_id;
+  return (
+    <section class="card placesum" data-testid="place-summary" aria-label={t('placesum.aria', { name })}>
+      <p class="placesum-line">{t('placesum.sentence', { disease: diseaseName(core, disease), name, value: num(s.v[i]), measure: measureInSentence(meta.metric, meta.case_definition), period: periodInSentence(s.p[i], s.ptype), source })}</p>
+      <div class="figures">
+        <div><span class="k">{t('placesum.latest')}</span><b>{num(s.v[i])}</b><span class="s">{measureLabel(meta.metric, meta.case_definition)} · {periodLabel(s.p[i], s.ptype)}</span></div>
+        {span > 1
+          ? <div><span class="k">{t('placesum.total.' + s.ptype)}</span><b>{num(total)}</b><span class="s">{t('placesum.reported', { n: win.length, w: span })}{rate !== null ? ' · ' + t('placesum.per100k', { rate: smart(rate) }) : ''}</span></div>
+          : rate !== null && <div><span class="k">{t('placesum.rate')}</span><b>{smart(rate)}</b><span class="s">{periodLabel(s.p[i], s.ptype)}</span></div>}
+        {r && <div><span class="k">{t('health.title')}</span><b class="words">{r.periods_behind === 0 ? t('placesum.upToDate') : t('placesum.behind.' + rep.data!.period_type, { n: r.periods_behind })}</b><span class="s">{t('health.present', { pct: Math.round(r.completeness * 100), n: r.expected })}</span></div>}
+      </div>
+      {rep.data && reportingText(rep.data, iso3) && <p class="sr" data-testid="reporting-health">{reportingText(rep.data, iso3)}</p>}
+    </section>
+  );
+}
 
 export function Place({ iso3 }: { iso3: string }) {
   const { core, route } = useApp();
@@ -81,7 +112,7 @@ export function Place({ iso3 }: { iso3: string }) {
 
       {model && d && disease && (
         <>
-          <ReportingChip disease={disease} iso3={iso3} />
+          {model.main[0] && <PlaceSummary name={name} disease={disease} iso3={iso3} s={model.main[0]} />}
           {analyst && (
             <section class="card" style={{ marginBottom: '16px' }}>
               <h2>{t('place.series')}</h2>

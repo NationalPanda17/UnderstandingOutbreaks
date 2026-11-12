@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type EventIdx } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
-import { date, num, periodLabel, t } from '../lib/i18n';
+import { date, num, periodLabel, snapLabel, t } from '../lib/i18n';
 import { placeName } from '../lib/series';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventCite, EventRow, EventSummary, StatusBadge, eventPlaces, eventProv } from '../components/Events';
 import { FeedLink } from '../components/FeedLink';
-import { ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
+import { ErrorBox, Ext, HowToRead, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { WatchButton } from './Watchlists';
@@ -138,7 +138,7 @@ function NoticeDots({ reports, sources }: { reports: any[]; sources: Record<stri
       <p class="small" aria-live="polite" style={{ minHeight: '3.2em' }}>
         {cur ? <><b>{date(cur.published, 'long')}</b> · {sources[cur.source_id]?.short_name} · {cur.title}. {cur.counts?.cases ? <>{t('timeline.stated', { n: num(cur.counts.cases.value) })} <q class="quote">{cur.counts.cases.quote}</q></> : t('timeline.noCount')}</> : <span class="muted">{t('timeline.hint')}</span>}
       </p>
-      <p class="small muted">{t('timeline.means')}</p>
+      <HowToRead><p>{t('timeline.means')}</p></HowToRead>
     </div>
   );
 }
@@ -176,7 +176,7 @@ export function Outbreak({ id }: { id: string }) {
               <div>{t('outbreak.lastReport')}<b>{date(e.last_report)}</b><span class="small">{t('outbreak.daysAgo', { n: e.days_since_last_report })}</span></div>
             </div>
             {e.status_quote && <p class="small">{t('outbreak.statusQuote')} <q class="quote">{e.status_quote}</q></p>}
-            <p class="small muted">{t('outbreak.countsNote')}</p>
+            <HowToRead><p>{t('outbreak.countsNote')}</p></HowToRead>
             <div class="btnrow"><EventCite e={{ ...briefE, cases: e.cases, deaths: e.deaths, counts_suppressed: e.counts_suppressed }} /></div>
           </section>
           <section class="card">
@@ -198,7 +198,7 @@ export function Outbreak({ id }: { id: string }) {
               <h2>{t('outbreak.revisions')}</h2>
               <p class="sub">{t('pin.vintage')}</p>
               <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('trace.snapshot')}</th><th>{t('outbreak.status')}</th><th class="n">{t('outbreak.cases')}</th><th class="n">{t('outbreak.deaths')}</th><th class="n">{t('outbreak.reports')}</th></tr></thead>
-                <tbody>{(e.history as any[]).slice().reverse().map((h) => <tr key={h.snapshot_id}><th scope="row"><code>{h.snapshot_id}</code></th><td>{t('status.' + h.status)}</td><td class="n">{num(h.cases)}</td><td class="n">{num(h.deaths)}</td><td class="n">{h.n_reports}</td></tr>)}</tbody></table></div>
+                <tbody>{(e.history as any[]).slice().reverse().map((h) => <tr key={h.snapshot_id}><th scope="row" title={h.snapshot_id}>{snapLabel(h.snapshot_id)}</th><td>{t('status.' + h.status)}</td><td class="n">{num(h.cases)}</td><td class="n">{num(h.deaths)}</td><td class="n">{h.n_reports}</td></tr>)}</tbody></table></div>
             </section>
           )}
         </div>
@@ -206,7 +206,7 @@ export function Outbreak({ id }: { id: string }) {
           <section class="card">
             <h2>{t('outbreak.locations')}</h2>
             {points.length ? <LazyMap points={points} pointMode="markers" names={names} ariaLabel={t('map.aria', { title })} view={{ lng: points[0].lon, lat: points[0].lat, z: 2.4 }} /> : <p class="muted">{t('outbreak.noLocation')}</p>}
-            <p class="small muted">{t('outbreak.precisionNote')}</p>
+            <HowToRead><p>{t('outbreak.precisionNote')}</p></HowToRead>
             <p><a class="btn small" href={href(route, 'spread/' + id)} data-testid="open-spread">{t('spread.open')}</a></p>
             <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('map.precision')}</th>{analyst && <th>{t('trace.method')}</th>}</tr></thead>
               <tbody>{(e.locations as any[]).map((l, i) => <tr key={i}><th scope="row">{l.name}{l.precision !== 'country' && <span class="muted">, {placeName(core, l.iso3)}</span>}</th><td>{t('precision.' + l.precision)}</td>{analyst && <td class="small"><code>{l.method} v{l.method_version}</code> {l.gazetteer_ref}</td>}</tr>)}</tbody></table></div>

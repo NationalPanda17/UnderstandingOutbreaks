@@ -3,7 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Search } from './Search';
 import { OFFERED, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
 import type { Core, Disease } from '../lib/data';
-import { date, num, periodLabel, t } from '../lib/i18n';
+import { date, num, periodLabel, snapLabel, t } from '../lib/i18n';
 import { useApp } from './SourceChip';
 
 const NAV: { path: string; key: string; cls?: string }[] = [
@@ -13,9 +13,51 @@ const NAV: { path: string; key: string; cls?: string }[] = [
   { path: 'diseases', key: 'nav.diseases' },
   { path: 'changes', key: 'nav.changes' },
   { path: 'learn', key: 'nav.learn', cls: 'learn' },
-  { path: 'researchers', key: 'nav.researchers' },
-  { path: 'about', key: 'nav.about' },
 ];
+/** Reference pages, grouped under one "More" menu so the main navigation stays on one row. */
+const MORE: { path: string; key: string }[] = [
+  { path: 'about', key: 'nav.about' },
+  { path: 'methodology', key: 'nav.methodology' },
+  { path: 'sources', key: 'nav.sources' },
+  { path: 'data-quality', key: 'nav.quality' },
+  { path: 'reporters-guide', key: 'nav.reporters' },
+  { path: 'researchers', key: 'nav.researchers' },
+  { path: 'glossary', key: 'nav.glossary' },
+  { path: 'watchlists', key: 'nav.watchlists' },
+];
+
+/** The "More" menu: a button that opens a short list of reference pages. Closes on Escape, on a click outside and
+ *  when a link is followed. */
+function MoreMenu({ current }: { current: (p: string) => boolean }) {
+  const { route } = useApp();
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setOpen(false); }, [route.parts.join('/')]);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: Event) => { if (!(e.target as HTMLElement).closest?.('.moremenu')) setOpen(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); document.getElementById('more-button')?.focus(); } };
+    document.addEventListener('click', close); document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('click', close); document.removeEventListener('keydown', key); };
+  }, [open]);
+  const here = MORE.some((m) => current(m.path));
+  return (
+    <div class="moremenu">
+      <button type="button" id="more-button" class={here ? 'on' : undefined} aria-expanded={open} aria-controls="more-list" onClick={() => setOpen(!open)} data-testid="more-menu">{t('nav.more')} <span aria-hidden="true">▾</span></button>
+      <ul id="more-list" hidden={!open}>
+        {MORE.map((m) => <li key={m.path}><a href={href(route, m.path)} aria-current={current(m.path) ? 'page' : undefined}>{t(m.key)}</a></li>)}
+      </ul>
+    </div>
+  );
+}
+
+/** "More options" / "Fewer options": the detailed view (definitions, filters, downloads, source details) is turned
+ *  on where it is needed instead of from a switch in the header. The choice is remembered and kept in the address. */
+export function DetailToggle({ compact }: { compact?: boolean }) {
+  const { route } = useApp();
+  const on = route.mode === 'analyst';
+  const set = () => { const m = on ? 'simple' : 'analyst'; storage.set('mode', m); setParams({ mode: m === 'analyst' ? 'analyst' : null }); };
+  return <button type="button" class={compact ? 'btn small' : 'linklike detailtoggle'} aria-pressed={on} onClick={set} title={t(on ? 'mode.simple.hint' : 'mode.analyst.hint')} data-testid="detail-toggle">{t(on ? 'mode.fewer' : 'mode.more')}</button>;
+}
 
 /** Annual series are often a year or two behind: say so next to the headline instead of leaving the reader to notice. */
 export function AgeBadge({ period, ptype }: { period: string | null | undefined; ptype: string }) {
@@ -53,8 +95,7 @@ export function Layout({ children }: { children: any }) {
   const [menu, setMenu] = useState(false);
   useEffect(() => { setMenu(false); }, [route.parts.join('/')]);
   const first = route.parts[0] ?? '';
-  const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && first === 'outbreak') || (p === 'diseases' && first === 'disease') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
-  const setMode = (m: 'simple' | 'analyst') => { storage.set('mode', m); setParams({ mode: m === 'analyst' ? 'analyst' : null }); };
+  const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && ['outbreak', 'spread'].includes(first)) || (p === 'diseases' && first === 'disease') || (p === 'changes' && first === 'compare') || (p === 'about' && first === 'status') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
   const latest = core.manifest.snapshot_id;
   const pinned = route.snapshot && route.snapshot !== latest ? core.manifest.snapshots.find((s) => s.id === route.snapshot) : null;
   const unknownPin = route.snapshot && !core.manifest.snapshots.some((s) => s.id === route.snapshot);
@@ -70,13 +111,11 @@ export function Layout({ children }: { children: any }) {
           <button type="button" class="menubtn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu(!menu)} data-testid="menu-button">{t('nav.menu')}</button>
           <nav class={'main' + (menu ? ' open' : '')} id="main-nav" aria-label={t('a11y.mainNav')}>
             {NAV.map((n) => <a key={n.path} class={n.cls} href={href(route, n.path)} aria-current={isCurrent(n.path) ? 'page' : undefined}>{t(n.key)}</a>)}
+            <MoreMenu current={isCurrent} />
           </nav>
           <div class="controls">
-            <Search />
-            <span class="seg" role="group" aria-label={t('mode.label')}>
-              <button type="button" aria-pressed={route.mode === 'simple'} onClick={() => setMode('simple')} title={t('mode.simple.hint')}>{t('mode.simple')}</button>
-              <button type="button" aria-pressed={route.mode === 'analyst'} onClick={() => setMode('analyst')} title={t('mode.analyst.hint')}>{t('mode.analyst')}</button>
-            </span>
+            {/* the home page has its own large search box, so the header does not repeat it there */}
+            {first !== '' && <Search />}
             {(OFFERED.length > 1 || !OFFERED.includes(route.locale)) && (
             <label><span class="sr">{t('lang.label')}</span>
               <select aria-label={t('lang.label')} value={route.locale} onChange={(e) => switchLocale(route, (e.target as HTMLSelectElement).value)} data-testid="lang-switch">
@@ -86,25 +125,24 @@ export function Layout({ children }: { children: any }) {
             )}
           </div>
         </div>
-        <div class="wrap strip">
-          <span class="modehint">{t(route.mode === 'analyst' ? 'mode.hintAnalyst' : 'mode.hintSimple')}</span>
-          <span class="asof" data-testid="data-asof">{t('asof.chip', { date: date(core.manifest.generated_at) })}</span>
-        </div>
       </header>
-      {first !== 'learn' && (
-        <aside class="persist" aria-label={t('persist.more')}><div class="wrap">{t('persist.notice')} <a href={href(route, 'methodology')}>{t('persist.more')}</a></div></aside>
-      )}
+      {/* One standing caveat for the whole site, with the date of the data. Cards link to "How to read this" instead of repeating it. */}
+      <aside class="persist" aria-label={t('persist.more')}><div class="wrap">
+        {first !== 'learn' && <span>{t('persist.notice')} <a href={href(route, 'reporters-guide')}>{t('persist.more')}</a></span>}
+        <span class="asof" data-testid="data-asof">{t('asof.chip', { date: date(core.manifest.generated_at) })}</span>
+      </div></aside>
       <main id="main" tabIndex={-1}>
         <div class="wrap">
           {pinned && (
             <div class="notice pin" role="status" data-testid="pinned-banner">
-              {t('pin.banner', { date: date(pinned.created_at, 'long'), id: pinned.id })}{' '}
+              {t('pin.banner', { date: date(pinned.created_at, 'long'), id: snapLabel(pinned.id) })}{' '}
               <a href={href(route, route.parts.join('/'), { snapshot: null }, { keepAll: true })}>{t('pin.latest')}</a>
               <div class="small muted">{t('pin.vintage')}</div>
             </div>
           )}
           {!OFFERED.includes(route.locale) && <div class="notice warn" role="note" data-testid="draft-locale">{t('lang.draftNotice')} <a href={href(route, route.parts.join('/'), {}, { locale: SITE.defaultLocale, keepAll: true })} lang="en">Read this page in English</a></div>}
           {unknownPin && <div class="notice warn" role="alert">{t('pin.unknown', { id: route.snapshot! })}</div>}
+          {first !== 'learn' && <div class="detailbar"><DetailToggle /></div>}
           {route.mode === 'analyst' && first !== 'learn' && <SnapshotPicker />}
           {children}
         </div>
@@ -137,7 +175,7 @@ export function Layout({ children }: { children: any }) {
               <li><a href={href(route, 'about') + '#contact'}>{t('contact.report')}</a></li>
             </ul>
           </div>
-          <p class="small">{t('footer.snapshot', { id: latest, date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>
+          <p class="small" title={latest}>{t('footer.snapshot', { id: snapLabel(latest), date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>
         </div>
       </footer>
     </>
@@ -156,12 +194,18 @@ export function SnapshotPicker() {
       <label>{t('pin.pick')}{' '}
         <select value={route.snapshot ?? ''} onChange={(e) => setParams({ snapshot: (e.target as HTMLSelectElement).value || null })}>
           <option value="">{t('pin.latestOption', { date: date(snaps[snaps.length - 1]?.created_at) })}</option>
-          {snaps.slice(0, -1).reverse().map((s) => <option key={s.id} value={s.id}>{date(s.created_at)} · {s.id}</option>)}
+          {snaps.slice(0, -1).reverse().map((s) => <option key={s.id} value={s.id}>{snapLabel(s.id)}</option>)}
         </select>
       </label>
       <span class="small muted">{t('pin.count', { n: snaps.length })} {t('pin.vintage')}</span>
     </div>
   );
+}
+
+/** The explanations and caveats for one card, folded behind a single "How to read this" line. The site-wide caveat
+ *  stays visible under the header; each card keeps its fine print one click away instead of printing it in grey. */
+export function HowToRead({ children }: { children: any }) {
+  return <details class="more howread" data-testid="how-to-read"><summary>{t('howread.title')}</summary><div class="howread-body">{children}</div></details>;
 }
 
 export function Loading({ what }: { what?: string }) {

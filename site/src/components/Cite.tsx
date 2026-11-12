@@ -3,7 +3,7 @@
  *  Used on charts and maps (cite the view) and beside single figures (cite the number, with `statement`). */
 import { useState } from 'preact/hooks';
 import { citeText, citeUrl, copyText } from '../lib/exporters';
-import { date, t } from '../lib/i18n';
+import { date, snapLabel, t } from '../lib/i18n';
 import { chainFor, sourceLinks, type Prov } from '../lib/prov';
 import { Dialog, PlainSteps, TracePanel, useApp } from './SourceChip';
 
@@ -58,7 +58,7 @@ function CitePanel({ prov, title, subtitle, statement, url, onClose }: CiteProps
         <dt>{t('citep.source')}</dt>
         <dd>{links.length ? links.map((l, i) => <span key={l.url}>{i > 0 && ' · '}<a class="ext" href={l.url} target="_blank" rel="noopener noreferrer">{l.label}</a></span>) : prov.sourceIds.map((s) => core.sources[s]?.short_name ?? s).join(', ')}</dd>
         <dt>{prov.asOfKind === 'published' ? t('citep.latestNotice') : t('trace.asOf')}</dt><dd>{prov.asOf ? date(prov.asOf, 'long') : t('trace.notApplicable')}</dd>
-        <dt>{t('trace.snapshot')}</dt><dd><code>{prov.snapshotId}</code></dd>
+        <dt>{t('trace.version')}</dt><dd title={prov.snapshotId}>{snapLabel(prov.snapshotId)}</dd>
       </dl>
       <PlainSteps prov={prov} />
       {steps.length > 0 && (

@@ -79,8 +79,7 @@ export function EventRow({ e, showScore }: { e: EventIdx; showScore?: boolean })
         {e.cases && !e.counts_suppressed && <> · {t('event.reportedCases', { n: num(e.cases.value) })} <span class="badge">{t('def.' + e.cases.case_definition)}</span> <span>{t('chip.asOf', { date: date(e.cases.as_of) })}</span></>}
         {e.deaths && !e.counts_suppressed && <> · {t('event.reportedDeaths', { n: num(e.deaths.value) })}</>}
         {(e.cases || e.deaths) && !e.counts_suppressed && <> <span class="badge auto" title={t('event.autoExplain')}>{t('event.autoCheck')}</span></>}
-        {e.counts_suppressed && <> · {t('event.countsHidden.' + e.counts_suppressed)}</>}
-        {' · '}{t('event.nReports', { n: e.n_reports })}
+        {' · '}<span title={e.counts_suppressed ? t('event.countsHidden.' + e.counts_suppressed) : undefined}>{t('event.nReports', { n: e.n_reports })}</span>
         {showScore && <> · {t('rank.score')}: {e.rank.score.toFixed(3)}</>}
       </div>
       <div style={{ marginTop: '4px' }} class="chipline"><SourceChip prov={eventProv(core, e, route.snapshot)} compact /> <EventCite e={e} inline /></div>
