@@ -259,3 +259,15 @@ def test_reviewed_region_names_are_drawn_and_none_is_listed_twice():
             if src_name in units:
                 assert units[src_name]["id"] and units[src_name]["name"] == target, (iso3, src_name)
                 assert not units[src_name]["conflict_years"], (iso3, src_name, units[src_name]["conflict_years"])
+
+
+def test_update_history_is_published_and_well_formed():
+    doc = J("runs.json")
+    assert doc["origin_type"] == "site-derived" and doc["source_ids"] == ["uo_site"]
+    last = None
+    for r in doc["runs"]:
+        assert set(r) >= {"at", "published", "snapshot_id", "failed", "seconds"}, r
+        assert isinstance(r["published"], bool) and (r["snapshot_id"] is None) == (not r["published"]), r
+        assert all(f["dataset_id"] and "error" in f for f in r["failed"]), r
+        assert last is None or r["at"] >= last, "runs are listed oldest first"
+        last = r["at"]

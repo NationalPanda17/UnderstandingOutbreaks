@@ -20,10 +20,10 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 | Locale | Language | Status | Strings | Reviewed | Awaiting review |
 |---|---|---|---|---|---|
-| en | English | source | 1951 | – | – |
-| es | Español | machine-drafted | 1951 | 0 | 1951 |
-| fr | Français | machine-drafted | 1951 | 0 | 1951 |
-| de | Deutsch | machine-drafted | 1951 | 0 | 1951 |
+| en | English | source | 2060 | – | – |
+| es | Español | machine-drafted | 2060 | 0 | 2060 |
+| fr | Français | machine-drafted | 2060 | 0 | 2060 |
+| de | Deutsch | machine-drafted | 2060 | 0 | 2060 |
 
 ## Español (es): strings by review status
 
@@ -159,7 +159,7 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Interface strings (lower priority)
 
-1320 strings: 0 reviewed, 1320 machine-drafted and awaiting review.
+1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `es.json` not listed in a priority group above.
 
@@ -298,7 +298,7 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1320 strings: 0 reviewed, 1320 machine-drafted and awaiting review.
+1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `fr.json` not listed in a priority group above.
 
@@ -437,7 +437,7 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1320 strings: 0 reviewed, 1320 machine-drafted and awaiting review.
+1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `de.json` not listed in a priority group above.
 

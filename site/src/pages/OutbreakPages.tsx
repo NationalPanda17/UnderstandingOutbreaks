@@ -5,12 +5,14 @@ import { getJSON, getOptional, type EventIdx } from '../lib/data';
 import { exportBundle } from '../lib/exporters';
 import { date, num, periodLabel, snapLabel, t } from '../lib/i18n';
 import { placeName } from '../lib/series';
+import { CHART, FONT } from '../lib/theme';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventCite, EventRow, EventSummary, StatusBadge, eventPlaces, eventProv } from '../components/Events';
 import { FeedLink } from '../components/FeedLink';
 import { ErrorBox, Ext, HowToRead, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
 import { SourceChip, useApp } from '../components/SourceChip';
+import { NotFound } from './Policies';
 import { WatchButton } from './Watchlists';
 
 export function Outbreaks() {
@@ -121,17 +123,17 @@ function NoticeDots({ reports, sources }: { reports: any[]; sources: Record<stri
   const cur = tip !== null ? reports[tip] : null;
   return (
     <div class="noticedots" data-testid="notice-dots">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="group" aria-label={t('timeline.aria')}>
-        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="#8fa1a5" />
-        <line x1={L} y1={T} x2={L} y2={H - B} stroke="#d9e1e3" />
-        <text x={L - 6} y={T + 4} text-anchor="end" font-size="11" fill="#4a5b5f">{num(max)}</text>
-        <text x={L - 6} y={H - B + 4} text-anchor="end" font-size="11" fill="#4a5b5f">0</text>
-        <text x={L} y={H - 8} font-size="11" fill="#4a5b5f">{date(reports[0].published)}</text>
-        <text x={W - R} y={H - 8} text-anchor="end" font-size="11" fill="#4a5b5f">{date(reports[reports.length - 1].published)}</text>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="group" aria-label={t('timeline.aria')} font-family={FONT}>
+        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke={CHART.rule} />
+        <line x1={L} y1={T} x2={L} y2={H - B} stroke={CHART.grid} />
+        <text x={L - 6} y={T + 4} text-anchor="end" font-size={CHART.text} fill={CHART.axis}>{num(max)}</text>
+        <text x={L - 6} y={H - B + 4} text-anchor="end" font-size={CHART.text} fill={CHART.axis}>0</text>
+        <text x={L} y={H - 8} font-size={CHART.text} fill={CHART.axis}>{date(reports[0].published)}</text>
+        <text x={W - R} y={H - 8} text-anchor="end" font-size={CHART.text} fill={CHART.axis}>{date(reports[reports.length - 1].published)}</text>
         {reports.map((r, i) => (
           <g key={r.report_id} tabIndex={0} role="img" aria-label={`${date(r.published, 'long')}: ${r.title}. ${vals[i] !== null ? t('timeline.stated', { n: num(vals[i]) }) + ' “' + r.counts.cases.quote + '”' : t('timeline.noCount')}`}
             onFocus={() => setTip(i)} onBlur={() => setTip(null)} onMouseEnter={() => setTip(i)} onMouseLeave={() => setTip(null)} style={{ outline: 'none' }}>
-            <circle cx={x(r)} cy={y(vals[i])} r={tip === i ? 7 : 5} fill={vals[i] === null ? '#fff' : '#0b6e75'} stroke={tip === i ? '#17272b' : '#0b6e75'} stroke-width={tip === i ? 2.5 : 1.5} />
+            <circle cx={x(r)} cy={y(vals[i])} r={tip === i ? 7 : 5} fill={vals[i] === null ? CHART.paper : CHART.accent} stroke={tip === i ? CHART.ink : CHART.accent} stroke-width={tip === i ? 2.5 : 1.5} />
           </g>
         ))}
       </svg>
@@ -152,7 +154,7 @@ export function Outbreak({ id }: { id: string }) {
   const replacement = !ev.loading && !ev.data ? idx.data?.events.find((x) => x.supersedes?.includes(id))?.event_id : undefined;
   useEffect(() => { if (replacement) navigate(href(route, 'outbreak/' + replacement)); }, [replacement]);
   if (ev.loading || (!ev.data && (idx.loading || replacement))) return <Loading />;
-  if (!ev.data) return <ErrorBox error={t('outbreak.unknown', { id })} />;
+  if (!ev.data) return <NotFound />;
   const e = ev.data;
   const brief = idx.data?.events.find((x) => x.event_id === id) ?? (e as EventIdx & { n_reports: number });
   const briefE: EventIdx = { ...(brief as any), n_reports: e.reports.length, latest_url: e.reports[e.reports.length - 1].url, latest_title: e.reports[e.reports.length - 1].title };

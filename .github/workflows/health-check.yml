@@ -29,7 +29,8 @@ jobs:
       - name: Check the live site
         id: check
         working-directory: healthcheck
-        run: node check.mjs
+        # One retry after a pause: a check that starts while a deploy is still spreading can time out once.
+        run: node check.mjs || { echo "first pass failed; checking again in 90 seconds"; sleep 90; node check.mjs; }
       - name: Add the report to the run summary
         if: always()
         run: cat healthcheck/health-report.md >> "$GITHUB_STEP_SUMMARY" || true

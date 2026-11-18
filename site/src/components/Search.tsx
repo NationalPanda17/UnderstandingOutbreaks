@@ -9,11 +9,11 @@ import { placeName } from '../lib/series';
 import { diseaseName } from './Layout';
 import { useApp } from './SourceChip';
 
-const PAGES: [string, string][] = [['', 'nav.overview'], ['outbreaks', 'nav.outbreaks'], ['map', 'nav.map'], ['diseases', 'nav.diseases'], ['changes', 'nav.changes'], ['learn', 'nav.learn'],
+const PAGES: [string, string][] = [['', 'nav.overview'], ['outbreaks', 'nav.outbreaks'], ['map', 'nav.map'], ['diseases', 'nav.diseases'], ['learn', 'nav.learn'],
   ['researchers', 'nav.researchers'], ['about', 'nav.about'], ['methodology', 'nav.methodology'], ['sources', 'nav.sources'], ['data-quality', 'nav.quality'], ['changelog', 'nav.changelog'],
-  ['glossary', 'nav.glossary'], ['reporters-guide', 'nav.reporters'], ['cite', 'nav.cite'], ['watchlists', 'nav.watchlists'], ['workbench', 'workbench.title'], ['explorer', 'search.page.explorer']];
+  ['glossary', 'nav.glossary'], ['reporters-guide', 'nav.reporters'], ['cite', 'nav.cite'], ['watchlists', 'nav.watchlists'], ['briefing', 'title.briefing'], ['changes', 'nav.changes'], ['status', 'status.title'], ['privacy', 'title.privacy'], ['accessibility', 'title.accessibility'], ['corrections', 'title.corrections'], ['editorial-standards', 'title.editorial-standards'], ['workbench', 'workbench.title'], ['explorer', 'search.page.explorer']];
 
-export function Search({ hero }: { hero?: boolean }) {
+export function Search({ hero, id = 'site-search' }: { hero?: boolean; id?: string }) {
   const { core, route } = useApp();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -43,10 +43,10 @@ export function Search({ hero }: { hero?: boolean }) {
   const go = (i: number) => { const r = results[i]; if (!r) return; setOpen(false); setQ(''); navigate(href(route, r.path, r.params)); };
   const show = open && q.trim().length > 0;
   return (
-    <div class={'search' + (hero ? ' hero' : '')} role="search">
-      <label class={hero ? 'searchlabel' : 'sr'} for="site-search">{hero ? t('search.heroLabel') : t('search.label')}</label>
-      <input id="site-search" type="search" value={q} placeholder={hero ? t('search.heroPlaceholder') : t('search.placeholder')} autocomplete="off" spellcheck={false}
-        {...({ role: 'combobox' } as any)} aria-expanded={show} aria-controls="site-search-list" aria-autocomplete="list" aria-activedescendant={show && results[sel] ? 'site-search-' + sel : undefined}
+    <div class={'search' + (hero ? ' hero' : '')} role="search" aria-label={hero ? t('search.heroLabel') : t('search.label')}>
+      <label class={hero ? 'searchlabel' : 'sr'} for={id}>{hero ? t('search.heroLabel') : t('search.label')}</label>
+      <input id={id} type="search" value={q} placeholder={hero ? t('search.heroPlaceholder') : t('search.placeholder')} autocomplete="off" spellcheck={false}
+        {...({ role: 'combobox' } as any)} aria-expanded={show} aria-controls={id + '-list'} aria-autocomplete="list" aria-activedescendant={show && results[sel] ? id + '-' + sel : undefined}
         onFocus={() => { loadEvents(); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)}
         onInput={(e) => { setQ((e.target as HTMLInputElement).value); setSel(0); setOpen(true); }}
         onKeyDown={(e) => {
@@ -56,9 +56,9 @@ export function Search({ hero }: { hero?: boolean }) {
           else if (e.key === 'Escape') { setOpen(false); }
         }} />
       {show && (
-        <ul id="site-search-list" role="listbox" aria-label={t('search.results')}>
+        <ul id={id + '-list'} role="listbox" aria-label={t('search.results')}>
           {results.map((r, i) => (
-            <li key={r.kind + r.path + (r.params?.d ?? '')} id={'site-search-' + i} role="option" aria-selected={i === sel} class={i === sel ? 'on' : undefined}
+            <li key={r.kind + r.path + (r.params?.d ?? '')} id={id + '-' + i} role="option" aria-selected={i === sel} class={i === sel ? 'on' : undefined}
               onMouseDown={(e) => { e.preventDefault(); go(i); }} onMouseEnter={() => setSel(i)}>
               <span>{r.label}</span>{r.sub && <span class="small muted">{r.sub}</span>}
             </li>

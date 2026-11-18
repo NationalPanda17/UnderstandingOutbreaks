@@ -14,6 +14,7 @@ import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { ErrorBox, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
+import { NotFound } from './Policies';
 import { WatchButton } from './Watchlists';
 
 /** The country page opens with the answer: one sentence and three figures for the chosen disease, from the latest
@@ -90,7 +91,7 @@ export function Place({ iso3 }: { iso3: string }) {
     return { keys, def, defMeta, filtered, chosen, main, comparable };
   }, [ts, d, analyst, picked.join('~'), fDef, fSrc, from, to]);
 
-  if (!place) return <ErrorBox error={t('place.unknown', { iso3 })} />;
+  if (!place) return <NotFound />;
   const name = placeName(core, iso3);
   const myEvents = (events.data?.events ?? []).filter((e) => e.countries.includes(iso3)).sort((a, b) => (a.last_report < b.last_report ? 1 : -1));
   const myFlags = (flags.data?.flags ?? []).filter((f) => f.iso3 === iso3 && f.status === 'flagged');

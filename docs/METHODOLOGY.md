@@ -30,6 +30,9 @@ written with the failing source, the error, the last good snapshot and a schema 
   notice ids with the list the last run published (`events/report_ids.json`). If a feed lists a notice the site does
   not have, it starts a full run. The check writes no data. A source it cannot read is skipped; the full run is what
   reports source failures.
+- **Update history.** Each run appends one line to `state/run_log.json` (start time, whether anything was published,
+  which sources failed and why). The last 200 lines are published as `runs.json` and shown on the status page. A run
+  that finds nothing new publishes nothing, so its line appears at the next publication.
 - **What starts the runs.** GitHub starts scheduled workflows on a best-effort basis and was observed starting them
   up to seven hours late. A small external timer (`scheduler/`, a Cloudflare Worker with cron triggers) therefore
   starts both workflows at the times above. The schedules in the workflow files remain as a fallback; a fallback

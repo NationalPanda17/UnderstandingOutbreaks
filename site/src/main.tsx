@@ -15,6 +15,7 @@ import { MapPage } from './pages/MapPage';
 import { Outbreak, Outbreaks } from './pages/OutbreakPages';
 import { Overview } from './pages/Overview';
 import { Place } from './pages/Place';
+import { Accessibility, Briefing, CorrectionsPolicy, EditorialStandards, NotFound, Privacy } from './pages/Policies';
 import { Watchlists } from './pages/Watchlists';
 
 function Lazy({ load, parts }: { load: () => Promise<{ default: any }>; parts: string[] }) {
@@ -48,11 +49,16 @@ function Page({ parts }: { parts: string[] }) {
     case 'researchers': return <Researchers />;
     case 'watchlists': return <Watchlists />;
     case 'status': return <SourceStatus />;
+    case 'privacy': return <Privacy />;
+    case 'accessibility': return <Accessibility />;
+    case 'corrections': return <CorrectionsPolicy />;
+    case 'editorial-standards': return <EditorialStandards />;
+    case 'briefing': return <Briefing key={'br' + (b ?? '')} week={b} />;
     case 'compare': return <Lazy key="cmp" load={() => import('./workbench/ComparePlain')} parts={parts.slice(1)} />;
     case 'spread': return <Lazy key={'sp' + (parts[1] ?? '')} load={() => import('./pages/Spread')} parts={parts.slice(1)} />;
     case 'workbench': return <Lazy key="wb" load={() => import('./workbench/index')} parts={parts.slice(1)} />;
     case 'learn': return <Lazy key="learn" load={() => import('./sim/ui/index')} parts={parts.slice(1)} />;
-    default: return <div class="notice warn" role="alert">{t('state.notFound')}</div>;
+    default: return <NotFound />;
   }
 }
 
@@ -67,8 +73,18 @@ function App() {
     if (!ready) return;
     const key = 'title.' + (route.parts[0] ?? 'overview');
     const page = t(key);
-    document.title = (page === key ? '' : page + ' · ') + SITE.name;
-  }, [ready, route.parts.join('/')]);
+    const generic = !route.parts[0] ? `${SITE.name}: ${t('title.homeTag')}` : (page === key ? '' : page + ' · ') + SITE.name;
+    document.title = generic;
+    // The tab, the history entry and a bookmark name the page itself ("Kenya", "Measles", an outbreak), taken from
+    // its heading once the data has arrived. The home page keeps the site's name first.
+    if (!route.parts[0]) return;
+    const main = document.getElementById('main'); if (!main) return;
+    const name = () => { const h = main.querySelector('h1')?.textContent?.trim(); if (h) document.title = `${h} · ${SITE.name}`; };
+    name();
+    const obs = new MutationObserver(name);
+    obs.observe(main, { childList: true, subtree: true, characterData: true });
+    return () => obs.disconnect();
+  }, [ready, core, route.parts.join('/')]);
   if (err) return <div class="wrap"><ErrorBox error={err} /></div>;
   if (!core || ready !== route.locale) return <div class="wrap"><p role="status">Loading…</p></div>;
   return (

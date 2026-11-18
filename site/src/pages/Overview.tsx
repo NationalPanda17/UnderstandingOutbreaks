@@ -68,6 +68,14 @@ export function FlagList({ flags, limit }: { flags: Flag[]; limit: number }) {
 /** The disease the home map and the full map open on: the freshest series the site has. */
 export const HOME_DISEASE = 'influenza';
 
+/** The three events the home summary leads with. The list order is kept, except that an event that names its
+ *  countries comes before one that only says "several countries", and an unclassified one comes last: the first
+ *  screen should say where. The stated count is shown beside an event whenever its notice gives one. */
+export function summaryEvents<T extends Pick<EventIdx, 'countries' | 'cases' | 'counts_suppressed' | 'disease'>>(active: T[], n = 3): T[] {
+  const tier = (e: T) => (e.disease === 'other' ? 2 : !e.countries.length ? 1 : 0);
+  return active.map((e, i) => ({ e, i })).sort((a, b) => tier(a.e) - tier(b.e) || a.i - b.i).slice(0, n).map((x) => x.e);
+}
+
 /** Why the map shows the period it shows: the latest complete one, and how far the next one has filled in. A period
  *  is mapped once about nine in ten of the countries that usually report have reported it. */
 export function periodNote(ov: Ov, usual: number | null | undefined): string {
@@ -183,8 +191,9 @@ export function Overview() {
       <section class="card summary" data-testid="hero" aria-labelledby="summary-h">
         <h2 id="summary-h">{t('summary.title')}</h2>
         <ul class="summarylist">
-          {active.slice(0, 3).map((e) => (
-            <li key={e.event_id} data-testid="summary-event"><a href={href(route, 'outbreak/' + e.event_id)}><b>{diseaseName(core, e.disease)}</b> — {eventPlaces(core, e)}</a>: {t('summary.event', { date: date(e.last_report, 'long'), n: e.n_reports })}</li>
+          {summaryEvents(active).map((e) => (
+            <li key={e.event_id} data-testid="summary-event"><a href={href(route, 'outbreak/' + e.event_id)}><b>{diseaseName(core, e.disease)}</b> — {eventPlaces(core, e)}</a>: {t('summary.event', { date: date(e.last_report, 'long'), n: e.n_reports })}
+              {e.cases && !e.counts_suppressed && <> {t('briefing.states')} <q class="quote">{e.cases.quote}</q>.</>}</li>
           ))}
           {headline.map(({ o, last, nAt, m }) => (
             <li key={o.disease} data-testid="summary-disease"><a href={href(route, 'disease/' + o.disease)}><b>{diseaseName(core, o.disease)}</b></a>: {nAt !== null && o.global.n_total

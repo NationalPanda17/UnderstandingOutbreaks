@@ -7,7 +7,10 @@ const site = JSON.parse(readFileSync(join(root, '..', 'config', 'site.json'), 'u
 const locales = site.locales.map((l) => l.code);
 
 // ---- routing: every locale path serves the app shell; /embed/* serves the embed shell
-const redirects = [`/ /${site.defaultLocale}/ 302`, ...locales.map((l) => `/${l}/* /index.html 200`), '/embed/* /embed 200']; // no .html: Cloudflare Pages redirects .html targets to the pretty URL and drops the path;
+// Pages has no 404.html here on purpose: without one, Cloudflare Pages serves /index.html for any path that is not a
+// file (single-page-app mode). Known pages are real files written below (with their own title and link preview);
+// every other address under a locale still opens the app, which shows its own "page not found".
+const redirects = [`/ /${site.defaultLocale}/ 302`, '/embed/* /embed 200']; // no .html: Cloudflare Pages redirects .html targets to the pretty URL and drops the path;
 writeFileSync(join(dist, '_redirects'), redirects.join('\n') + '\n');
 
 // ---- headers. Rules never overlap, so the embed routes can allow framing while everything else forbids it.
@@ -27,12 +30,105 @@ const headers = [
   ...block('/', `'none'`), ...block('/index.html', `'none'`), ...locales.flatMap((l) => block(`/${l}/*`, `'none'`)),
   ...block('/embed/*', '*'), ...block('/embed', '*'), ...block('/embed.html', '*'),
   '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
+  '/sitemap.xml', '  Content-Type: application/xml; charset=utf-8', '',
+  '/.well-known/security.txt', '  Content-Type: text/plain; charset=utf-8', '',
   '/data/v1/feeds/*.xml', '  Content-Type: application/atom+xml; charset=utf-8', '',
   '/data/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=300, stale-while-revalidate=86400', '', // a repeat visit paints from cache at once and refreshes in the background
   '/data/v1/snapshots/*', '  Access-Control-Allow-Origin: *', '  Cache-Control: public, max-age=31536000, immutable', '',
   '/notebooks/*', '  Access-Control-Allow-Origin: *', '',
 ];
 writeFileSync(join(dist, '_headers'), headers.join('\n'));
+
+// ---- page headers: one static file per known page, with its own title, description and link-preview tags.
+// The body is the same app shell; only <head> differs, so a shared link, a search result and a browser tab all name
+// the page. English only: the other languages are unreviewed drafts and are not offered or indexed.
+{
+  const data = join(dist, 'data', 'v1');
+  const J = (p) => JSON.parse(readFileSync(join(data, p), 'utf8'));
+  const en = JSON.parse(readFileSync(join(root, 'src', 'i18n', 'locales', 'en.json'), 'utf8'));
+  const shell = readFileSync(join(dist, 'index.html'), 'utf8');
+  const base = site.baseUrl.replace(/\/+$/, '');
+  const L = site.defaultLocale;
+  const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const clip = (x, n = 200) => (x.length > n ? x.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : x);
+  const longDate = (iso) => new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(iso.length <= 10 ? iso + 'T00:00:00Z' : iso));
+  const regions = new Intl.DisplayNames(['en'], { type: 'region' });
+  const PLAIN = { CD: 'DR Congo', CG: 'Republic of the Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' };   // same as src/lib/i18n.ts
+  const urls = [];
+  const write = (path, title, description, opts = {}) => {
+    const url = `${base}/${L}/${path}`;
+    const full = path === '' ? `${site.name}: ${en['title.homeTag']}` : `${title} · ${site.name}`;
+    const desc = clip(description);
+    const head = [
+      `<title>${esc(full)}</title>`,
+      `<meta name="description" content="${esc(desc)}" />`,
+      `<link rel="canonical" href="${esc(url)}" />`,
+      `<meta property="og:site_name" content="${esc(site.name)}" />`,
+      `<meta property="og:type" content="${opts.article ? 'article' : 'website'}" />`,
+      `<meta property="og:title" content="${esc(path === '' ? site.name : title)}" />`,
+      `<meta property="og:description" content="${esc(desc)}" />`,
+      `<meta property="og:url" content="${esc(url)}" />`,
+      `<meta property="og:image" content="${base}/og.png" />`,
+      `<meta property="og:image:width" content="1200" />`, `<meta property="og:image:height" content="630" />`,
+      `<meta property="og:image:alt" content="${esc(site.name)}: official infectious disease reports, with every number traced to its source" />`,
+      `<meta name="twitter:card" content="summary_large_image" />`,
+      ...(path === '' ? [`<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: site.name, url: base + '/', inLanguage: 'en', description: desc })}</script>`] : []),
+    ].join('\n    ');
+    const html = shell.replace(/<title>[\s\S]*?<\/title>\s*/, '').replace(/<meta name="description"[^>]*>\s*/, '').replace('<meta name="referrer"', head + '\n    <meta name="referrer"');
+    if (!html.includes('og:title')) throw new Error('page header could not be written: the app shell changed');
+    const file = path === '' ? join(dist, L, 'index.html') : join(dist, L, path + '.html');
+    mkdirSync(join(file, '..'), { recursive: true });
+    writeFileSync(file, html);
+    urls.push({ url, lastmod: opts.lastmod });
+  };
+  const manifest = J('manifest.json'); const built = manifest.generated_at.slice(0, 10);
+  const lead = (k, fb) => (en[k] ?? fb ?? '').replace(/\{[^}]+\}/g, '').replace(/\s+/g, ' ').trim();
+  write('', site.name, lead('overview.leadShort'), { lastmod: built });
+  const STATIC = [
+    ['outbreaks', en['title.outbreaks'], lead('outbreaks.lead')], ['map', en['title.map'], lead('mappage.lead')], ['diseases', en['title.diseases'], lead('diseases.lead')],
+    ['briefing', en['title.briefing'], 'New and updated official outbreak notices and the largest changes in reported counts, week by week.'],
+    ['changes', en['title.changes'], 'A factual list of what is new in the official reports this week.'], ['compare', en['title.compare'], lead('datecompare.lead')],
+    ['about', en['title.about'], 'What this site is, what it is not, who it is for and how to report an error.'], ['methodology', en['title.methodology'], 'How official reports are collected, checked, combined and presented, with every parameter.'],
+    ['sources', en['title.sources'], 'Every official source this site reads, with its licence and how to cite it.'], ['data-quality', en['title.data-quality'], 'How complete, how fresh and how often revised each dataset is.'],
+    ['reporters-guide', en['title.reporters-guide'], 'How to read and quote reported disease figures without being misled by lag, definitions or missing data.'],
+    ['glossary', en['title.glossary'], 'Plain definitions of the terms used in disease reporting.'], ['researchers', en['title.researchers'], 'Bulk downloads, the data dictionary, notebooks and the analysis workbench.'],
+    ['cite', en['title.cite'], lead('cite.lead')], ['watchlists', en['title.watchlists'], 'Follow chosen diseases and countries, with feeds. Nothing leaves your browser.'],
+    ['status', en['status.title'], 'What was checked and when for every dataset, and the history of updates.'], ['changelog', en['title.changelog'], 'Dated record of corrections and changes to this site.'],
+    ['privacy', en['title.privacy'], lead('policy.privacy.lead')], ['accessibility', en['title.accessibility'], lead('policy.accessibility.lead')],
+    ['corrections', en['title.corrections'], lead('policy.corrections.lead')], ['editorial-standards', en['title.editorial-standards'], lead('policy.editorial-standards.lead')],
+    ['learn', en['title.learn'], 'Interactive lessons and illustrative simulations about how outbreaks grow and how reporting works. Not forecasts.'],
+    ['spread', en['title.spread'], 'A notice-by-notice map of where official reports placed an outbreak over time.'],
+  ];
+  for (const [p, title, d] of STATIC) write(p, title, d, { lastmod: built });
+  const diseases = J('diseases.json').diseases; const dname = Object.fromEntries(diseases.map((d) => [d.id, d.name]));
+  for (const d of diseases) write(`disease/${d.id}`, d.name, d.has_timeseries
+    ? `${d.name}: officially reported figures by country, the latest complete period, outbreak notices and sources.`
+    : `${d.name}: official outbreak notices, grouped into events, with sources.`, { lastmod: built });
+  const places = Object.values(J('places.json').places ?? J('places.json'));
+  const pname = {};
+  for (const p of places) { if (!p.iso3) continue; let n = p.name; try { n = PLAIN[p.iso2] ?? regions.of(p.iso2) ?? p.name; } catch { /* keep the source's name */ } pname[p.iso3] = n; }
+  for (const [iso3, n] of Object.entries(pname)) write(`place/${iso3}`, n, `${n}: officially reported infectious disease figures, how up to date its reporting is, and official outbreak notices that name it.`, { lastmod: built });
+  const where = (cs) => (cs.length ? cs.slice(0, 4).map((c) => pname[c] ?? c).join(', ') + (cs.length > 4 ? ` +${cs.length - 4}` : '') : 'several countries');
+  for (const e of J('events/index.json').events) {
+    const title = `${dname[e.disease] ?? 'Outbreak'} — ${where(e.countries)}`;
+    write(`outbreak/${e.event_id}`, title, `${title}: ${e.n_reports} official notice${e.n_reports === 1 ? '' : 's'} between ${longDate(e.first_report)} and ${longDate(e.last_report)}, with the source of each.`, { article: true, lastmod: e.last_report });
+  }
+  if (existsSync(join(data, 'weekly', 'index.json'))) for (const w of J('weekly/index.json').weeks) {
+    const [y, n] = w.split('-W'); const wk = J(`weekly/${w}.json`);
+    write(`briefing/${w}`, `Week ${parseInt(n, 10)}, ${y}: what official reports said`, `Official outbreak notices and the largest changes in reported counts between ${longDate(wk.from)} and ${longDate(wk.to)}.`, { article: true, lastmod: wk.to });
+  }
+  // ---- sitemap and robots: English pages only; embeds are for framing, not for search results
+  writeFileSync(join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u.url)}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>\n`);
+  writeFileSync(join(dist, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /embed/\n\nSitemap: ${base}/sitemap.xml\n`);
+  // ---- security.txt (RFC 9116) needs a real contact, which only the maintainers can supply (config/site.json)
+  const sec = site.identity?.securityContact ?? '';
+  if (sec) {
+    const expires = new Date(Date.now() + 330 * 86400000).toISOString().slice(0, 19) + 'Z';
+    mkdirSync(join(dist, '.well-known'), { recursive: true });
+    writeFileSync(join(dist, '.well-known', 'security.txt'), `Contact: ${/^(https?:|mailto:)/.test(sec) ? sec : 'mailto:' + sec}\nExpires: ${expires}\nPreferred-Languages: en\nCanonical: ${base}/.well-known/security.txt\n`);
+  } else console.log('[postbuild] no security.txt: identity.securityContact is empty in config/site.json');
+  console.log(`[postbuild] ${urls.length} page headers, sitemap.xml, robots.txt`);
+}
 
 // ---- warm up the connection to the bucket that serves the basemap, so the first map tile does not wait for DNS and TLS
 if (basemap) {

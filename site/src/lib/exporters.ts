@@ -4,6 +4,7 @@
  */
 import { SITE, absoluteUrl } from './app';
 import { snapLabel } from './i18n';
+import { markSvg } from './theme';
 import type { Core } from './data';
 import { deepLink } from './data';
 import { provBlock, suggestedCitation, type Prov } from './prov';
@@ -204,7 +205,8 @@ export function composeExportSVG(inner: { svg?: string; imageHref?: string; widt
   const titleLines = wrap(meta.title, Math.floor(W / 9));
   const foot = [meta.sourceLine, meta.licenseLine + (meta.asOf ? ` · Data as of ${meta.asOf}` : ''), ...(meta.simLine ? [meta.simLine] : []), ...(meta.caveatLine ? [meta.caveatLine] : []), meta.shortUrl].flatMap((l) => wrap(l, Math.floor(W / 6.2)));
   const top = 20 + titleLines.length * 24 + (meta.subtitle ? 20 : 0) + (meta.watermark ? 22 : 0);
-  const H = top + inner.height + 16 + foot.length * 16 + 12;
+  const band = 34;  // brand band under the notes: mark, name and address, the same on every exported image
+  const H = top + inner.height + 16 + foot.length * 16 + 12 + band;
   const font = 'font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"';
   let y = 30;
   let out = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"><title>${esc(meta.title)}</title><desc>${esc(foot.join(' '))}</desc><rect width="${W}" height="${H}" fill="#ffffff"/>`;
@@ -215,6 +217,9 @@ export function composeExportSVG(inner: { svg?: string; imageHref?: string; widt
   else if (inner.imageHref) out += `<image x="16" y="${top}" width="${inner.width}" height="${inner.height}" href="${inner.imageHref}" xlink:href="${inner.imageHref}"/>`;
   let fy = top + inner.height + 22;
   for (const l of foot) { out += `<text x="16" y="${fy}" ${font} font-size="11" fill="#4a5b5f">${esc(l)}</text>`; fy += 16; }
+  const by = H - band;
+  out += `<line x1="16" x2="${W - 16}" y1="${by}" y2="${by}" stroke="#d9e1e3"/>${markSvg(16, by + 8, 18)}<text x="42" y="${by + 22}" ${font} font-size="12.5" font-weight="700" fill="#17272b">${esc(SITE.name)}</text>`
+    + `<text x="${W - 16}" y="${by + 22}" text-anchor="end" ${font} font-size="11.5" fill="#4a5b5f">${esc(meta.asOf ? 'Data as of ' + meta.asOf + ' · ' : '')}${esc(meta.shortUrl)}</text>`;
   return out + '</svg>';
 }
 

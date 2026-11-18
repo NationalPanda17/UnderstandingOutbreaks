@@ -1,10 +1,15 @@
-/* Understanding Outbreaks: calm, light-first, one accent colour, no alarmist reds. System fonts only (no third-party requests). */
+/* Understanding Outbreaks: calm, light-first, one accent colour, no alarmist reds.
+   Typefaces are served by this site itself (no third-party requests): Inter for text and numbers, Source Serif 4 for
+   headings. Both are open-licensed (SIL OFL 1.1) and bundled from npm packages at build time. */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/source-serif-4/wght.css';
 :root {
   --accent: #0b6e75; --accent-ink: #084d52; --accent-soft: #e3f1f2;
   --ink: #17272b; --ink-2: #4a5b5f; --ink-3: #5f6e72; --line: #d9e1e3; --line-2: #eef2f3;
   --bg: #fbfcfc; --card: #ffffff; --note: #f6f3e7; --note-line: #e2d9b5; --sim: #6a3d9a; --sim-soft: #f1eafa;
   --radius: 10px; --shadow: 0 1px 2px rgba(20, 40, 45, .06), 0 2px 8px rgba(20, 40, 45, .04);
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --serif: "Source Serif 4 Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -265,4 +270,49 @@ header.site .strip .asof { white-space: nowrap; font-weight: 600; color: var(--i
 .figures .s { font-size: .9rem; color: var(--ink-2); }
 p, li { overflow-wrap: break-word; }
 @media (max-width: 640px) { h1 { font-size: 1.5rem; } .card { padding: 14px; } .summarylist { font-size: 1rem; } .figures b { font-size: 1.6rem; } }
-.persist .wrap > span:first-child { flex: 1 1 320px; min-width: 0; }
+.persist .wrap > span:first-child:not(.asof) { flex: 1 1 320px; min-width: 0; }
+
+/* ---- identity: heading face, wordmark, numbers ---- */
+body { font-feature-settings: "cv05", "cv08", "ss03"; }
+h1, h2, .placesum-line, .kicker + h1 { font-family: var(--serif); font-weight: 650; letter-spacing: -.005em; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.4rem; }
+.card h2, .panel h2, .card header h2 { font-size: 1.25rem; }
+.lead { font-family: var(--serif); font-size: 1.22rem; line-height: 1.5; }
+.figures b, .kpi, .readouts b, table.data td.n { font-feature-settings: "tnum", "cv05"; }
+.brand { gap: 9px; } .brand svg { width: 28px; height: 28px; flex: none; }
+.wordmark { font-family: var(--serif); font-size: 1.16rem; font-weight: 450; letter-spacing: -.01em; white-space: nowrap; }
+.wordmark .strong { font-weight: 750; }
+.kicker { text-transform: uppercase; letter-spacing: .09em; font-size: .82rem; font-weight: 650; color: var(--accent-ink); margin: 0 0 .3rem; }
+.nowrap { overflow-wrap: anywhere; }
+/* ---- loading placeholders and empty states ---- */
+.skeleton { display: grid; gap: 10px; padding: 8px 0; max-width: 560px; }
+.skeleton .bar { display: block; height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--line-2) 0%, #f7f9f9 50%, var(--line-2) 100%); background-size: 200% 100%; }
+.skeleton .bar.w60 { width: 60%; } .skeleton .bar.w80 { width: 80%; }
+@media (prefers-reduced-motion: no-preference) { .skeleton .bar { animation: shimmer 1.4s linear infinite; } @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } } }
+.empty { color: var(--ink-2); background: var(--line-2); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+/* ---- policy pages, briefing, not found ---- */
+.prose h2 { margin-top: 2rem; } .prose p, .prose li { font-size: 1.05rem; line-height: 1.65; }
+.policynav { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.policynav a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; background: var(--card); }
+.policynav a[aria-current="page"] { background: var(--accent-soft); border-color: #b9dcdf; font-weight: 600; }
+.brieflist { list-style: none; padding: 0; margin: .4rem 0; } .brieflist li { padding: 10px 0; border-bottom: 1px solid var(--line-2); } .brieflist li:last-child { border-bottom: 0; }
+.briefmeta { margin-top: 2.2rem; padding-top: .4rem; border-top: 2px solid var(--ink); }
+.weeks { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; } .weeks a { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; background: var(--card); display: inline-block; }
+.weeks a[aria-current="page"] { background: var(--accent-soft); font-weight: 600; }
+.notfound { max-width: 640px; margin: 6vh auto 0; text-align: start; }
+.nf-code { font-family: var(--serif); font-size: 5rem; line-height: 1; margin: 0; color: var(--ink-3); font-weight: 700; letter-spacing: -.03em; }
+.nf-links { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 10px; } .nf-links a { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; background: var(--card); display: inline-block; }
+footer.site .cols { gap: 8px 28px; }
+/* ---- print: the content, not the controls; every folded explanation opened; links spelled out in the briefing ---- */
+@media print {
+  header.site, footer.site .cols, .persist a, .btnrow, .tools, .detailbar, .search, .policynav, .weeks, .menubtn, .mapswap, .chip .ico, details.more > summary, .skip { display: none !important; }
+  body { background: #fff; font-size: 11pt; } main { padding: 0; } .wrap { max-width: none; padding: 0; }
+  .card { box-shadow: none; break-inside: avoid; border-color: #bbb; } h1, h2, h3 { break-after: avoid; }
+  details.more > .howread-body, details.more > * { display: block !important; } details.more { display: block; }
+  a { color: inherit; text-decoration: none; } .briefing a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; overflow-wrap: anywhere; }
+  .tablewrap { max-height: none; overflow: visible; border: 0; } .grid.side, .grid.two, .grid.three { display: block; } .grid > * { margin-bottom: 12pt; }
+  footer.site { border: 0; padding-top: 8pt; }
+}
+.summarylist q.quote, .brieflist q.quote { display: inline; border: 0; padding: 0; margin: 0; background: none; font-style: normal; font-weight: 600; }
+@media (max-width: 1040px) { .brand { flex: 1 1 0; min-width: 0; } .menubtn { flex: none; margin-inline-start: 0; } }
+@media (max-width: 420px) { .wordmark { font-size: 1.02rem; } .brand svg { width: 24px; height: 24px; } header.site .bar { gap: 8px 10px; } }

@@ -220,6 +220,22 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
         "origin_type": "site-derived", "source_ids": sorted({d["source_id"] for d in load_yaml(CONFIG / "datasets.yaml")["events"]}),
         "snapshot_id": snapshot_id, "generated_at": iso(now), "report_ids": ev_out["known_ids"]})
     summary["changed"] = bool(is_new_snapshot)
+    # ---- update history: one line per run (when it ran, whether it published anything, which sources failed), so
+    # the status page can show that the site is being kept up and what went wrong. Offline rebuilds are not runs.
+    runs: list = read_json(STATE / "run_log.json", [])
+    if not offline:
+        failed_now = [{"dataset_id": k, "error": str(v.get("error") or "")[:300]} for k, v in sorted(status.items())
+                      if v.get("state") == "quarantined" and v.get("last_failure") == iso(now)]
+        runs.append({"at": iso(now), "published": bool(is_new_snapshot), "snapshot_id": snapshot_id if is_new_snapshot else None,
+                     "sources_checked": len(status), "failed": failed_now,
+                     "seconds": int((dt.datetime.now(dt.timezone.utc) - now).total_seconds())})
+        runs = runs[-600:]
+        write_json(STATE / "run_log.json", runs, compact=False)
+    write_json(DATA_OUT / "runs.json", {
+        "origin_type": "site-derived", "source_ids": ["uo_site"], "generated_at": iso(now),
+        "note": "One entry per pipeline run. 'published' is false when nothing had changed, so nothing was published. "
+                "Runs that found nothing new are added to the public list at the next publication.",
+        "runs": runs[-200:]})
     log("done", json.dumps(summary))
     return summary
 

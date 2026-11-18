@@ -508,3 +508,39 @@ describe('home map period note', () => {
     expect(periodNote(ov, null)).toBe('Latest complete period: Aug 2026.');
   });
 });
+
+describe('home summary, update history, weekly briefing, exported images', () => {
+  it('the summary leads with events that name a country, keeping list order otherwise', async () => {
+    const { summaryEvents } = await import('../src/pages/Overview');
+    const ev = (id: string, countries: string[], disease = 'measles') => ({ id, countries, disease, cases: null, counts_suppressed: null });
+    const list = [ev('vague1', []), ev('named1', ['KEN']), ev('other', ['UGA'], 'other'), ev('vague2', []), ev('named2', ['COD', 'UGA']), ev('named3', ['PER'])];
+    expect(summaryEvents(list).map((e) => e.id)).toEqual(['named1', 'named2', 'named3']);
+    expect(summaryEvents(list.slice(0, 3)).map((e) => e.id)).toEqual(['named1', 'vague1', 'other']);
+    expect(summaryEvents([])).toEqual([]);
+  });
+
+  it('the update history summary counts recent runs, publications and runs with a failed source', async () => {
+    const { runSummary } = await import('../src/pages/InfoPages');
+    const now = Date.parse('2026-11-18T12:00:00Z');
+    const run = (at: string, published: boolean, failed: string[] = []) => ({ at, published, snapshot_id: published ? 'S' : null, sources_checked: 19, failed: failed.map((d) => ({ dataset_id: d, error: 'x' })), seconds: 90 });
+    const s = runSummary([run('2026-11-01T05:17:00Z', true), run('2026-11-17T05:17:00Z', true), run('2026-11-17T11:17:00Z', false, ['who_flunet_weekly']), run('2026-11-18T05:17:00Z', false)], now);
+    expect(s).toEqual({ n: 3, published: 1, withFailure: 1, hoursSinceLast: 7 });
+    expect(runSummary([], now)).toEqual({ n: 0, published: 0, withFailure: 0, hoursSinceLast: null });
+  });
+
+  it('a week id reads as a week number and year', async () => {
+    const { weekTitle } = await import('../src/pages/Policies');
+    expect(weekTitle('2026-W47')).toEqual({ n: 47, year: '2026' });
+    expect(weekTitle('2027-W01')).toEqual({ n: 1, year: '2027' });
+  });
+
+  it('every exported image ends with the same band: the mark, the site name, the data date and the address', () => {
+    const svg = composeExportSVG({ svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50"></svg>', width: 700, height: 300 },
+      { title: 'T', sourceLine: 'Source: X', licenseLine: 'License: Y', asOf: '2026-11-18', shortUrl: 'example.org' });
+    const tail = svg.slice(svg.lastIndexOf('<line'));
+    expect(tail).toContain('Understanding Outbreaks');
+    expect(tail).toContain('Data as of 2026-11-18 · example.org');
+    expect(tail).toContain('<rect width="32" height="32"');
+    expect(svg).toContain('Source: X');
+  });
+});

@@ -25,6 +25,24 @@ def ensure_labels(names: set[str]) -> None:
         gh("label", "create", n, "--color", "6b7280", "--description", "Opened by the data pipeline; needs a person")
 
 
+def close_recovered() -> None:
+    """Close a source-failure issue once that source has been read successfully again, with a note saying when.
+
+    Only issues this pipeline opened ("[pipeline] Source failure: <dataset>") are touched, and only when the published
+    data-quality file shows the dataset in good state with a successful read later than the issue.
+    """
+    q = ROOT / "site" / "public" / "data" / "v1" / "quality.json"
+    if not q.exists():
+        return
+    ok = {d["dataset_id"]: d.get("last_success") for d in json.loads(q.read_text())["datasets"] if d.get("state", "ok") == "ok" and d.get("last_success")}
+    prefix = "[pipeline] Source failure: "
+    for i in json.loads(gh("issue", "list", "--state", "open", "--label", "source-failure", "--limit", "100", "--json", "number,title,createdAt")):
+        ds = i["title"][len(prefix):] if i["title"].startswith(prefix) else None
+        if ds in ok and ok[ds] > i["createdAt"]:
+            gh("issue", "close", str(i["number"]), "--reason", "completed", "--comment",
+               f"Recovered: `{ds}` was read successfully again at {ok[ds]}. Closed automatically; a new failure opens a new issue.")
+
+
 def main() -> int:
     dry = "--dry-run" in sys.argv
     d = ROOT / "state" / "issues"
@@ -43,6 +61,8 @@ def main() -> int:
         else:
             gh("issue", "create", "--title", title, "--body", rec["body"], "--label", f"pipeline,{rec['kind']}")
         f.unlink()
+    if not dry:
+        close_recovered()
     print(f"{len(files)} issue request(s) processed" + (" (dry run)" if dry else ""))
     return 0
 

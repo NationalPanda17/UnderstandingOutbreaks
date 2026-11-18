@@ -4,6 +4,7 @@ import { Search } from './Search';
 import { OFFERED, SITE, href, navigate, setParams, storage, type Route } from '../lib/app';
 import type { Core, Disease } from '../lib/data';
 import { date, num, periodLabel, snapLabel, t } from '../lib/i18n';
+import { MARK_PATH } from '../lib/theme';
 import { useApp } from './SourceChip';
 
 const NAV: { path: string; key: string; cls?: string }[] = [
@@ -11,7 +12,7 @@ const NAV: { path: string; key: string; cls?: string }[] = [
   { path: 'outbreaks', key: 'nav.outbreaks' },
   { path: 'map', key: 'nav.map' },
   { path: 'diseases', key: 'nav.diseases' },
-  { path: 'changes', key: 'nav.changes' },
+  { path: 'briefing', key: 'nav.briefing' },
   { path: 'learn', key: 'nav.learn', cls: 'learn' },
 ];
 /** Reference pages, grouped under one "More" menu so the main navigation stays on one row. */
@@ -95,7 +96,7 @@ export function Layout({ children }: { children: any }) {
   const [menu, setMenu] = useState(false);
   useEffect(() => { setMenu(false); }, [route.parts.join('/')]);
   const first = route.parts[0] ?? '';
-  const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && ['outbreak', 'spread'].includes(first)) || (p === 'diseases' && first === 'disease') || (p === 'changes' && first === 'compare') || (p === 'about' && first === 'status') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
+  const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && ['outbreak', 'spread'].includes(first)) || (p === 'diseases' && first === 'disease') || (p === 'briefing' && ['changes', 'compare'].includes(first)) || (p === 'about' && first === 'status') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
   const latest = core.manifest.snapshot_id;
   const pinned = route.snapshot && route.snapshot !== latest ? core.manifest.snapshots.find((s) => s.id === route.snapshot) : null;
   const unknownPin = route.snapshot && !core.manifest.snapshots.some((s) => s.id === route.snapshot);
@@ -105,8 +106,9 @@ export function Layout({ children }: { children: any }) {
       <header class="site">
         <div class="wrap bar">
           <a class="brand" href={href(route, '')} aria-label={SITE.name}>
-            <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="#0b6e75" /><path d="M5 22c4 0 4-12 8-12s4 8 7 8 3-4 7-4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" /></svg>
-            {SITE.name}
+            <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0b6e75" /><path d={MARK_PATH} fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" /><circle cx="27" cy="14" r="2.4" fill="#fff" /></svg>
+            {/* the wordmark: two weights of the heading face, set once here and in exported images */}
+            <span class="wordmark">{SITE.name.split(' ').map((w, i, a) => <span key={w} class={i === a.length - 1 ? 'strong' : undefined}>{w}{i < a.length - 1 ? ' ' : ''}</span>)}</span>
           </a>
           <button type="button" class="menubtn" aria-expanded={menu} aria-controls="main-nav" onClick={() => setMenu(!menu)} data-testid="menu-button">{t('nav.menu')}</button>
           <nav class={'main' + (menu ? ' open' : '')} id="main-nav" aria-label={t('a11y.mainNav')}>
@@ -165,14 +167,21 @@ export function Layout({ children }: { children: any }) {
               <li><a href={href(route, 'researchers')}>{t('nav.researchers')}</a></li>
               <li><a href={href(route, 'cite')}>{t('nav.cite')}</a></li>
               <li><a href={href(route, 'watchlists')}>{t('nav.watchlists')}</a></li>
+              <li><a href={href(route, 'briefing')}>{t('title.briefing')}</a></li>
+            </ul>
+            <ul>
+              <li><a href={href(route, 'privacy')}>{t('title.privacy')}</a></li>
+              <li><a href={href(route, 'accessibility')}>{t('title.accessibility')}</a></li>
+              <li><a href={href(route, 'corrections')}>{t('title.corrections')}</a></li>
+              <li><a href={href(route, 'editorial-standards')}>{t('title.editorial-standards')}</a></li>
+              <li><a href={href(route, 'status')}>{t('status.title')}</a></li>
+              <li><a href={href(route, 'about') + '#contact'}>{t('contact.report')}</a></li>
             </ul>
             <ul>
               <li>{t('footer.licenseCode')}</li>
               <li>{t('footer.licenseContent')}</li>
               <li>{t('footer.licenseData')}</li>
               <li>{t('footer.privacy')}</li>
-              <li><a href={href(route, 'status')}>{t('status.title')}</a></li>
-              <li><a href={href(route, 'about') + '#contact'}>{t('contact.report')}</a></li>
             </ul>
           </div>
           <p class="small" title={latest}>{t('footer.snapshot', { id: snapLabel(latest), date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>
@@ -208,9 +217,12 @@ export function HowToRead({ children }: { children: any }) {
   return <details class="more howread" data-testid="how-to-read"><summary>{t('howread.title')}</summary><div class="howread-body">{children}</div></details>;
 }
 
+/** While data loads: quiet placeholder bars where the content will be, with the words kept for screen readers. */
 export function Loading({ what }: { what?: string }) {
-  return <p class="muted" role="status" aria-live="polite">{what ?? t('state.loading')}</p>;
+  return <div class="skeleton" role="status" aria-live="polite" data-testid="loading"><span class="sr">{what ?? t('state.loading')}</span><span class="bar w60" /><span class="bar" /><span class="bar w80" /></div>;
 }
+/** A section with nothing in it says so the same way everywhere. */
+export function Empty({ children }: { children: any }) { return <p class="empty" data-testid="empty">{children}</p>; }
 export function ErrorBox({ error }: { error: unknown }) {
   return <div class="notice warn" role="alert">{t('state.error')} <code class="small">{String((error as any)?.message ?? error)}</code></div>;
 }

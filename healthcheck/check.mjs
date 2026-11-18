@@ -76,6 +76,30 @@ await check('A chart embed renders', async () => {
   return text.split('\n')[0];
 });
 
+await check('A shared link carries its own title and preview card', async () => {
+  // what a chat app or search engine sees: the raw HTML of a page, before any script runs
+  const r = await ctx.request.get(`${BASE}/en/place/KEN`);
+  if (!r.ok()) throw new Error(`/en/place/KEN returned ${r.status()}`);
+  const html = await r.text();
+  const title = (html.match(/<title>([^<]*)/) ?? [])[1] ?? '';
+  if (!/Kenya/.test(title)) throw new Error(`the page's own title is "${title}"`);
+  if (!/property="og:image"/.test(html) || !/rel="canonical"/.test(html)) throw new Error('preview tags are missing');
+  const img = await ctx.request.get(`${BASE}/og.png`);
+  if (!img.ok() || !/image\/png/.test(img.headers()['content-type'] ?? '')) throw new Error(`og.png returned ${img.status()}`);
+  const map = await ctx.request.get(`${BASE}/sitemap.xml`);
+  if (!map.ok() || !(await map.text()).includes('/en/place/KEN')) throw new Error('sitemap.xml is missing or does not list the page');
+  return title;
+});
+
+await check('The weekly briefing and an unknown address both render', async () => {
+  await page.goto(`${BASE}/en/briefing`, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-testid="briefing"] h1').waitFor({ timeout: 30000 });
+  const h1 = await page.locator('[data-testid="briefing"] h1').innerText();
+  await page.goto(`${BASE}/en/this-page-does-not-exist`, { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-testid="not-found"]').waitFor({ timeout: 30000 });
+  return h1;
+});
+
 await check(`Data was updated in the last ${MAX_DATA_AGE_DAYS} days`, async () => {
   const r = await ctx.request.get(`${BASE}/data/v1/manifest.json`);
   if (!r.ok()) throw new Error(`manifest.json returned ${r.status()}`);

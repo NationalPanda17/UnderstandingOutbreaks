@@ -4,6 +4,7 @@
  * hatched and de-emphasised, and simulated or user-supplied series are dashed and labelled.
  */
 import { scaleLinear, scaleLog } from 'd3-scale';
+import { CHART, FONT } from '../lib/theme';
 import { line as d3line } from 'd3-shape';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { num, periodLabel, smart, t } from '../lib/i18n';
@@ -11,7 +12,7 @@ import type { SeriesData } from '../lib/transforms';
 
 export const PALETTE = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#7a5c00', '#3b3b3b', '#8c6bb1'];
 export const SIM_PALETTE = ['#6a3d9a', '#b15928', '#1b7c8c', '#a6761d', '#7570b3', '#666666'];
-const FONT = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
 
 export interface ChartProps {
   series: SeriesData[];
@@ -143,22 +144,22 @@ export function Chart(props: ChartProps) {
         <defs>
           <pattern id="uo-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f2f2f2" /><line x1="0" y1="0" x2="0" y2="6" stroke="#c9c9c9" stroke-width="2" /></pattern>
         </defs>
-        <rect x="0" y="0" width={W} height={H} fill="#ffffff" />
+        <rect x="0" y="0" width={W} height={H} fill={CHART.paper} />
         {yTicks.map((v) => (
           <g key={'y' + v}>
-            <line x1={M.l} x2={W - M.r} y1={sy(v)} y2={sy(v)} stroke="#e6ecee" stroke-width="1" />
-            <text x={M.l - 6} y={sy(v) + 4} text-anchor="end" font-size="11" fill="#4a5b5f">{smart(v)}</text>
+            <line x1={M.l} x2={W - M.r} y1={sy(v)} y2={sy(v)} stroke={CHART.grid} stroke-width="1" />
+            <text x={M.l - 6} y={sy(v) + 4} text-anchor="end" font-size={CHART.text} fill={CHART.axis}>{smart(v)}</text>
           </g>
         ))}
         {xTicks.map((tk) => (
           <g key={'x' + tk.v}>
-            <line x1={sx(tk.v)} x2={sx(tk.v)} y1={H - M.b} y2={H - M.b + 4} stroke="#9aa8ab" />
-            <text x={sx(tk.v)} y={H - M.b + 16} text-anchor="middle" font-size="11" fill="#4a5b5f">{tk.label}</text>
+            <line x1={sx(tk.v)} x2={sx(tk.v)} y1={H - M.b} y2={H - M.b + 4} stroke={CHART.rule} />
+            <text x={sx(tk.v)} y={H - M.b + 16} text-anchor="middle" font-size={CHART.text} fill={CHART.axis}>{tk.label}</text>
           </g>
         ))}
-        <line x1={M.l} x2={W - M.r} y1={H - M.b} y2={H - M.b} stroke="#9aa8ab" />
-        {yLabel && <text x={12} y={M.t + 2} font-size="11" fill="#4a5b5f" transform={`rotate(-90 12 ${M.t + 2})`} text-anchor="end">{yLabel}</text>}
-        {xLabel && <text x={(W + M.l - M.r) / 2} y={H - 6} font-size="11" fill="#4a5b5f" text-anchor="middle">{xLabel}</text>}
+        <line x1={M.l} x2={W - M.r} y1={H - M.b} y2={H - M.b} stroke={CHART.rule} />
+        {yLabel && <text x={12} y={M.t + 2} font-size={CHART.text} fill={CHART.axis} transform={`rotate(-90 12 ${M.t + 2})`} text-anchor="end">{yLabel}</text>}
+        {xLabel && <text x={(W + M.l - M.r) / 2} y={H - 6} font-size={CHART.text} fill={CHART.axis} text-anchor="middle">{xLabel}</text>}
         {(bands ?? []).map((b, i) => (
           <g key={'b' + i}>
             <rect x={toX(b.x0)} y={M.t} width={Math.max(1, toX(b.x1) - toX(b.x0))} height={H - M.b - M.t} fill="#d9e8f5" opacity="0.55" />
@@ -210,14 +211,14 @@ export function Chart(props: ChartProps) {
           );
         })}
         {(marks ?? []).map((m, i) => (
-          <g key={'m' + i}><line x1={toX(m.x)} x2={toX(m.x)} y1={M.t} y2={H - M.b} stroke="#7a5c00" stroke-dasharray="2 3" />
-            <path d={`M${toX(m.x) - 5},${M.t} l10,0 l-5,7 z`} fill="#7a5c00"><title>{m.label}</title></path></g>
+          <g key={'m' + i}><line x1={toX(m.x)} x2={toX(m.x)} y1={M.t} y2={H - M.b} stroke={CHART.note} stroke-dasharray="2 3" />
+            <path d={`M${toX(m.x) - 5},${M.t} l10,0 l-5,7 z`} fill={CHART.note}><title>{m.label}</title></path></g>
         ))}
         {props.simulated && <text x={W - M.r - 4} y={H - M.b - 6} text-anchor="end" font-size="11" font-weight="700" fill="#6a3d9a" opacity="0.9" letter-spacing="0.5">{t('sim.watermarkShort')}</text>}
         {brush && longest.x.length > 0 && (
           <rect data-noexport x={Math.min(sx(longest.x[brush[0]]), sx(longest.x[brush[1]]))} y={M.t} width={Math.abs(sx(longest.x[brush[1]]) - sx(longest.x[brush[0]]))} height={H - M.b - M.t} fill="#0b6e75" opacity="0.15" />
         )}
-        {hx !== null && <line data-noexport x1={sx(hx)} x2={sx(hx)} y1={M.t} y2={H - M.b} stroke="#17272b" stroke-width="1" opacity="0.5" />}
+        {hx !== null && <line data-noexport x1={sx(hx)} x2={sx(hx)} y1={M.t} y2={H - M.b} stroke={CHART.ink} stroke-width="1" opacity="0.5" />}
       </svg>
       {hx !== null && (
         <div class="tip" role="status" aria-live="polite" style={{ left: `${Math.min(70, Math.max(2, (sx(hx) / W) * 100))}%`, top: '4px' }}>
@@ -259,8 +260,8 @@ export function Sparkline({ p, v, incompleteFrom, label }: { p: string[]; v: (nu
   const end = cut >= 0 ? cut : v.length;
   return (
     <svg class="spark" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
-      <path d={seg(0, end)} fill="none" stroke="#0b6e75" stroke-width="1.5" />
-      {cut > 0 && <path d={seg(cut - 1, v.length)} fill="none" stroke="#9aa8ab" stroke-width="1.2" stroke-dasharray="2 2" />}
+      <path d={seg(0, end)} fill="none" stroke={CHART.accent} stroke-width="1.5" />
+      {cut > 0 && <path d={seg(cut - 1, v.length)} fill="none" stroke={CHART.rule} stroke-width="1.2" stroke-dasharray="2 2" />}
     </svg>
   );
 }

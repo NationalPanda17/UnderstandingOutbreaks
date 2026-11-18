@@ -6,7 +6,7 @@ import { copyText } from '../lib/exporters';
 import { date, hasKey, num, periodLabel, t } from '../lib/i18n';
 import { placeName } from '../lib/series';
 import { EventRow } from '../components/Events';
-import { ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
+import { Empty, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { FlagList } from './Overview';
 
@@ -42,7 +42,7 @@ export function Changes() {
   return (
     <>
       <h1>{t('changes.title')}</h1>
-      <p><a class="btn" href={href(route, 'compare')}>{t('datecompare.open')}</a></p>
+      <p class="btnrow"><a class="btn" href={href(route, 'briefing' + (wk ? '/' + wk : ''))}>{t('title.briefing')}</a><a class="btn" href={href(route, 'compare')}>{t('datecompare.open')}</a></p>
       <p class="lead">{t('changes.lead', { from: date(d.from, 'long'), to: date(d.to, 'long') })}</p>
       <p><SourceChip prov={prov} /> {(idx.data?.weeks.length ?? 0) > 1 && <label class="small">{t('changes.week')} <select value={d.week} onChange={(e) => (window.location.href = href(route, 'changes', { week: (e.target as HTMLSelectElement).value }))}>{idx.data!.weeks.slice().reverse().map((x) => <option key={x} value={x}>{x}</option>)}</select></label>}</p>
       <div class="grid two">
@@ -320,6 +320,54 @@ export function SourceStatus() {
         ))}</tbody>
       </table></div>
       <p class="small muted">{t('status.note')} <a href={href(route, 'data-quality')}>{t('nav.quality')}</a> · <a href={dataUrl('manifest.json')}>manifest.json</a></p>
+      <UpdateHistory />
     </>
+  );
+}
+
+interface Run { at: string; published: boolean; snapshot_id: string | null; sources_checked: number; failed: { dataset_id: string; error: string }[]; seconds: number }
+/** Counts for the summary line: runs in the last `days` days, how many published something, how many had a failed source. */
+export function runSummary(runs: Run[], now: number, days = 7): { n: number; published: number; withFailure: number; hoursSinceLast: number | null } {
+  const recent = runs.filter((r) => now - Date.parse(r.at) <= days * 86400000);
+  const last = runs.length ? Math.max(...runs.map((r) => Date.parse(r.at))) : null;
+  return { n: recent.length, published: recent.filter((r) => r.published).length, withFailure: recent.filter((r) => r.failed.length > 0).length, hoursSinceLast: last === null ? null : Math.max(0, Math.round((now - last) / 3600000)) };
+}
+
+/** When each update ran and what failed, from the pipeline's own run log, plus every data version published. */
+function UpdateHistory() {
+  const { core } = useApp();
+  const log = useAsync(() => getOptional<{ runs: Run[] }>('runs.json'), []);
+  const runs = (log.data?.runs ?? []).slice().reverse();
+  const sum = runSummary(runs, Date.now());
+  const snaps = core.manifest.snapshots.slice().reverse();
+  const when = (iso: string) => `${date(iso)}, ${iso.slice(11, 16)} UTC`;
+  return (
+    <section data-testid="update-history">
+      <h2>{t('runs.title')}</h2>
+      <p>{t('runs.lead')}</p>
+      {log.loading && <Loading />}
+      {!log.loading && runs.length === 0 && <Empty>{t('runs.none')}</Empty>}
+      {runs.length > 0 && (
+        <>
+          <p data-testid="run-summary">{t('runs.summary', { n: sum.n, published: sum.published, failed: sum.withFailure })}{sum.hoursSinceLast !== null && <> {t('runs.last', { h: sum.hoursSinceLast })}</>}</p>
+          <div class="tablewrap" tabIndex={0}><table class="data">
+            <thead><tr><th scope="col">{t('runs.when')}</th><th scope="col">{t('runs.result')}</th><th scope="col">{t('runs.problems')}</th></tr></thead>
+            <tbody>{runs.slice(0, 60).map((r) => (
+              <tr key={r.at}>
+                <th scope="row">{when(r.at)}</th>
+                <td>{r.published ? t('runs.published') : t('runs.unchanged')}</td>
+                <td>{r.failed.length ? r.failed.map((f) => <div key={f.dataset_id}><span class="badge stale">{t('status.quarantined')}</span> <code>{f.dataset_id}</code><div class="small muted">{f.error}</div></div>) : t('runs.noProblems')}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        </>
+      )}
+      <h3>{t('runs.versions', { n: snaps.length })}</h3>
+      <p class="small muted">{t('runs.versionsNote', { date: date(core.manifest.snapshots[0]?.created_at, 'long') })}</p>
+      <div class="tablewrap" tabIndex={0}><table class="data">
+        <thead><tr><th scope="col">{t('runs.version')}</th><th scope="col" class="n">{t('runs.revised')}</th><th scope="col" class="n">{t('runs.new')}</th><th scope="col" class="n">{t('runs.removed')}</th><th scope="col">{t('runs.events')}</th></tr></thead>
+        <tbody>{snaps.slice(0, 60).map((s: any) => <tr key={s.id}><th scope="row">{when(s.created_at)}</th><td class="n">{num(s.n_revised)}</td><td class="n">{num(s.n_new)}</td><td class="n">{num(s.n_removed)}</td><td>{s.events_changed ? t('runs.eventsChanged') : '–'}</td></tr>)}</tbody>
+      </table></div>
+    </section>
   );
 }

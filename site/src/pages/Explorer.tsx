@@ -21,10 +21,10 @@ export function Explorer() {
       <h1>{t('explorer.title')}</h1>
       <p class="lead">{t('explorer.lead')}</p>
       <FirstUse id="explorer-compare" title={t('firstuse.compare.title')}>{t('firstuse.compare.body')}</FirstUse>
-      <div class="tabs" role="tablist">
-        {['timeseries', 'events', 'revisions'].map((x) => <a key={x} role="tab" aria-selected={tab === x} href={href(route, 'explorer', { tab: x === 'timeseries' ? null : x, d: q.get('d'), c: q.get('c') })}>{t('explorer.tab.' + x)}</a>)}
+      <nav class="tabs" aria-label={t('title.explorer')}>
+        {['timeseries', 'events', 'revisions'].map((x) => <a key={x} aria-current={tab === x ? 'page' : undefined} href={href(route, 'explorer', { tab: x === 'timeseries' ? null : x, d: q.get('d'), c: q.get('c') })}>{t('explorer.tab.' + x)}</a>)}
         <a href={href(route, 'workbench')}>{t('workbench.open')} →</a>
-      </div>
+      </nav>
       {tab === 'timeseries' && <TsExplorer />}
       {tab === 'events' && <EventExplorer />}
       {tab === 'revisions' && <RevExplorer />}

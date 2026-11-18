@@ -94,6 +94,9 @@ jobs:
       - name: Nothing changed
         if: env.ALWAYS_DEPLOY != 'true' && steps.pipeline.outputs.changed != 'true'
         run: echo "No new or revised data since the last snapshot. Nothing is rebuilt or deployed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the update history when nothing was published
+        if: env.R2_STATE_BUCKET != '' && env.AWS_ACCESS_KEY_ID != '' && env.ALWAYS_DEPLOY != 'true' && steps.pipeline.outputs.changed != 'true'
+        run: aws s3 cp state/run_log.json "s3://$R2_STATE_BUCKET/state/run_log.json" --endpoint-url "$R2_ENDPOINT" --only-show-errors || true
       - name: Check source links
         if: inputs.linkcheck || github.event.schedule == '23 6 * * 1'
         working-directory: pipeline
@@ -127,7 +130,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4 pages deploy site/dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true
+        # Cloudflare's API occasionally returns a malformed response mid-deploy; the same deploy then succeeds on a retry.
+        run: |
+          for i in 1 2 3; do
+            npx --yes wrangler@4 pages deploy site/dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true && exit 0
+            echo "deploy attempt $i failed; retrying" >&2; sleep $((i * 30))
+          done
+          exit 1
       - name: Start the live-site health check
         if: steps.deploy.outcome == 'success'
         env: { GH_TOKEN: "${{ github.token }}" }

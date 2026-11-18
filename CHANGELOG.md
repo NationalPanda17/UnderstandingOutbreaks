@@ -2,6 +2,28 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-18 — Identity, weekly briefing, policies and update history
+<!-- type: release -->
+- Shared links: every page now has its own title, description and preview card, and the site has a sitemap.
+- Look: a wordmark, the site's own typefaces (Inter and Source Serif 4, served by this site), one style for every
+  chart, and exported images that end with the same band: name, data date and address.
+- New pages: privacy, accessibility, corrections policy and editorial standards, linked from every page's footer,
+  and a designed "page not found" with search.
+- This week in official reports: a one-page briefing for each week at a permanent address (for example
+  /en/briefing/2026-W47), with a ready citation and a print layout.
+- The home summary leads with outbreak events that name a country, and quotes the notice's count where it has one.
+- Status page: an update history showing when each update ran, whether it published anything and which sources
+  could not be read, plus every data version published.
+- Loading placeholders instead of "Loading…", and one style for empty sections.
+
+## 2026-11-18 — Fixes to updates and checks
+<!-- type: pipeline -->
+- The Monday weekly build had been refused by GitHub since its permissions changed; it starts again.
+- A deploy that fails on a malformed answer from the hosting service is retried instead of failing the run.
+- The live-site check retries once before reporting a failure, and a source-failure issue is closed automatically
+  when that source is read successfully again.
+- Dengue: the Philippines' regions are recorded as a different kind of unit from the boundary file's provinces.
+
 ## 2026-11-12 — Clearer pages
 <!-- type: release -->
 - Home page: one sentence, a large "Find a country or disease" box, then a summary in plain sentences built from the

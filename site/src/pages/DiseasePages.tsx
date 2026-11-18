@@ -13,6 +13,7 @@ import { EventRow } from '../components/Events';
 import { useState } from 'preact/hooks';
 import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
+import { NotFound } from './Policies';
 import { WatchButton } from './Watchlists';
 
 export function Diseases() {
@@ -51,7 +52,7 @@ export function DiseasePage({ id }: { id: string }) {
   const regions = useAsync(() => getOptional<{ countries: Record<string, { years: [number, number]; latest_year: number | null; n_matched: number }> }>(`subnational/${id}/index.json`), [id]);
   const [panelOn, setPanelOn] = useState(false);
   const rep = useAsync(() => (d?.has_timeseries ? loadReporting(id) : Promise.resolve(null)), [id]);
-  if (!d) return <ErrorBox error={t('disease.unknown', { id })} />;
+  if (!d) return <NotFound />;
   const name = diseaseName(core, id);
   const mine = (events.data?.events ?? []).filter((e) => e.disease === id).sort((a, b) => (a.last_report < b.last_report ? 1 : -1));
   const o = ov.data;
