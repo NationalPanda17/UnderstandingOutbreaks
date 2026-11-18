@@ -115,7 +115,7 @@ No second-level (district) gazetteer is bundled, so `admin2` precision is never 
 | Source | License recorded | Verification | Raw files redistributed |
 |---|---|---|---|
 | WHO FluNet, mpox, measles, WIISE, GHO | WHO terms of use (attribution) | stated-unverified | **no** (hash + link only) |
-| WHO COVID-19 dashboard data | CC BY 4.0 as stated on data.who.int | stated-unverified (page is rendered by JavaScript) | **no**, until a person confirms |
+| WHO COVID-19 dashboard data | CC BY 4.0 with WHO's additional terms, as stated on data.who.int | verified-live (WHO terms-and-conditions page, read 2026-11-18) | **no**, until a person confirms |
 | WHO Disease Outbreak News | WHO terms; text not redistributed | verified-live (WHO copyright page) | **no** |
 | Our World in Data | CC BY 4.0 | stated-unverified | yes |
 | OpenDengue | CC BY 4.0 as described by the project | stated-unverified (repository has no license file; site is JavaScript-rendered) | **no**, until confirmed |

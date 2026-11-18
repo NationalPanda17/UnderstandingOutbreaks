@@ -27,10 +27,13 @@ sources:
     short_name: WHO COVID-19
     publisher: World Health Organization
     landing_url: https://data.who.int/dashboards/covid19/data
-    license: CC BY 4.0 (as stated on data.who.int)
-    license_url: https://data.who.int/about/data/licensing
-    license_verification: stated-unverified
-    license_checked: "2026-11-09"
+    license: CC BY 4.0, with WHO's additional terms (as stated on data.who.int)
+    # WHO's terms-and-conditions page states the licence for datasets on data.who.int; the COVID-19 data page repeats
+    # it under "Copyright and licensing". The earlier address (/about/data/licensing) no longer exists.
+    license_url: https://data.who.int/about/data/terms-and-conditions
+    license_verification: verified-live
+    license_checked: "2026-11-18"
+    # Raw files stay unpublished until a person has confirmed the terms, whatever the licence statement says.
     redistribute_raw: false
     citation: "World Health Organization. WHO COVID-19 dashboard: COVID-19 cases and deaths. https://data.who.int/dashboards/covid19"
     cadence: weekly
