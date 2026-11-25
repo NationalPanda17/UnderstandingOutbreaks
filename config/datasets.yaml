@@ -330,7 +330,7 @@ events:
     source_id: who_don
     connector: who_don
     raw_ext: json
-    url: "https://www.who.int/api/news/diseaseoutbreaknews?$orderby=PublicationDate%20desc&$select=Id,DonId,Title,OverrideTitle,UseOverrideTitle,PublicationDate,LastModified,UrlName,ItemDefaultUrl,Summary,Overview&$filter=PublicationDate%20ge%20{start}T00:00:00Z"
+    url: "https://www.who.int/api/news/diseaseoutbreaknews?$orderby=PublicationDate%20desc&$select=Id,DonId,Title,OverrideTitle,UseOverrideTitle,PublicationDate,PublicationDateAndTime,LastModified,UrlName,ItemDefaultUrl,Summary,Overview&$filter=PublicationDate%20ge%20{start}T00:00:00Z"
     start: "2022-01-01"
     item_url: "https://www.who.int/emergencies/disease-outbreak-news/item/{UrlName}"
     link_kind: deep
@@ -384,6 +384,19 @@ subnational:
       measles: ["Measles, Imported", "Measles, Indigenous"]
       mpox: ["Mpox"]
       cholera: ["Cholera"]
+  # German federal states: laboratory-confirmed influenza cases per reporting week, from the Robert Koch Institute's
+  # open data (CC BY 4.0). Added up per complete ISO-week year. See pipeline/uo/subnational.py (parse_rki_flu_records).
+  rki_flu_states:
+    id: rki_influenza_states
+    source_id: rki
+    disease: influenza
+    raw_ext: tsv
+    url: "https://raw.githubusercontent.com/robert-koch-institut/Influenzafaelle_in_Deutschland/main/IfSG_Influenzafaelle.tsv"
+    release: "Laborbestätigte Influenzafälle in Deutschland"
+    deep_link: "https://github.com/robert-koch-institut/Influenzafaelle_in_Deutschland"
+    link_kind: dataset-level link
+    refresh_days: 7
+    expected_min_rows: 64
   boundaries_admin1:
     id: ne_admin1_10m
     source_id: naturalearth

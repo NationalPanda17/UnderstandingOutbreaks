@@ -155,6 +155,21 @@ sources:
     citation: "US Centers for Disease Control and Prevention. National Notifiable Diseases Surveillance System, Weekly Tables of Infectious Disease Data. https://www.cdc.gov/nndss/"
     cadence: weekly
     kind: timeseries
+  - id: rki
+    name: Robert Koch Institute, laboratory-confirmed influenza cases in Germany
+    short_name: RKI influenza cases
+    publisher: Robert Koch Institute
+    landing_url: https://github.com/robert-koch-institut/Influenzafaelle_in_Deutschland
+    license: CC BY 4.0
+    # The dataset's own README states: licensed under CC BY 4.0, free to use on condition that the Robert Koch
+    # Institute is named as the source. Read 2026-11-25.
+    license_url: https://github.com/robert-koch-institut/Influenzafaelle_in_Deutschland/blob/main/LICENSE
+    license_verification: verified-live
+    license_checked: "2026-11-25"
+    redistribute_raw: true
+    citation: "Robert Koch-Institut. Laborbestätigte Influenzafälle in Deutschland [Data set]. Zenodo. https://doi.org/10.5281/zenodo.24363949"
+    cadence: weekly
+    kind: timeseries
   - id: ecdc
     name: European Centre for Disease Prevention and Control, epidemiological updates
     short_name: ECDC epidemiological updates

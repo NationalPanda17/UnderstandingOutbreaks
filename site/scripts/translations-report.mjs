@@ -1,5 +1,5 @@
 // Writes TRANSLATIONS.md: review status of every string, per locale, with health-related wording listed first.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 const root = new URL('..', import.meta.url).pathname;
 const site = JSON.parse(readFileSync(root + '../config/site.json', 'utf8'));
 const load = (l) => JSON.parse(readFileSync(`${root}src/i18n/locales/${l}.json`, 'utf8'));
@@ -33,6 +33,7 @@ const L = ['# Translations', '',
   '1. Edit the string in `site/src/i18n/locales/<locale>.json`.',
   '2. Add the key to `site/src/i18n/review-status.json` under the locale, e.g. `{"es": {"footer.positioning": {"status": "reviewed", "by": "native speaker, public health", "date": "YYYY-MM-DD"}}}`.',
   '3. Run `node site/scripts/translations-report.mjs` and `npm run check:i18n`.', '',
+  'A reviewer who prefers a spreadsheet can use a review sheet instead: `node site/scripts/translations-report.mjs --sheets` writes one CSV per language into `translation-review/` (English beside the draft, health wording first). Fill in the last two columns, then `node site/scripts/translation-review-apply.mjs <locale> <file.csv> "<who reviewed>"` applies the sheet and records the review.', '',
   '## Adding a language', '', 'Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one line to `locales` in `config/site.json`. No code changes; right-to-left scripts set `"dir": "rtl"`.', '',
   '## Status summary', '', '| Locale | Language | Status | Strings | Reviewed | Awaiting review |', '|---|---|---|---|---|---|'];
 const detail = [];
@@ -53,3 +54,20 @@ for (const loc of site.locales) {
 }
 writeFileSync(root + '../TRANSLATIONS.md', [...L, ...detail].join('\n') + '\n');
 console.log('wrote TRANSLATIONS.md');
+
+// --sheets: one CSV per language for a reviewer to fill in (English beside the draft, health wording first).
+// The sheets are working files and are not committed; translation-review-apply.mjs reads a completed one back.
+if (process.argv.includes('--sheets')) {
+  const cell = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  mkdirSync(root + '../translation-review', { recursive: true });
+  for (const loc of site.locales) {
+    if (loc.code === site.defaultLocale) continue;
+    const msgs = load(loc.code); const rev = reviewed[loc.code] ?? {};
+    const keys = Object.keys(en).filter((k) => rev[k]?.status !== 'reviewed').sort((a, b) => order.indexOf(groupOf(a)) - order.indexOf(groupOf(b)));
+    const rows = [['Group', 'Key', 'English (source)', `Draft (${loc.code})`, 'OK as it is? (y)', 'Corrected text (leave empty if OK)'],
+      ...keys.map((k) => [groupOf(k), k, en[k], msgs[k] ?? '', '', ''])];
+    // a byte-order mark so that spreadsheet programs read the accents correctly
+    writeFileSync(`${root}../translation-review/${loc.code}.csv`, '\ufeff' + rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n');
+    console.log(`wrote translation-review/${loc.code}.csv (${keys.length} strings awaiting review)`);
+  }
+}

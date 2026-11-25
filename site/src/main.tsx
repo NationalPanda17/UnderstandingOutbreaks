@@ -101,3 +101,9 @@ function App() {
 applyRemembered();
 installLinkHandler();
 render(<App />, document.getElementById('app')!);
+
+// Offline support: pages and data already visited open without a connection (public/sw.js). Built site only, so
+// development always sees fresh files. Nothing is fetched ahead of time and nothing leaves the browser.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => { /* the site works without it */ }); });
+}

@@ -107,6 +107,22 @@ await check('The weekly briefing and an unknown address both render', async () =
   return h1;
 });
 
+await check('A page already opened still opens offline', async () => {
+  await page.goto(`${BASE}/en/glossary`, { waitUntil: 'domcontentloaded' });
+  await page.locator('#automated-reading').waitFor({ timeout: 30000 });
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload({ waitUntil: 'load' });                 // this load goes through the offline helper, which keeps a copy
+  await page.locator('#automated-reading').waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1500);
+  await ctx.setOffline(true);
+  try {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('#automated-reading').waitFor({ timeout: 30000 });
+    await page.locator('[data-testid="offline-banner"]').waitFor({ timeout: 10000 });
+  } finally { await ctx.setOffline(false); }
+  return 'glossary opened with the network off, with the offline notice';
+});
+
 await check(`Data was updated in the last ${MAX_DATA_AGE_DAYS} days`, async () => {
   const r = await ctx.request.get(`${BASE}/data/v1/manifest.json`);
   if (!r.ok()) throw new Error(`manifest.json returned ${r.status()}`);

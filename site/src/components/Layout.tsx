@@ -95,6 +95,13 @@ export function Layout({ children }: { children: any }) {
   const { route, core } = useApp();
   const [menu, setMenu] = useState(false);
   useEffect(() => { setMenu(false); }, [route.parts.join('/')]);
+  // Without a connection, pages come from the copy this browser saved on an earlier visit: say so.
+  const [offline, setOffline] = useState(typeof navigator !== 'undefined' && navigator.onLine === false);
+  useEffect(() => {
+    const on = () => setOffline(false), off = () => setOffline(true);
+    window.addEventListener('online', on); window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
   const first = route.parts[0] ?? '';
   const isCurrent = (p: string) => (p === '' ? first === '' : first === p || (p === 'outbreaks' && ['outbreak', 'spread'].includes(first)) || (p === 'diseases' && first === 'disease') || (p === 'briefing' && ['changes', 'compare'].includes(first)) || (p === 'about' && first === 'status') || (p === 'researchers' && ['explorer', 'workbench', 'cite', 'api'].includes(first)));
   const latest = core.manifest.snapshot_id;
@@ -135,6 +142,7 @@ export function Layout({ children }: { children: any }) {
       </div></aside>
       <main id="main" tabIndex={-1}>
         <div class="wrap">
+          {offline && <div class="notice" role="status" data-testid="offline-banner">{t('offline.banner')}</div>}
           {pinned && (
             <div class="notice pin" role="status" data-testid="pinned-banner">
               {t('pin.banner', { date: date(pinned.created_at, 'long'), id: snapLabel(pinned.id) })}{' '}

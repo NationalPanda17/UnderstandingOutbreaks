@@ -1,0 +1,19 @@
+{
+  "method.rki_state_calendar_year": "Pour chaque Land allemand et chaque année, les cas de grippe confirmés en laboratoire notifiés chaque semaine de déclaration ont été additionnés. Le fichier ne contient pas de ligne pour les semaines sans cas. Seules les années complètes sont affichées. Les chiffres dépendent du nombre de tests réalisés.",
+  "glossary.provisional.term": "Provisoire",
+  "glossary.provisional.def": "Un chiffre que la source a publié avant d’avoir fini de vérifier et de rassembler les déclarations. Les chiffres provisoires sont généralement révisés, parfois fortement. Ce site les affiche tels que publiés et conserve chaque révision ultérieure.",
+  "glossary.cumulative.term": "Cumulé",
+  "glossary.cumulative.def": "Un total cumulé depuis un début indiqué, comme le début de l’année ou d’une flambée. Un chiffre cumulé ne fait que croître ou être corrigé ; il ne dit pas combien de cas sont récents.",
+  "glossary.laboratory-confirmed.term": "Confirmé en laboratoire",
+  "glossary.laboratory-confirmed.def": "Un cas pour lequel un test de laboratoire a trouvé l’agent pathogène. Le nombre de cas confirmés en laboratoire dépend du nombre de personnes testées : il augmente quand les tests augmentent.",
+  "glossary.automated-reading.term": "Lecture automatique",
+  "glossary.automated-reading.def": "Un nombre que le programme de ce site a lu dans le texte d’un avis officiel, par exemple « 12 cas confirmés ». Il est affiché avec les mots de l’avis et un lien, et signalé comme automatique tant qu’une personne ne l’a pas comparé à l’avis.",
+  "withdrawn.title": "Cette page de flambée a été retirée",
+  "withdrawn.lead": "Cette adresse affichait une page de flambée qui n’est plus publiée. Elle a été publiée pour la dernière fois avec les données du {date}.",
+  "withdrawn.why": "Une page est retirée lorsque les avis dont elle était tirée s’avèrent ne pas avoir leur place sur le site, par exemple un avis d’archive qu’une source a réémis sous une nouvelle date. Chaque retrait est consigné dans le registre des corrections.",
+  "withdrawn.log": "Lire le registre des corrections",
+  "withdrawn.all": "Voir les flambées en cours",
+  "offline.banner": "Vous êtes hors connexion. Cette page et ses chiffres ont été enregistrés sur cet appareil lors d’une visite précédente et peuvent ne plus être à jour.",
+  "policy.privacy.device.p3": "Pour que les pages déjà consultées s’ouvrent sans connexion, votre navigateur en garde une copie, ainsi que de leurs fichiers de données, sur votre appareil. Cette copie n’est jamais envoyée où que ce soit, et effacer les données du site dans votre navigateur la supprime.",
+  "glossary.what": "ce que cela signifie"
+}

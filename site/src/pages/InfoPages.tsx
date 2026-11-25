@@ -165,7 +165,7 @@ export function About() {
   );
 }
 
-export const GLOSSARY = ['case-definition', 'confirmed', 'probable', 'suspected', 'notified', 'incidence', 'per-capita', 'reporting-lag', 'incomplete', 'revision', 'snapshot', 'undercounting', 'surveillance', 'sentinel', 'percent-positive', 'epi-curve', 'rolling-average', 'log-scale', 'signal-flag', 'baseline', 'origin-type', 'lineage', 'r0', 'herd-immunity', 'simulation'];
+export const GLOSSARY = ['case-definition', 'confirmed', 'laboratory-confirmed', 'probable', 'suspected', 'notified', 'provisional', 'cumulative', 'automated-reading', 'incidence', 'per-capita', 'reporting-lag', 'incomplete', 'revision', 'snapshot', 'undercounting', 'surveillance', 'sentinel', 'percent-positive', 'epi-curve', 'rolling-average', 'log-scale', 'signal-flag', 'baseline', 'origin-type', 'lineage', 'r0', 'herd-immunity', 'simulation'];
 export function GlossaryPage() {
   return (
     <div class="prose">

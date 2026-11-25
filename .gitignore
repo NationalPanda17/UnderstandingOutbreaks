@@ -15,3 +15,4 @@ site/public/notebooks/
 .claude/
 healthcheck/node_modules/
 healthcheck/health-report.md
+translation-review/

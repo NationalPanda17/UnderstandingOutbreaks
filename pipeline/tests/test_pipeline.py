@@ -446,6 +446,60 @@ def test_who_don_and_cdc_parsers():
         E.parse_cdc_travel({"id": "x", "source_id": "cdc_travel"}, b"<html></html>", "f")
 
 
+def test_who_don_uses_the_date_a_notice_was_first_published():
+    """WHO re-issued its archive under new dates: a notice from 2000 must never appear as one from 2024."""
+    ds = {"id": "who_don_api", "source_id": "who_don", "item_url": "{UrlName}"}
+    row = {"Title": "Yellow fever - Brazil", "LastModified": "", "Summary": "", "Overview": ""}
+    don = {"value": [{**row, "DonId": "2000DON213", "UrlName": "2000DON213", "PublicationDate": "2024-03-14T09:43:15Z", "PublicationDateAndTime": "2000-01-24T11:00:00Z"},
+                     {**row, "DonId": "2026-DON625", "UrlName": "2026-DON625", "PublicationDate": "2026-11-06T17:27:28Z", "PublicationDateAndTime": "2026-11-06T17:27:00Z"},
+                     {**row, "DonId": "2026-DON626", "UrlName": "2026-DON626", "PublicationDate": "2026-11-07T10:00:00Z"}]}
+    old, new, undated = E.parse_who_don(ds, json.dumps(don).encode(), "f")
+    assert old["published"] == "2000-01-24" and old["reissued"] == "2024-03-14"
+    assert new["published"] == "2026-11-06" and "reissued" not in new and undated["published"] == "2026-11-07"
+    cfg = next(d for d in core.load_yaml(core.CONFIG / "datasets.yaml")["events"] if d["id"] == "who_don_api")
+    assert "PublicationDateAndTime" in cfg["url"] and "Epidemiology" not in cfg["url"] and cfg["start"] > old["published"]
+
+
+def test_table_images_are_listed_and_never_read():
+    markup = ('<p>Text</p><img src="https://cdn.who.int/x/table-1.-diphtheria.jpg?v=1" title="Table 1. Diphtheria" alt="a">'
+              '<img src="https://cdn.who.int/x/figure-2.png" alt="Epidemic curve"><img src="https://cdn.who.int/x/hantavirus_table.png">')
+    got = E.table_images(markup)
+    assert [g["label"] for g in got] == ["Table 1. Diphtheria", ""] and got[1]["src"].endswith("hantavirus_table.png")
+    assert E.table_images("") == [] and E.table_images('<img src="https://cdn.who.int/x/vegetable.png" alt="Market">') == []
+
+
+def test_count_review_queue_lists_tables_and_unreviewed_readings():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("queue", core.ROOT / "scripts" / "count_review_queue.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    rep = {"report_id": "who_don:1", "title": "Cholera - A and B", "url": "https://example.invalid/1", "published": "2026-01-02", "countries": ["KEN", "BDI"],
+           "counts": {"cases": {"value": 10, "quote": "10 cases"}, "deaths": {"value": 1, "quote": "1 deaths", "review": {"action": "confirmed"}}},
+           "country_counts": {"KEN": {"cases": {"value": 7, "quote": "a total of 7 cases in Kenya"}}},
+           "table_images": [{"label": "Table 1", "src": "https://example.invalid/t.png"}]}
+    tables, readings = mod.queue([{"event_id": "e", "reports": [rep]}])
+    assert len(tables) == 1 and [(r["field"], r["country"], r["value"]) for r in readings] == [("cases", None, 10), ("cases", "KEN", 7)]
+    text = mod.render(tables, readings)
+    assert "report_id: who_don:1" in text and "country: KEN" in text and "| cases | KEN | 7 |" in text
+
+
+def test_rki_state_years_are_complete_years_only():
+    from uo import subnational as SN
+    head = "Meldewoche\tRegion\tRegion_Id\tAltersgruppe\tFallzahl\tInzidenz\n"
+    lines = []
+    for w in range(1, 53):  # 2024 has 52 ISO weeks; the national row is there every week
+        lines.append(f"2024-W{w:02d}\tDeutschland\t00\t00+\t10\t0.1")
+        if w <= 3:  # Bremen has no row in most weeks: no cases were notified there
+            lines += [f"2024-W{w:02d}\tBremen\t04\t00+\t2\t0.3", f"2024-W{w:02d}\tBremen\t04\t00-14\t1\t0.3"]
+    lines += ["2023-W01\tDeutschland\t00\t00+\t5\t0.1", "2023-W01\tBremen\t04\t00+\t5\t0.1",   # 2023: the file does not cover the year
+              "2026-W01\tBremen\t04\t00+\t9\t0.1", "2024-W02\tunbekannt\tNA\t00+\t4\tNA"]
+    df = SN.parse_rki_flu_records(("\ufeff" + head + "\n".join(lines)).encode(), dt.date(2026, 11, 25))
+    assert df.to_dict("records") == [{"iso3": "DEU", "name": "Bremen", "year": 2024, "value": 6.0, "ptype": "W",
+                                      "detail": "laboratory-confirmed cases notified in reporting weeks 1 to 52, all ages"}]
+    with pytest.raises(SchemaChange):
+        SN.parse_rki_flu_records(b"a\tb\n1\t2\n", dt.date(2026, 1, 1))
+
+
 # ----------------------------------------------------------------------------- failures become issues (never pull requests)
 
 def test_source_failure_writes_an_issue_with_last_good_snapshot_and_schema_diff(tmp_path, monkeypatch):

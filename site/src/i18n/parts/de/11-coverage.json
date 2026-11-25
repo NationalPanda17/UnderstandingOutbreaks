@@ -1,0 +1,19 @@
+{
+  "method.rki_state_calendar_year": "Für jedes deutsche Bundesland und Jahr wurden die in jeder Meldewoche gemeldeten laborbestätigten Influenzafälle addiert. Die Datei enthält keine Zeilen für Wochen ohne Fälle. Es werden nur vollständige Jahre gezeigt. Die Zahlen hängen davon ab, wie viel getestet wird.",
+  "glossary.provisional.term": "Vorläufig",
+  "glossary.provisional.def": "Eine Zahl, die die Quelle veröffentlicht hat, bevor sie alle Meldungen geprüft und gesammelt hatte. Vorläufige Zahlen werden meist revidiert, manchmal stark. Diese Website zeigt sie wie veröffentlicht und bewahrt jede spätere Revision auf.",
+  "glossary.cumulative.term": "Kumuliert",
+  "glossary.cumulative.def": "Eine laufende Summe seit einem genannten Beginn, etwa dem Jahresanfang oder dem Beginn eines Ausbruchs. Eine kumulierte Zahl wächst nur oder wird korrigiert; sie sagt nicht, wie viele Fälle neu sind.",
+  "glossary.laboratory-confirmed.term": "Laborbestätigt",
+  "glossary.laboratory-confirmed.def": "Ein Fall, bei dem ein Labortest den Erreger nachgewiesen hat. Die Zahl laborbestätigter Fälle hängt davon ab, wie viele Menschen getestet werden; sie steigt, wenn mehr getestet wird.",
+  "glossary.automated-reading.term": "Automatische Lesung",
+  "glossary.automated-reading.def": "Eine Zahl, die das Programm dieser Website aus dem Text einer amtlichen Meldung gelesen hat, etwa „12 bestätigte Fälle“. Sie wird mit dem Wortlaut der Meldung und einem Link gezeigt und als automatisch gekennzeichnet, bis ein Mensch sie mit der Meldung verglichen hat.",
+  "withdrawn.title": "Diese Ausbruchsseite wurde zurückgezogen",
+  "withdrawn.lead": "Unter dieser Adresse stand eine Ausbruchsseite, die nicht mehr veröffentlicht wird. Zuletzt erschien sie mit den Daten vom {date}.",
+  "withdrawn.why": "Seiten werden zurückgezogen, wenn sich herausstellt, dass die zugrunde liegenden Meldungen nicht auf die Website gehören, etwa eine Archivmeldung, die eine Quelle unter neuem Datum erneut herausgegeben hat. Jede Zurückziehung wird im Korrekturprotokoll festgehalten.",
+  "withdrawn.log": "Korrekturprotokoll lesen",
+  "withdrawn.all": "Aktuelle Ausbrüche ansehen",
+  "offline.banner": "Sie sind offline. Diese Seite und ihre Zahlen wurden bei einem früheren Besuch auf diesem Gerät gespeichert und sind möglicherweise nicht aktuell.",
+  "policy.privacy.device.p3": "Damit bereits besuchte Seiten ohne Verbindung geöffnet werden können, behält Ihr Browser eine Kopie davon und von ihren Datendateien auf Ihrem Gerät. Die Kopie wird nirgendwohin gesendet; wenn Sie die Daten der Website im Browser löschen, wird sie entfernt.",
+  "glossary.what": "was das bedeutet"
+}

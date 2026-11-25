@@ -1,0 +1,19 @@
+{
+  "method.rki_state_calendar_year": "For each German federal state and year, the laboratory-confirmed influenza cases notified in each reporting week were added up. The file has no rows for weeks without cases. Only complete years are shown. Counts depend on how much testing is done.",
+  "glossary.provisional.term": "Provisional",
+  "glossary.provisional.def": "A figure the source published before it finished checking and collecting reports. Provisional figures are usually revised, sometimes by a lot. This site shows them as published and keeps every later revision.",
+  "glossary.cumulative.term": "Cumulative",
+  "glossary.cumulative.def": "A running total since a stated start, such as the start of the year or of an outbreak. A cumulative figure only grows or is corrected; it does not say how many cases are recent.",
+  "glossary.laboratory-confirmed.term": "Laboratory-confirmed",
+  "glossary.laboratory-confirmed.def": "A case in which a laboratory test found the pathogen. Counts of laboratory-confirmed cases depend on how many people are tested, so they rise when testing rises.",
+  "glossary.automated-reading.term": "Automated reading",
+  "glossary.automated-reading.def": "A number this site’s program read from the text of an official notice, such as “12 confirmed cases”. It is shown with the notice’s own words and a link, and is labelled as automated until a person has compared it with the notice.",
+  "withdrawn.title": "This outbreak page was withdrawn",
+  "withdrawn.lead": "This address showed an outbreak page that is no longer published. It was last published in the data of {date}.",
+  "withdrawn.why": "Pages are withdrawn when the notices they were built from turn out not to belong on the site, for example an archive notice that a source re-issued under a new date. Every withdrawal is recorded in the corrections log.",
+  "withdrawn.log": "Read the corrections log",
+  "withdrawn.all": "See current outbreaks",
+  "offline.banner": "You are offline. This page and its figures were saved on this device during an earlier visit and may be out of date.",
+  "policy.privacy.device.p3": "So that pages you have already visited open without a connection, your browser keeps a copy of them and of their data files on your device. The copy is never sent anywhere, and clearing the site’s data in your browser removes it.",
+  "glossary.what": "what this means"
+}

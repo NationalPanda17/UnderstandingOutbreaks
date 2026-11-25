@@ -2,6 +2,24 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-25 — Correct notice dates, German states, offline reading, review tools
+<!-- type: release -->
+- Correction: WHO notices are dated by when they were first published, not by a later re-issue. 299 archive
+  notices from 1998 to 2021 are no longer shown as recent, and 128 outbreak pages built from them were withdrawn
+  (see the corrections log). A withdrawn page's address now says so.
+- Germany by federal state: laboratory-confirmed influenza cases per complete year, from the Robert Koch
+  Institute's open data (CC BY 4.0).
+- Offline reading: pages and data a browser has already opened are kept on that device and open again without a
+  connection, with a notice that they may be out of date. Nothing is fetched ahead of time or sent anywhere.
+- Glossary: provisional, cumulative, laboratory-confirmed and automated reading added; the outbreak page links the
+  case definition and the "automated" label to their entries.
+- For maintainers: `scripts/count_review_queue.py` lists the notices whose tables are published as pictures and
+  every automated reading nobody has checked, with entries ready for `config/count_reviews.yaml`.
+  `translations-report.mjs --sheets` writes a review sheet per language and `translation-review-apply.mjs` applies
+  a completed one. `docs/READER_TEST.md` is a script for testing the site with three readers.
+- Not done, and why: tables in notices are pictures, which the site does not read; WHO's "Epidemiology" field was
+  tried as a source of counts and rejected because it describes the disease in general, not the event.
+
 ## 2026-11-25 — Context, story kits, US states, dark appearance
 <!-- type: release -->
 - Context for the headline figure: disease pages show the same week (or month) in each of the last five years, with

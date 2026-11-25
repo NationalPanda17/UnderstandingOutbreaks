@@ -33,6 +33,8 @@ METHOD = {"name": "dengue_admin1_annual", "version": "1"}
 NNDSS_METHOD = {"name": "nndss_state_year_end", "version": "1", "new_york": "state = New York + New York City"}
 # Flags in the weekly tables: "-" is "no reported cases" (a zero). Every other flag means no figure is available.
 NNDSS_ZERO_FLAGS = {"-"}
+RKI_METHOD = {"name": "rki_state_calendar_year", "version": "1", "age_group": "00+", "year": "ISO-week year, complete years only"}
+RKI_ALL_AGES, RKI_NATIONAL_ID = "00+", "00"
 NYC, NY_REST = "New York City", "New York"
 NAME_FIELDS = ("name", "name_alt", "name_local", "gn_name", "woe_name", "name_en", "gns_name", "abbrev", "postal")
 GENERIC = r"\b(province|state|region|department|departamento|provincia|estado|prefecture|governorate|district|city|municipality|of|de|del|la|el)\b"
@@ -154,6 +156,47 @@ def parse_nndss_records(content: bytes, today: dt.date, labels: list[str]) -> pd
     for (name, year), rest in sorted(by.items()):
         if name == NY_REST and (NYC, year) in by:
             out.append({**rest, "value": rest["value"] + by[(NYC, year)]["value"], "detail": rest["detail"] + "; New York City, reported separately, is included"})
+    return pd.DataFrame(out, columns=["iso3", "name", "year", "value", "ptype", "detail"])
+
+
+def parse_rki_flu_records(content: bytes, today: dt.date) -> pd.DataFrame:
+    """One value per (German federal state, year): laboratory-confirmed influenza cases notified in that year.
+
+    The file gives cases per reporting week (ISO 8601), state and age group. The row for all ages (``00+``) is added
+    up over the weeks of each ISO-week year. The file has no rows with zero cases: a week without a row for a state is
+    a week in which no case was notified there. A year is used only when the national row is present for every one
+    of its weeks, which shows the file covers that year in full; the national row itself is not published here, and
+    the current year is left out, so a partial year is never shown as a total.
+    """
+    import csv
+    rows = list(csv.DictReader(io.StringIO(content.decode("utf-8-sig")), delimiter="\t"))
+    need = {"Meldewoche", "Region", "Region_Id", "Altersgruppe", "Fallzahl"}
+    if not rows or not need <= set(rows[0]):
+        raise SchemaChange("RKI influenza cases: expected columns Meldewoche, Region, Region_Id, Altersgruppe, Fallzahl",
+                           expected=sorted(need), found=sorted(rows[0]) if rows else [])
+    recs, national = [], {}
+    for r in rows:
+        if r["Altersgruppe"] != RKI_ALL_AGES or r["Region_Id"] in ("NA", ""):
+            continue
+        m = re.fullmatch(r"(\d{4})-W(\d{2})", r["Meldewoche"].strip())
+        if not m:
+            raise SchemaChange(f"RKI influenza cases: unreadable week {r['Meldewoche']!r}")
+        year, week = int(m.group(1)), int(m.group(2))
+        if year >= today.year:
+            continue
+        if r["Region_Id"] == RKI_NATIONAL_ID:
+            national.setdefault(year, set()).add(week)
+        else:
+            recs.append({"name": r["Region"].strip(), "year": year, "week": week, "value": float(r["Fallzahl"])})
+    full = {y for y, weeks in national.items() if weeks == set(range(1, dt.date(y, 12, 28).isocalendar()[1] + 1))}
+    df = pd.DataFrame(recs, columns=["name", "year", "week", "value"])
+    out = []
+    for (name, year), g in df.groupby(["name", "year"], sort=True):
+        if int(year) not in full or g["week"].duplicated().any():
+            continue
+        weeks = dt.date(int(year), 12, 28).isocalendar()[1]
+        out.append({"iso3": "DEU", "name": name, "year": int(year), "value": float(g["value"].sum()), "ptype": "W",
+                    "detail": f"laboratory-confirmed cases notified in reporting weeks 1 to {weeks}, all ages"})
     return pd.DataFrame(out, columns=["iso3", "name", "year", "value", "ptype", "detail"])
 
 
@@ -377,6 +420,49 @@ def _nndss_products(cfg: dict, registry: dict, offline: bool, now: dt.datetime, 
         return (cached or {}).get("products", {})
 
 
+def _rki_products(cfg: dict, registry: dict, offline: bool, now: dt.datetime, load, save, log, f_shape: Fetch, aliases: dict, reviewed: set) -> dict:
+    """Influenza by German federal state, from the Robert Koch Institute's open data. A failure here never affects
+    the other products: the last derived product is reused if there is one, and an issue is recorded."""
+    ds = cfg.get("rki_flu_states")
+    if not ds:
+        return {}
+    cache_path = STATE / "subnational" / "rki_flu_states.json"
+    cached = read_json(cache_path)
+    try:
+        f = _fetch(ds, registry, offline, now, load, save)
+        if f is None:
+            return (cached or {}).get("products", {})
+        key = {"data": f.raw_file_hash, "shapes": f_shape.raw_file_hash, "method": RKI_METHOD, "aliases": aliases, "year": now.year}
+        if cached and cached.get("key") == key:
+            return cached["products"]
+        log("subnational: deriving influenza by German federal state")
+        records = parse_rki_flu_records(open(f.raw_path, "rb").read(), now.date())
+        if len(records) < int(ds.get("expected_min_rows", 1)):
+            raise SchemaChange(f"RKI influenza cases: only {len(records)} state-years derived")
+        shapes = [s for s in read_admin1_shapes(open(f_shape.raw_path, "rb").read()) if s["iso3"] == "DEU"]
+        prod = build_dengue_product(records, shapes, aliases)
+        pending = [u for u in prod["unmatched"] if u not in reviewed]
+        if pending:
+            record_issue("unmatched-region", "German federal states without a matching boundary",
+                         "These names in the RKI influenza file did not match exactly one Natural Earth region of Germany, so they "
+                         "are listed in the published tables but not drawn on maps. Add a reviewed mapping to "
+                         "`config/admin1_aliases.yaml` (never guessed automatically):\n\n" + "\n".join(f"- {u}" for u in sorted(set(pending))),
+                         source_id=ds["source_id"], dedupe_key="unmatched-de-states")
+        products = {ds["disease"]: {**prod, "method": RKI_METHOD, "source_ids": [ds["source_id"], "naturalearth"],
+                                    "fetches": {"data": f.public(), "boundaries": f_shape.public()}, "release": ds.get("release"),
+                                    "deep_link": ds.get("deep_link"), "generated_at": iso(now),
+                                    "note": "Robert Koch Institute. Laboratory-confirmed influenza cases notified under the German Infection Protection Act, "
+                                            "added up over the reporting weeks of each complete year. Counts depend on how much testing is done."}}
+        write_json(cache_path, {"key": key, "products": products})
+        return products
+    except Exception as e:  # noqa: BLE001 - never take the other products or the rest of the site down
+        log("subnational (RKI) failed:", type(e).__name__, e)
+        record_issue("source-failure", "German state influenza figures could not be built",
+                     f"**Error:** {type(e).__name__}: {e}\n\n**Effect:** the last derived figures stay live. "
+                     "Nothing was changed automatically; a person needs to review.", source_id=ds.get("source_id"), dedupe_key="subnational-rki")
+        return (cached or {}).get("products", {})
+
+
 def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dict | None:
     """Fetch (or reuse), derive (or reuse the cached derivation) and return the product, or None on failure.
 
@@ -419,6 +505,7 @@ def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dic
                           "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
                           "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}}
         out.update(_nndss_products(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
+        out.update(_rki_products(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
         return out
     except Exception as e:  # noqa: BLE001 - any failure here must not take the rest of the site down
         log("subnational failed:", type(e).__name__, e)

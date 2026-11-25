@@ -150,6 +150,12 @@ miss real changes. Annual series are not flagged. Parameters are published in `/
 
 - **Disease normalization:** a declarative alias table; the longest alias wins; unmatched names go to "Other /
   unclassified" and into an issue request. Nothing is guessed.
+- **Date of a notice:** the date it was first published. WHO's feed carries two dates; `PublicationDate` was reset
+  when WHO re-issued its archive, so `PublicationDateAndTime` is used. Notices first published before 1 January
+  2022 are not shown.
+- **Tables:** many notices give per-country figures in a table published as a picture. Pictures are never read.
+  They are listed, with every automated reading nobody has checked, by `scripts/count_review_queue.py`, so that a
+  person can record the figures in `config/count_reviews.yaml`.
 - **Grouping** (`group_by_disease_place_gap` v1): same disease, at least one common country (or neither names one),
   at most 120 days apart. A notice that matches two open groups joins them. Event ids persist between runs.
 - **Counts** (`regex_count_extraction` v1): the first stated case and death counts in the notice text, with the exact
@@ -187,6 +193,12 @@ first-level region, for the countries where OpenDengue reports at that level.
   "-" in the table is a zero; any other flag means no figure. Measles is the sum of imported and indigenous cases,
   and only when both have a figure. New York State is the sum of the "New York" and "New York City" rows, which the
   source reports separately. Territories are listed but not drawn.
+- **Germany by federal state.** For influenza, the value for a state and year is the sum, over the reporting weeks
+  of that ISO-week year, of laboratory-confirmed cases notified under the German Infection Protection Act, all
+  ages, from the Robert Koch Institute's open data file. The file has no rows with zero cases, so a week without a
+  row for a state is a week without notified cases there; this was checked by adding up the states, which equals
+  the national row for every complete year. A year is used only when the national row is present for each of its
+  weeks, and the current year is never used. Counts of confirmed cases depend on how much testing is done.
 - **Unmatched names** stay in the published table, marked as not on the map, and are listed in a GitHub issue.
 - **Two names for one region.** If two source names match the same region and both report the same year, the
   region is left off the map for that year and the table says so; the values are never added together.

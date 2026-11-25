@@ -66,6 +66,26 @@ def fold(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+IMG_RX = re.compile(r"<img\b[^>]*>", re.I)
+ATTR_RX = re.compile(r'\b(src|title|alt)\s*=\s*"([^"]*)"', re.I)
+
+
+def table_images(markup: str) -> list[dict]:
+    """Images in a notice that the source itself labels as a table (in the title, alt text or file name).
+
+    Many notices publish their per-country figures as a picture of a table. The site never reads pictures: it lists
+    them so that a person can read them and record the figures in ``config/count_reviews.yaml``.
+    """
+    out = []
+    for tag in IMG_RX.findall(markup or ""):
+        attrs = {k.lower(): html.unescape(v) for k, v in ATTR_RX.findall(tag)}
+        label = attrs.get("title") or attrs.get("alt") or ""
+        name = attrs.get("src", "").split("?")[0].rsplit("/", 1)[-1]
+        if re.search(r"\btable\b", label, re.I) or re.search(r"(^|[-_.])table([-_.\d]|$)", name, re.I):
+            out.append({"label": label.strip()[:160], "src": attrs.get("src", "")})
+    return out
+
+
 # ----------------------------------------------------------------------------- connectors
 
 def fetch_who_don(ds: dict, registry: dict) -> list[Fetch]:
@@ -98,11 +118,20 @@ def parse_who_don(ds: dict, content: bytes, fetch_id: str) -> list[dict]:
         if missing:
             raise SchemaChange("WHO DON: fields missing", expected=need, found=list(r))
         title = (r.get("OverrideTitle") if r.get("UseOverrideTitle") and r.get("OverrideTitle") else r["Title"]) or r["Title"]
+        # WHO re-issued its archive of older notices (1996 onwards) with new values in "PublicationDate".
+        # "PublicationDateAndTime" keeps the date the notice was first published, so that is the date used.
+        listed = str(r["PublicationDate"])[:10]
+        first = str(r.get("PublicationDateAndTime") or "")[:10]
+        published = first if re.fullmatch(r"\d{4}-\d{2}-\d{2}", first) else listed
         out.append({
             "report_id": f"who_don:{r['DonId'] or r['UrlName']}", "source_id": ds["source_id"], "dataset_id": ds["id"],
             "title": title.strip(), "url": ds["item_url"].format(UrlName=r["UrlName"]),
-            "published": str(r["PublicationDate"])[:10], "last_modified": str(r.get("LastModified") or "")[:19],
+            "published": published, "last_modified": str(r.get("LastModified") or "")[:19],
+            **({"reissued": listed} if listed != published else {}),
             "text": (strip_html(r.get("Summary")) + " " + strip_html(r.get("Overview"))).strip(),
+            # WHO's "Epidemiology" field is background on the disease (history, global estimates), so it is never read
+            # for counts: a figure from it would describe another time or place.
+            "table_images": table_images(r.get("Overview") or ""),
             "fetch_id": fetch_id, "raw_record_ref": f"DonId={r['DonId'] or r['UrlName']}", "countries_hint": None,
             "source_weight": ds.get("source_type_weight", 1.0),
         })
@@ -644,7 +673,8 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
                     "country_counts": COUNTRY_COUNT_METHOD},
         "reports": [{k: (r.get(k) or {}) if k == "country_counts" else r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
                                        "fetch_id", "raw_record_ref", "countries", "broad", "counts", "country_counts", "status_stated", "status_quote",
-                                       "disease_name_in_source", "route_quotes", "onset_quotes")} | {"origin_type": "source-reported"} for r in reps],
+                                       "disease_name_in_source", "route_quotes", "onset_quotes")} | {"origin_type": "source-reported"}
+                    | ({"table_images": r["table_images"]} if r.get("table_images") else {}) for r in reps],
         "source_weight": max(r["source_weight"] for r in reps),
     }
     ev["rank"] = rank_event(ev)

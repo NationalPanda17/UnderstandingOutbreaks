@@ -569,6 +569,14 @@ def publish_all(ctx: Context, log) -> dict:
         "note": "One entry per snapshot in which the event changed. Counts are the figures read automatically from the notices.",
         "events": {e["event_id"]: {"disease": e["disease"], "countries": e["countries"], "history": ctx.event_history.get(e["event_id"], [])} for e in idx}})
 
+    # Event pages that were published once and are not any more (and were not merged into another event). Their
+    # addresses answer with a short notice and a link to the corrections log instead of "page not found".
+    live = {e["event_id"] for e in idx} | {o for e in idx for o in e["supersedes"]}
+    write_json(out / "events" / "withdrawn.json", {
+        "snapshot_id": ctx.snapshot_id, "origin_type": "site-derived",
+        "events": {eid: {"last_snapshot": h[-1]["snapshot_id"], "last_report": h[-1].get("last_report")}
+                   for eid, h in sorted(ctx.event_history.items()) if eid not in live and h}})
+
     # ---- feeds: recent official notices per disease and per country, as Atom files. Static files, no accounts:
     # a feed reader fetches them like any other file. Entries are the notices' own titles and links.
     write_feeds(ctx, out)

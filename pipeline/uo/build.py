@@ -269,9 +269,18 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
             seen[dsid] = [r["report_id"] for r in reps]
             # feeds only list current notices: keep earlier ones from the last good run
             known = {r["report_id"]: r for r in last_good.get(dsid, [])}
-            prev_n = len(known)
             for r in reps:
                 known[r["report_id"]] = r
+            if ds.get("start"):
+                # Notices first published before the dataset's start date are not shown (a source may re-issue its
+                # archive under new dates). Compared before and after, so the size check below is not tripped.
+                early = {i for i, r in known.items() if str(r["published"]) < str(ds["start"])}
+                reps = [r for r in reps if r["report_id"] not in early]
+                last_good[dsid] = [r for r in last_good.get(dsid, []) if r["report_id"] not in early]
+                known = {i: r for i, r in known.items() if i not in early}
+                if early:
+                    log(f"  {dsid}: {len(early)} notices first published before {ds['start']} left out")
+            prev_n = len(last_good.get(dsid, []))
             merged = list(known.values())
             problems = ev.validate_events(merged, prev_n)
             if problems:

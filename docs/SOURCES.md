@@ -170,6 +170,14 @@ Licence statements were read from each publisher's own pages on that date.
 | PAHO/EIH Open Data (`opendata.paho.org`) | Regional indicators and dashboards | "Creative Commons license 3.0"; the page does not say which variant, and adds that some resources carry another | **Not added** until the variant is confirmed for the specific dataset; no per-disease machine-readable weekly file was identified |
 | Africa CDC weekly epidemic intelligence reports | Weekly event summaries for the continent | No terms-of-use page was found; reports are PDF documents | **Not added**: no stated reuse terms, and PDF reports are not read by this site |
 
-The OpenDengue regional data remains the only subnational source outside the United States. No other open,
-machine-readable first-level series with clear reuse terms was identified in this pass.
+## National sources assessed on 2026-11-25 (second pass)
+
+| Source | What it offers | Licence as stated | Decision |
+|---|---|---|---|
+| Robert Koch Institute, "Laborbestätigte Influenzafälle in Deutschland" (GitHub `robert-koch-institut/Influenzafaelle_in_Deutschland`) | Laboratory-confirmed influenza cases per reporting week, federal state and age group, 2020 onward, as one TSV file | The dataset's README: CC BY 4.0, free to use on condition that the Robert Koch Institute is named as the source | **Added**: influenza by federal state, complete years |
+| UK Health Security Agency data dashboard (`api.ukhsa-dashboard.data.gov.uk`) | Measles cases by onset week for England and UKHSA regions; respiratory indicators | Not yet read from the publisher's own terms page | **Not added**: the licence statement has to be read first; UKHSA regions are also not first-level regions on the boundary file |
+| Brazil (Ministry of Health open data, InfoDengue) | State-level notifications | Not assessed in this pass | **Not added** |
+
+Subnational data now covers dengue (OpenDengue, many countries), the United States (measles, mpox, cholera) and
+Germany (influenza).
 

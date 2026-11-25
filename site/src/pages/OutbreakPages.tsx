@@ -12,6 +12,7 @@ import { FeedLink } from '../components/FeedLink';
 import { ErrorBox, Ext, HowToRead, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
 import { SourceChip, useApp } from '../components/SourceChip';
+import { GLOSSARY } from './InfoPages';
 import { NotFound } from './Policies';
 import { WatchButton } from './Watchlists';
 
@@ -242,6 +243,24 @@ export function StoryKit({ id }: { id: string }) {
   );
 }
 
+/** An address that once showed an outbreak page and no longer does. It says so and points to the corrections log,
+ *  instead of answering "page not found" as if the page had never existed. Any other address gets the usual page. */
+function Withdrawn({ id }: { id: string }) {
+  const { route } = useApp();
+  const w = useAsync(() => getOptional<{ events: Record<string, { last_snapshot: string }> }>('events/withdrawn.json'), []);
+  if (w.loading) return <Loading />;
+  const hit = w.data?.events?.[id];
+  if (!hit) return <NotFound />;
+  return (
+    <div class="prose" data-testid="withdrawn">
+      <h1>{t('withdrawn.title')}</h1>
+      <p class="lead">{t('withdrawn.lead', { date: snapLabel(hit.last_snapshot) })}</p>
+      <p>{t('withdrawn.why')}</p>
+      <p><a href={href(route, 'changelog')}>{t('withdrawn.log')}</a> · <a href={href(route, 'outbreaks')}>{t('withdrawn.all')}</a></p>
+    </div>
+  );
+}
+
 export function Outbreak({ id }: { id: string }) {
   const { core, route } = useApp();
   const analyst = route.mode === 'analyst';
@@ -251,7 +270,7 @@ export function Outbreak({ id }: { id: string }) {
   const replacement = !ev.loading && !ev.data ? idx.data?.events.find((x) => x.supersedes?.includes(id))?.event_id : undefined;
   useEffect(() => { if (replacement) navigate(href(route, 'outbreak/' + replacement)); }, [replacement]);
   if (ev.loading || (!ev.data && (idx.loading || replacement))) return <Loading />;
-  if (!ev.data) return <NotFound />;
+  if (!ev.data) return <Withdrawn id={id} />;
   const e = ev.data;
   const brief = idx.data?.events.find((x) => x.event_id === id) ?? (e as EventIdx & { n_reports: number });
   const briefE: EventIdx = { ...(brief as any), n_reports: e.reports.length, latest_url: e.reports[e.reports.length - 1].url, latest_title: e.reports[e.reports.length - 1].title };
@@ -270,7 +289,7 @@ export function Outbreak({ id }: { id: string }) {
             <EventSummary e={briefE} core={core} />
             <div class="readouts">
               <div>{t('outbreak.status')}<b>{t('status.' + e.status)}</b><span class="small">{t('statusbasis.' + e.status_basis)}</span></div>
-              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? `${t('def.' + e.cases.case_definition)} · ${t('chip.asOf', { date: date(e.cases.as_of) })} · ${e.cases.review ? t('review.' + e.cases.review.action, { date: e.cases.review.date ? date(e.cases.review.date) : '' }) : t('event.auto')}` : t('outbreak.notStated')}</span></div>
+              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? <>{GLOSSARY.includes(e.cases.case_definition) ? <a href={href(route, 'glossary') + '#' + e.cases.case_definition} title={t('glossary.what')}>{t('def.' + e.cases.case_definition)}</a> : t('def.' + e.cases.case_definition)} · {t('chip.asOf', { date: date(e.cases.as_of) })} · {e.cases.review ? t('review.' + e.cases.review.action, { date: e.cases.review.date ? date(e.cases.review.date) : '' }) : <a href={href(route, 'glossary') + '#automated-reading'} title={t('glossary.what')}>{t('event.auto')}</a>}</> : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.deaths')}<b>{e.deaths ? num(e.deaths.value) : '–'}</b><span class="small">{e.deaths ? t('chip.asOf', { date: date(e.deaths.as_of) }) : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.lastReport')}<b>{date(e.last_report)}</b><span class="small">{t('outbreak.daysAgo', { n: e.days_since_last_report })}</span></div>
             </div>

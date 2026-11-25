@@ -30,6 +30,7 @@ const headers = [
   ...block('/', `'none'`), ...block('/index.html', `'none'`), ...locales.flatMap((l) => block(`/${l}/*`, `'none'`)),
   ...block('/embed/*', '*'), ...block('/embed', '*'), ...block('/embed.html', '*'),
   '/assets/*', '  Cache-Control: public, max-age=31536000, immutable', '',
+  '/sw.js', '  Cache-Control: no-cache', '', // the offline helper is always checked for a newer version
   '/sitemap.xml', '  Content-Type: application/xml; charset=utf-8', '',
   // only when the file exists (it needs identity.securityContact): otherwise the address falls through to the app
   ...(site.identity?.securityContact ? ['/.well-known/security.txt', '  Content-Type: text/plain; charset=utf-8', ''] : []),
