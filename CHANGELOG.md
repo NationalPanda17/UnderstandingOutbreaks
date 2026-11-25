@@ -2,6 +2,30 @@
 
 Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on the public changelog page.
 
+## 2026-11-25 — Context, story kits, US states, dark appearance
+<!-- type: release -->
+- Context for the headline figure: disease pages show the same week (or month) in each of the last five years, with
+  the number of countries behind each total; country pages show the highest and lowest period of the past year and
+  the same period a year earlier.
+- Outbreak pages: a figure for one country is shown when a notice states it as a total in a sentence naming only
+  that country. This is deliberately narrow; figures in tables are not read. A person can confirm, correct or
+  reject any automated reading in `config/count_reviews.yaml`, and the page then says so.
+- Story kit: a printable page for each outbreak with the key facts, every notice, the sources' own words for each
+  figure, the sources and a ready citation.
+- United States by state: measles, mpox and cholera, from the US CDC weekly notifiable-disease tables (provisional
+  year-end cumulative counts). New York State is the sum of the state and New York City rows.
+- Pre-built pages now contain their headline content as plain HTML, so they are readable before scripts load.
+- Dark appearance, following the device setting or chosen in the footer. Charts and maps stay on light paper.
+- Methodology page: contents beside the text; a duplicated parameters block removed.
+- Regional maps of countries that cross the date line (the United States, Russia, Fiji) are centred correctly.
+- ECDC: licence recorded as CC BY 4.0 unless otherwise stated, from ECDC's own notice.
+
+## 2026-11-25 — Checks before publishing
+<!-- type: pipeline -->
+- The browser checks that ran against the live site after each deploy now also run against the freshly built site
+  before it is published, and in CI. A build that breaks the map, search, an embed, the briefing or link previews
+  is not deployed.
+
 ## 2026-11-18 — Identity, weekly briefing, policies and update history
 <!-- type: release -->
 - Shared links: every page now has its own title, description and preview card, and the site has a sitemap.

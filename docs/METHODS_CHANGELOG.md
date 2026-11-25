@@ -3,6 +3,18 @@
 Versioned log of method changes. Each entry starts with `## YYYY-MM-DD — title`. Method versions appear in every trace
 panel and export, so a change here must come with a version bump in the code.
 
+## 2026-11-25
+
+- `single_country_sentence_count` v1 (new). A case or death count is attributed to one country of a multi-country
+  notice only when a single sentence states it, names that country and no other, contains a totals phrase ("a
+  total of", "cumulative", "as of", "to date", "so far"), contains no wording of an increment, subset or caption,
+  and mentions no year before the notice's own. The first such sentence per country and measure is used.
+- Human review of automated readings (new): `config/count_reviews.yaml` can confirm, correct, reject or add a
+  reading; the outcome is published with the figure.
+- `nndss_state_year_end` v1 (new): see METHODOLOGY, "United States by state".
+- Regional name matching: a reviewed alias that two boundary regions answer to is settled in favour of the region
+  whose own name it is (used for the state of Washington). Automatic matching is unchanged.
+
 ## 2026-11-12 — Correctness pass: influenza positivity, lag, event grouping v3, ranking v2, polio default
 <!-- type: methodology -->
 - `paired_positivity` v1: percent positive divides detections by samples only within a surveillance system that

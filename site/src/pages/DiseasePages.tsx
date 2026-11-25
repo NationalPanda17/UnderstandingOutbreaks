@@ -2,7 +2,7 @@
 import { href } from '../lib/app';
 import { getJSON, getOptional, type EventIdx, type Overview as Ov, type PType } from '../lib/data';
 import { num, periodLabel, smart, t } from '../lib/i18n';
-import { mapMetricLabel, placeName, seriesLabel, measureLabel } from '../lib/series';
+import { mapMetricLabel, placeName, seriesLabel, measureLabel, samePeriodPastYears } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { CiteButton, globalStatement } from '../components/Cite';
@@ -11,7 +11,7 @@ import { loadReporting, reportingShort } from '../components/ReportingHealth';
 import { ContextLinks } from '../components/ContextLinks';
 import { EventRow } from '../components/Events';
 import { useState } from 'preact/hooks';
-import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync } from '../components/Layout';
+import { AgeBadge, Breakdown, DiseaseBadge, ErrorBox, Ext, Loading, diseaseName, useAsync, HowToRead } from '../components/Layout';
 import { SourceChip, useApp } from '../components/SourceChip';
 import { NotFound } from './Policies';
 import { WatchButton } from './Watchlists';
@@ -41,6 +41,37 @@ export function Diseases() {
         {count('other') > 0 && <section class="card"><h2 style={{ fontSize: '1.05rem' }}><a href={href(route, 'outbreaks', { d: 'other' })}>{t('disease.other')}</a></h2><p><span class="badge ev">{t('badge.events-only')}</span> <span class="small muted">{t('diseases.events', { n: count('other') })}</span></p><p class="small muted">{t('diseases.otherNote')}</p></section>}
       </div>
     </>
+  );
+}
+
+/** Context for the headline figure: the same week (or month) in each of the last five years, as a small table with
+ *  bars. It describes what was reported; the number of countries reporting is shown because it changes the total. */
+function PastYears({ o, measure }: { o: Ov; measure: string }) {
+  const i = o.global.p.indexOf(o.anchor);
+  const past = samePeriodPastYears(o.global.p, o.global.v, o.anchor, o.period_type);
+  if (i < 0 || past.filter((x) => x.value !== null).length < 2) return null;
+  const rows = [{ period: o.anchor, year: parseInt(o.anchor.slice(0, 4), 10), value: o.global.v[i] as number | null, index: i }, ...past];
+  const max = Math.max(1, ...rows.map((r) => r.value ?? 0));
+  const known = rows.filter((r): r is typeof r & { value: number } => r.value !== null);
+  const hi = known.reduce((a, b) => (b.value > a.value ? b : a)); const lo = known.reduce((a, b) => (b.value < a.value ? b : a));
+  return (
+    <section class="card pastyears" style={{ marginTop: '16px' }} data-testid="past-years">
+      <h2>{t('pastyears.title.' + o.period_type)}</h2>
+      <p class="sub">{measure} · {t('pastyears.sub')}</p>
+      <table class="data bars">
+        <thead><tr><th scope="col">{t('table.period')}</th><th scope="col" class="n">{measure}</th><th scope="col" aria-hidden="true"></th><th scope="col" class="n">{t('pastyears.countries')}</th></tr></thead>
+        <tbody>{rows.map((r, k) => (
+          <tr key={r.year} class={k === 0 ? 'now' : undefined}>
+            <th scope="row">{r.period ? periodLabel(r.period, o.period_type) : String(r.year)}{k === 0 && <> <span class="badge ts">{t('pastyears.latest')}</span></>}</th>
+            <td class="n">{r.value === null ? t('pastyears.none') : num(r.value)}</td>
+            <td class="barcell" aria-hidden="true">{r.value !== null && <span class="bar" style={{ width: Math.max(1, (r.value / max) * 100) + '%' }} />}</td>
+            <td class="n">{r.index >= 0 && o.global.n?.[r.index] !== undefined ? num(o.global.n[r.index]) : '–'}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      {hi.year !== lo.year && <p>{t('pastyears.range', { n: known.length, hiYear: String(hi.year), hi: num(hi.value), loYear: String(lo.year), lo: num(lo.value) })}</p>}
+      <HowToRead><p>{t('pastyears.note')}</p></HowToRead>
+    </section>
   );
 }
 
@@ -81,6 +112,7 @@ export function DiseasePage({ id }: { id: string }) {
               return <> <CiteButton inline title={t('disease.globalTitle', { name })} prov={{ title: t('disease.globalTitle', { name }), origin: 'site-derived', sourceIds: [meta.source_id], asOf: meta.retrieved_at?.slice(0, 10) ?? null, snapshotId: route.snapshot ?? o.snapshot_id, series: [{ skey: o.skey }], method: { name: 'sum_reporting_countries', version: '1' }, caseDefinitions: [meta.case_definition] }}
                 statement={globalStatement(name, periodLabel(o.anchor, o.period_type), num(v), `${measureLabel(meta.metric, meta.case_definition)}`, nLatest, o.global.n_total)} /></>; })()}</p>
           <Breakdown g={o.global} ptype={o.period_type} />
+          <PastYears o={o} measure={measureLabel(meta.metric, meta.case_definition)} />
           {meta.case_definition === 'mixed' && <div class="notice warn" role="note">{t('warn.mixedSeries')}</div>}
           <section class="card" style={{ marginTop: '16px' }}>
             <header><h2>{t('disease.top', { metric: mapMetricLabel(core, id, o.method.window_periods, o.period_type) })}</h2>

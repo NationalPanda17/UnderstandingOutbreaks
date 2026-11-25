@@ -1,13 +1,13 @@
 /** Outbreak list (all event sources, transparent ranking) and auto-generated outbreak detail pages. */
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { href, navigate, setParams } from '../lib/app';
+import { absoluteUrl, href, navigate, setParams } from '../lib/app';
 import { getJSON, getOptional, type EventIdx } from '../lib/data';
-import { exportBundle } from '../lib/exporters';
+import { citeText, copyText, exportBundle } from '../lib/exporters';
 import { date, num, periodLabel, snapLabel, t } from '../lib/i18n';
 import { placeName } from '../lib/series';
 import { CHART, FONT } from '../lib/theme';
 import { ContextLinks } from '../components/ContextLinks';
-import { EventCite, EventRow, EventSummary, StatusBadge, eventPlaces, eventProv } from '../components/Events';
+import { EventCite, EventRow, EventSummary, StatusBadge, eventPlaces, eventProv, eventStatement } from '../components/Events';
 import { FeedLink } from '../components/FeedLink';
 import { ErrorBox, Ext, HowToRead, Loading, diseaseName, useAsync } from '../components/Layout';
 import { LazyMap } from '../components/LazyMap';
@@ -145,6 +145,103 @@ function NoticeDots({ reports, sources }: { reports: any[]; sources: Record<stri
   );
 }
 
+/** How a reading was obtained: by the program (the default), or checked, corrected or added by a person. */
+function ReadingBadge({ c }: { c: any }) {
+  const r = c?.review;
+  if (!r) return <span class="badge auto" title={t('event.autoExplain')}>{t('event.autoCheck')}</span>;
+  return <span class="badge ts" title={r.note || undefined}>{t('review.' + r.action, { date: r.date ? date(r.date) : '' })}{r.action === 'corrected' && <> ({t('review.was', { n: num(r.previous_value) })})</>}</span>;
+}
+
+/** Figures a notice states as a total for one country, each with the sentence it was read from. Only present when
+ *  a notice about several countries has such a sentence; figures in tables stay on the notice. */
+function CountryFigures({ e }: { e: any }) {
+  const { core } = useApp();
+  const rows = Object.entries((e.country_counts ?? {}) as Record<string, any>);
+  if (!rows.length) return null;
+  return (
+    <div data-testid="country-figures">
+      <h3>{t('ccounts.title')}</h3>
+      <div class="tablewrap" tabIndex={0}><table class="data">
+        <thead><tr><th scope="col">{t('table.place')}</th><th scope="col" class="n">{t('outbreak.cases')}</th><th scope="col" class="n">{t('outbreak.deaths')}</th><th scope="col">{t('ccounts.sentence')}</th></tr></thead>
+        <tbody>{rows.map(([iso3, c]) => { const any = c.cases ?? c.deaths; return (
+          <tr key={iso3}>
+            <th scope="row">{placeName(core, iso3)}</th>
+            <td class="n">{c.cases ? num(c.cases.value) : '–'}</td>
+            <td class="n">{c.deaths ? num(c.deaths.value) : '–'}</td>
+            <td class="small"><q class="quote">{any.quote}</q> <span class="muted">{t('chip.asOf', { date: date(any.as_of) })}</span> <ReadingBadge c={any} /> <Ext url={any.url}>{t('event.originalNotice')}</Ext></td>
+          </tr>
+        ); })}</tbody>
+      </table></div>
+      <p class="small muted">{t('ccounts.note')}</p>
+    </div>
+  );
+}
+
+/** A one-page, printable summary of an event for someone writing about it: the key facts, what each notice said and
+ *  when, the sources' own words for every figure, the sources and how to cite. Nothing here is new information; it
+ *  gathers what the outbreak page shows into a form that can be printed or saved. */
+export function StoryKit({ id }: { id: string }) {
+  const { core, route } = useApp();
+  const [copied, setCopied] = useState(false);
+  const ev = useAsync(() => getOptional<any>(`events/${id}.json`), [id]);
+  if (ev.loading) return <Loading />;
+  if (!ev.data) return <NotFound />;
+  const e = ev.data;
+  const brief: EventIdx = { ...(e as any), n_reports: e.reports.length, latest_url: e.reports[e.reports.length - 1].url, latest_title: e.reports[e.reports.length - 1].title };
+  const prov = { ...eventProv(core, brief, route.snapshot), sourceIds: e.source_ids as string[] };
+  const title = `${diseaseName(core, e.disease)} — ${eventPlaces(core, brief)}`;
+  const page = absoluteUrl(href(route, 'outbreak/' + id));
+  const cite = citeText(core, prov, title, undefined, eventStatement(core, brief), href(route, 'outbreak/' + id));
+  const reports = (e.reports as any[]).slice().reverse();
+  const cc = Object.entries((e.country_counts ?? {}) as Record<string, any>);
+  return (
+    <article class="prose kit" data-testid="story-kit">
+      <p class="kicker">{t('kit.kicker')}</p>
+      <h1>{title}</h1>
+      <p class="lead">{t('kit.lead', { n: e.reports.length, first: date(e.first_report, 'long'), last: date(e.last_report, 'long') })}</p>
+      <p class="chipline"><SourceChip prov={prov} />
+        <button type="button" class="btn small" onClick={() => window.print()}>{t('briefing.print')}</button>
+        <a class="btn small" href={href(route, 'outbreak/' + id)}>{t('kit.back')}</a>
+      </p>
+
+      <h2>{t('kit.facts')}</h2>
+      <dl class="kitfacts">
+        <dt>{t('filter.disease')}</dt><dd>{diseaseName(core, e.disease)}{e.name_in_source && e.name_in_source !== diseaseName(core, e.disease) && <> <span class="muted">({t('kit.sourceCalls', { name: e.name_in_source })})</span></>}</dd>
+        <dt>{t('kit.where')}</dt><dd>{e.countries.length ? (e.countries as string[]).map((c) => placeName(core, c)).join(', ') : t('event.scope.none')}</dd>
+        <dt>{t('kit.firstNotice')}</dt><dd>{date(e.first_report, 'long')}</dd>
+        <dt>{t('outbreak.lastReport')}</dt><dd>{date(e.last_report, 'long')} ({t('outbreak.daysAgo', { n: e.days_since_last_report })})</dd>
+        <dt>{t('outbreak.status')}</dt><dd>{t('status.' + e.status)}. {t('status.' + e.status + '.explain')}{e.status_quote && <> <q class="quote">{e.status_quote}</q></>}</dd>
+        <dt>{t('outbreak.cases')}</dt><dd>{e.cases ? <><b>{num(e.cases.value)}</b> ({t('def.' + e.cases.case_definition)}), {t('chip.asOf', { date: date(e.cases.as_of, 'long') })}. {t('briefing.states')} <q class="quote">{e.cases.quote}</q> <ReadingBadge c={e.cases} /></> : t('outbreak.notStated')}</dd>
+        <dt>{t('outbreak.deaths')}</dt><dd>{e.deaths ? <><b>{num(e.deaths.value)}</b>, {t('chip.asOf', { date: date(e.deaths.as_of, 'long') })}. {t('briefing.states')} <q class="quote">{e.deaths.quote}</q> <ReadingBadge c={e.deaths} /></> : t('outbreak.notStated')}</dd>
+        {cc.map(([iso3, c]) => <div key={iso3} style={{ display: 'contents' }}><dt>{placeName(core, iso3)}</dt><dd>{[c.cases && `${num(c.cases.value)} ${t('outbreak.cases').toLocaleLowerCase()}`, c.deaths && `${num(c.deaths.value)} ${t('outbreak.deaths').toLocaleLowerCase()}`].filter(Boolean).join(', ')}. <q class="quote">{(c.cases ?? c.deaths).quote}</q> <ReadingBadge c={c.cases ?? c.deaths} /></dd></div>)}
+      </dl>
+      <p class="notice" role="note">{t('kit.check')}</p>
+
+      <h2>{t('kit.timeline', { n: reports.length })}</h2>
+      <ol class="kitline">
+        {reports.map((r) => (
+          <li key={r.report_id}>
+            <b>{date(r.published, 'long')}</b> · {core.sources[r.source_id]?.short_name}: <Ext url={r.url}>{r.title}</Ext>
+            {(r.counts?.cases || r.counts?.deaths) && <div class="small">{t('outbreak.stated')} {r.counts.cases && <q class="quote">{r.counts.cases.quote}</q>} {r.counts.deaths && <q class="quote">{r.counts.deaths.quote}</q>}</div>}
+            {(r.route_quotes?.length > 0 || r.onset_quotes?.length > 0) && <div class="small">{[...(r.route_quotes ?? []), ...(r.onset_quotes ?? [])].slice(0, 2).map((q: string) => <q class="quote" key={q}>{q}</q>)}</div>}
+          </li>
+        ))}
+      </ol>
+
+      <h2>{t('kit.sources')}</h2>
+      <ul>{(e.source_ids as string[]).map((s) => { const src = core.sources[s]; return src ? <li key={s}><b>{src.name}</b> ({src.publisher}). <Ext url={src.landing_url}>{src.landing_url}</Ext> · {t('trace.license')}: {src.license}</li> : null; })}</ul>
+
+      <h2>{t('kit.cite')}</h2>
+      <pre class="citebox" data-testid="kit-cite" tabIndex={0} aria-label={t('citep.textLabel')}>{cite}</pre>
+      <p class="btnrow"><button type="button" class="btn small" onClick={async () => { if (await copyText(cite)) { setCopied(true); setTimeout(() => setCopied(false), 1800); } }}>{copied ? t('action.copied') : t('citep.copyText')}</button></p>
+
+      <h2>{t('kit.limits')}</h2>
+      <ul>{[1, 2, 3, 4].map((k) => <li key={k}>{t('kit.limit' + k)}</li>)}</ul>
+      <p class="small muted">{t('kit.page')} {page}</p>
+    </article>
+  );
+}
+
 export function Outbreak({ id }: { id: string }) {
   const { core, route } = useApp();
   const analyst = route.mode === 'analyst';
@@ -173,11 +270,12 @@ export function Outbreak({ id }: { id: string }) {
             <EventSummary e={briefE} core={core} />
             <div class="readouts">
               <div>{t('outbreak.status')}<b>{t('status.' + e.status)}</b><span class="small">{t('statusbasis.' + e.status_basis)}</span></div>
-              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? `${t('def.' + e.cases.case_definition)} · ${t('chip.asOf', { date: date(e.cases.as_of) })} · ${t('event.auto')}` : t('outbreak.notStated')}</span></div>
+              <div>{t('outbreak.cases')}<b>{e.cases ? num(e.cases.value) : '–'}</b><span class="small">{e.cases ? `${t('def.' + e.cases.case_definition)} · ${t('chip.asOf', { date: date(e.cases.as_of) })} · ${e.cases.review ? t('review.' + e.cases.review.action, { date: e.cases.review.date ? date(e.cases.review.date) : '' }) : t('event.auto')}` : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.deaths')}<b>{e.deaths ? num(e.deaths.value) : '–'}</b><span class="small">{e.deaths ? t('chip.asOf', { date: date(e.deaths.as_of) }) : t('outbreak.notStated')}</span></div>
               <div>{t('outbreak.lastReport')}<b>{date(e.last_report)}</b><span class="small">{t('outbreak.daysAgo', { n: e.days_since_last_report })}</span></div>
             </div>
             {e.status_quote && <p class="small">{t('outbreak.statusQuote')} <q class="quote">{e.status_quote}</q></p>}
+            <CountryFigures e={e} />
             <HowToRead><p>{t('outbreak.countsNote')}</p></HowToRead>
             <div class="btnrow"><EventCite e={{ ...briefE, cases: e.cases, deaths: e.deaths, counts_suppressed: e.counts_suppressed }} /></div>
           </section>
@@ -209,7 +307,7 @@ export function Outbreak({ id }: { id: string }) {
             <h2>{t('outbreak.locations')}</h2>
             {points.length ? <LazyMap points={points} pointMode="markers" names={names} ariaLabel={t('map.aria', { title })} view={{ lng: points[0].lon, lat: points[0].lat, z: 2.4 }} /> : <p class="muted">{t('outbreak.noLocation')}</p>}
             <HowToRead><p>{t('outbreak.precisionNote')}</p></HowToRead>
-            <p><a class="btn small" href={href(route, 'spread/' + id)} data-testid="open-spread">{t('spread.open')}</a></p>
+            <p class="btnrow"><a class="btn small" href={href(route, 'spread/' + id)} data-testid="open-spread">{t('spread.open')}</a><a class="btn small" href={href(route, 'outbreak/' + id + '/kit')} data-testid="open-kit">{t('kit.open')}</a></p>
             <div class="tablewrap" tabIndex={0}><table class="data"><thead><tr><th>{t('table.place')}</th><th>{t('map.precision')}</th>{analyst && <th>{t('trace.method')}</th>}</tr></thead>
               <tbody>{(e.locations as any[]).map((l, i) => <tr key={i}><th scope="row">{l.name}{l.precision !== 'country' && <span class="muted">, {placeName(core, l.iso3)}</span>}</th><td>{t('precision.' + l.precision)}</td>{analyst && <td class="small"><code>{l.method} v{l.method_version}</code> {l.gazetteer_ref}</td>}</tr>)}</tbody></table></div>
           </section>

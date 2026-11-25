@@ -20,10 +20,10 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 | Locale | Language | Status | Strings | Reviewed | Awaiting review |
 |---|---|---|---|---|---|
-| en | English | source | 2060 | – | – |
-| es | Español | machine-drafted | 2060 | 0 | 2060 |
-| fr | Français | machine-drafted | 2060 | 0 | 2060 |
-| de | Deutsch | machine-drafted | 2060 | 0 | 2060 |
+| en | English | source | 2104 | – | – |
+| es | Español | machine-drafted | 2104 | 0 | 2104 |
+| fr | Français | machine-drafted | 2104 | 0 | 2104 |
+| de | Deutsch | machine-drafted | 2104 | 0 | 2104 |
 
 ## Español (es): strings by review status
 
@@ -139,11 +139,11 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Trace-panel explanations
 
-83 strings: 0 reviewed, 83 machine-drafted and awaiting review.
+84 strings: 0 reviewed, 84 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`
+`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`, `method.nndss_state_year_end`
 
 </details>
 
@@ -159,7 +159,7 @@ Drop a translated copy of `en.json` into `site/src/i18n/locales/` and add one li
 
 ### Interface strings (lower priority)
 
-1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
+1472 strings: 0 reviewed, 1472 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `es.json` not listed in a priority group above.
 
@@ -278,11 +278,11 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Trace-panel explanations
 
-83 strings: 0 reviewed, 83 machine-drafted and awaiting review.
+84 strings: 0 reviewed, 84 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`
+`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`, `method.nndss_state_year_end`
 
 </details>
 
@@ -298,7 +298,7 @@ Keys awaiting review: all keys in `es.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
+1472 strings: 0 reviewed, 1472 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `fr.json` not listed in a priority group above.
 
@@ -417,11 +417,11 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Trace-panel explanations
 
-83 strings: 0 reviewed, 83 machine-drafted and awaiting review.
+84 strings: 0 reviewed, 84 machine-drafted and awaiting review.
 
 <details><summary>Keys awaiting review</summary>
 
-`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`
+`origin.source-reported`, `origin.site-derived`, `origin.user-supplied`, `origin.simulated`, `origin.test-data`, `origin.source-reported.explain`, `origin.site-derived.explain`, `origin.user-supplied.explain`, `origin.simulated.explain`, `origin.test-data.explain`, `trace.title`, `trace.asOf`, `trace.snapshot`, `trace.caseDefinition`, `trace.method`, `trace.simulation`, `trace.simLine`, `trace.notApplicable`, `trace.originalSources`, `trace.references`, `trace.openOriginal`, `trace.linkUnavailable`, `trace.datasetLevel`, `trace.wayback`, `trace.archivedCopy`, `trace.notRedistributed`, `trace.retrieved`, `trace.license`, `trace.licenseUnverified`, `trace.transformations`, `trace.records`, `trace.values`, `trace.lineageFile`, `trace.rawRefs`, `trace.inputs`, `trace.showFull`, `trace.cite`, `trace.footer`, `trace.link`, `trace.verifiedOn`, `trace.unverified`, `transform.perCapita.explain`, `transform.cumulative.explain`, `transform.rolling.explain`, `transform.rebase.explain`, `transform.align.explain`, `transform.log.explain`, `transform.excludeIncomplete.explain`, `chain.select_columns`, `chain.iso2_to_iso3`, `chain.week_end_to_week_start`, `chain.sum_daily_to_iso_week`, `chain.sum_surveillance_systems`, `chain.dengue_annual_mixed`, `method.window_rate`, `method.period_rate`, `method.sum_reporting_countries`, `method.group_by_disease_place_gap`, `method.active_rank`, `method.reconcile_pairwise`, `method.population_density`, `method.weekly_changes`, `method.quality_metrics`, `method.revision_recording`, `method.gazetteer_match`, `method.user_sql_query`, `method.pivot`, `method.chart_builder`, `method.snapshot_diff`, `method.sum_selected_places`, `method.range_rate`, `method.next_generation_matrix`, `method.observation_layer`, `method.stochastic_ensemble`, `method.branching_process`, `method.parameter_sweep`, `method.phase_plane`, `method.network_sir`, `method.metapopulation_gravity`, `method.dengue_admin1_annual`, `method.reporting_health`, `method.constant_panel_total`, `trace.version`, `method.nndss_state_year_end`
 
 </details>
 
@@ -437,7 +437,7 @@ Keys awaiting review: all keys in `fr.json` not listed in a priority group above
 
 ### Interface strings (lower priority)
 
-1429 strings: 0 reviewed, 1429 machine-drafted and awaiting review.
+1472 strings: 0 reviewed, 1472 machine-drafted and awaiting review.
 
 Keys awaiting review: all keys in `de.json` not listed in a priority group above.
 

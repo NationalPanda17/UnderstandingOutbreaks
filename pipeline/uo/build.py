@@ -296,7 +296,15 @@ def build_events(registry, diseases_doc, places, gazetteer, offline, now, status
     write_json(STATE / "event_reports.json", last_good)
     geocoder = ev.Geocoder(places, load_yaml(CONFIG / "country_aliases.yaml"), gazetteer)
     reports = [dict(r) for r in reports]
-    reports, unmapped = ev.normalize_reports(reports, normalizer, geocoder)
+    # A person's checks of the automated count readings (confirm, correct or reject), applied on every run.
+    reviews = (load_yaml(CONFIG / "count_reviews.yaml") or {}).get("reviews") or []
+    review_problems: list[str] = []
+    reports, unmapped = ev.normalize_reports(reports, normalizer, geocoder, reviews, review_problems)
+    if review_problems:
+        record_issue("count-review", "Count reviews that could not be applied",
+                     "These entries in `config/count_reviews.yaml` did not match an automated reading, so they changed "
+                     "nothing. Please check them (never changed automatically):\n\n" + "\n".join(f"- {p}" for p in review_problems),
+                     dedupe_key="count-reviews")
     if unmapped:
         record_issue("unmapped-disease", "Unmapped disease names in event reports",
                      "These names from official notices are not in `config/diseases.yaml` and are shown under "

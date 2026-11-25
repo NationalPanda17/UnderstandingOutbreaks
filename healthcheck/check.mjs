@@ -4,6 +4,9 @@
 //
 //   node check.mjs [base-url]        default: baseUrl in config/site.json
 //
+// The same checks run against the freshly built site before every deploy (served locally the way Cloudflare Pages
+// serves it), so a build that breaks the map, search, an embed, the briefing or link previews is never published.
+//
 // Exit code 0 = healthy, 1 = at least one check failed. A Markdown report is written to health-report.md.
 // It only reads the public site. It changes nothing.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -17,7 +20,11 @@ const MAX_DATA_AGE_DAYS = 3;
 const results = [];
 const foreign = new Map();   // host -> first URL seen
 const blocked = new Set();   // third-party scripts the site's own policy refused to load
+// UO_SKIP_CHECKS=sql,fresh leaves out checks that only make sense against the live site (the SQL engine is served
+// from the assets address, which only answers the live site; a build made a moment ago is always fresh).
+const SKIP = (process.env.UO_SKIP_CHECKS ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 async function check(name, fn) {
+  if (SKIP.some((k) => name.toLowerCase().includes(k.toLowerCase()))) { results.push({ name, ok: true, detail: 'skipped for this run', ms: 0 }); return; }
   const t0 = Date.now();
   try { const detail = await fn(); results.push({ name, ok: true, detail: detail ?? '', ms: Date.now() - t0 }); }
   catch (e) { results.push({ name, ok: false, detail: String(e?.message ?? e).split('\n')[0].slice(0, 300), ms: Date.now() - t0 }); }

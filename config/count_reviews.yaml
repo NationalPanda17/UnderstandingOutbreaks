@@ -1,0 +1,21 @@
+# A person's review of the counts this site reads automatically from official notices.
+#
+# The program reads "N cases" and "N deaths" from a notice's text, and, for a notice about several countries, a figure
+# for one country when a single sentence states it and names only that country. Readings are labelled as automated
+# on the site. An entry here records that a person compared a reading with the notice, and what they found. Entries
+# are applied on every update and are never written by the pipeline.
+#
+#   - report_id: who_don:2026-DON625   # the notice (shown in the detailed view of an outbreak page)
+#     field: cases                     # cases | deaths
+#     country: COD                     # optional: the per-country figure for this ISO3 code; omit for the notice's headline figure
+#     action: confirm                  # confirm: the reading is right
+#                                      # correct: the reading is wrong; `value` replaces it (the old reading stays visible)
+#                                      # reject:  the notice does not state this; the reading is removed
+#     value: 10668                     # required for correct; optional for confirm (the review is ignored if the reading has changed)
+#     case_definition: confirmed       # optional, with correct on cases: confirmed | probable | suspected | notified
+#     quote: "..."                     # with correct, to add a figure the program missed: the notice's own words
+#     reviewed: "2026-11-25"           # the date of the review
+#     note: "Table 1 of the notice"    # optional
+#
+# An entry that matches nothing changes nothing and is reported as a GitHub issue.
+reviews: []

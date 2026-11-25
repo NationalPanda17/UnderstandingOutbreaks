@@ -47,7 +47,15 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
   const data = join(dist, 'data', 'v1');
   const J = (p) => JSON.parse(readFileSync(join(data, p), 'utf8'));
   const en = JSON.parse(readFileSync(join(root, 'src', 'i18n', 'locales', 'en.json'), 'utf8'));
-  const shell = readFileSync(join(dist, 'index.html'), 'utf8');
+  // ---- speed: the files every first view needs are announced in <head>, so the browser fetches them alongside the
+  // script instead of discovering them one after another (the two typefaces, and the English text bundle).
+  const assets = readdirSync(join(dist, 'assets'));
+  const pick = (rx) => assets.find((f) => rx.test(f));
+  const hints = [
+    [pick(/^inter-latin-wght-normal-.*\.woff2$/), 'font'], [pick(/^source-serif-4-latin-wght-normal-.*\.woff2$/), 'font'], [pick(/^en-.*\.js$/), 'module'],
+  ].filter(([f]) => f).map(([f, kind]) => (kind === 'font' ? `<link rel="preload" as="font" type="font/woff2" href="/assets/${f}" crossorigin />` : `<link rel="modulepreload" crossorigin href="/assets/${f}" />`)).join('\n    ');
+  const shell = readFileSync(join(dist, 'index.html'), 'utf8').replace('</head>', `  ${hints}\n  </head>`);
+  writeFileSync(join(dist, 'index.html'), shell);
   const base = site.baseUrl.replace(/\/+$/, '');
   const L = site.defaultLocale;
   const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -56,6 +64,13 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
   const regions = new Intl.DisplayNames(['en'], { type: 'region' });
   const PLAIN = { CD: 'DR Congo', CG: 'Republic of the Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' };   // same as src/lib/i18n.ts
   const urls = [];
+  const NAVLINKS = [['', 'nav.overview'], ['outbreaks', 'nav.outbreaks'], ['map', 'nav.map'], ['diseases', 'nav.diseases'], ['briefing', 'nav.briefing'], ['about', 'nav.about']].map(([p, k]) => `<a href="/${L}/${p}">${esc(en[k])}</a>`).join('');
+  const nf = new Intl.NumberFormat('en');
+  const num = (x) => (x === null || x === undefined ? '–' : nf.format(Math.round(x * 100) / 100));
+  const period = (p, pt, inSentence = true) => (pt === 'Y' ? p.slice(0, 4) : pt === 'M' ? new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(p + 'T00:00:00Z'))
+    : `${inSentence ? 'the week of ' : 'Week of '}${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(p + 'T00:00:00Z'))}`);
+  const a = (href, text) => `<a href="/${L}/${href}">${esc(text)}</a>`;
+  const ul = (items) => (items.length ? `<ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>` : '');
   const write = (path, title, description, opts = {}) => {
     const url = `${base}/${L}/${path}`;
     const full = path === '' ? `${site.name}: ${en['title.homeTag']}` : `${title} · ${site.name}`;
@@ -75,7 +90,11 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
       `<meta name="twitter:card" content="summary_large_image" />`,
       ...(path === '' ? [`<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: site.name, url: base + '/', inLanguage: 'en', description: desc })}</script>`] : []),
     ].join('\n    ');
-    const html = shell.replace(/<title>[\s\S]*?<\/title>\s*/, '').replace(/<meta name="description"[^>]*>\s*/, '').replace('<meta name="referrer"', head + '\n    <meta name="referrer"');
+    // The same facts in plain HTML, shown until the app has loaded its data and then removed by it (src/main.tsx).
+    // Readers on a slow connection, search engines and browsers without scripts get the headline content at once.
+    const body = `<div id="static"><header class="site"><div class="wrap bar"><a class="brand" href="/${L}/"><span class="wordmark">${esc(site.name)}</span></a><nav class="main" aria-label="Main navigation">${NAVLINKS}</nav></div></header><main><div class="wrap prose"><h1>${esc(path === '' ? en['overview.title'] : title)}</h1><p class="lead">${esc(description)}</p>${opts.body ?? ''}<p class="small muted">${esc(en['static.note'])} <a href="/data/v1/manifest.json">manifest.json</a></p></div></main></div>`;
+    const html = shell.replace(/<title>[\s\S]*?<\/title>\s*/, '').replace(/<meta name="description"[^>]*>\s*/, '').replace('<meta name="referrer"', head + '\n    <meta name="referrer"').replace('<div id="app">', body + '\n    <div id="app">');
+    if (!html.includes('id="static"')) throw new Error('page content could not be written: the app shell changed');
     if (!html.includes('og:title')) throw new Error('page header could not be written: the app shell changed');
     const file = path === '' ? join(dist, L, 'index.html') : join(dist, L, path + '.html');
     mkdirSync(join(file, '..'), { recursive: true });
@@ -83,8 +102,48 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
     urls.push({ url, lastmod: opts.lastmod });
   };
   const manifest = J('manifest.json'); const built = manifest.generated_at.slice(0, 10);
+  // ---- data for the page bodies
+  const diseasesAll = J('diseases.json').diseases; const dnameAll = Object.fromEntries(diseasesAll.map((d) => [d.id, d.name]));
+  const seriesMeta = Object.fromEntries(diseasesAll.flatMap((d) => d.series.map((x) => [x.skey, x])));
+  const measure = (skey) => { const m = seriesMeta[skey]; if (!m) return 'reported'; const plain = m.metric === 'detections' || m.metric === 'specimens_processed' || m.case_definition === 'not_applicable'; return en[plain ? `measureIn.${m.metric}` : `measureIn.${m.metric}.${m.case_definition}`] ?? m.metric; };
+  const overviews = {}; for (const d of diseasesAll) if (d.has_timeseries && existsSync(join(data, 'overview', `${d.id}.json`))) overviews[d.id] = J(`overview/${d.id}.json`);
+  const worldLine = (id) => { const o = overviews[id]; if (!o) return null; let i = -1; o.global.p.forEach((p, k) => { if (p < o.incomplete_from && o.global.v[k] !== null) i = k; }); if (i < 0) return null;
+    const n = o.global.n?.[i]; return `${num(o.global.v[i])} ${esc(measure(o.skey))} for ${period(o.global.p[i], o.period_type)}${n && o.global.n_total ? `, from ${n} of ${o.global.n_total} countries` : ''}.`; };
+  // the period a country's figure covers: the map window (one period, or several for diseases mapped over a few weeks)
+  const span = (r, o) => { const w = r.window ?? [o.anchor, o.anchor]; return w[0] === w[1] ? period(w[1], o.period_type, false) : `${period(w[0], o.period_type, false)} to ${period(w[1], o.period_type, false).replace('Week of ', 'week of ')}`; };
+  const allEvents = J('events/index.json').events;
+  const placesDoc = J('places.json').places;
+  const regions0 = new Intl.DisplayNames(['en'], { type: 'region' });
+  const PLAIN0 = { CD: 'DR Congo', CG: 'Republic of the Congo', MM: 'Myanmar', HK: 'Hong Kong', MO: 'Macao' };   // same as src/lib/i18n.ts
+  const cname = (iso3) => { const p = placesDoc[iso3]; if (!p) return iso3; try { return PLAIN0[p.iso2] ?? regions0.of(p.iso2) ?? p.name; } catch { return p.name; } };
+  const evPlaces = (cs) => (cs.length ? cs.slice(0, 4).map(cname).join(', ') + (cs.length > 4 ? ` +${cs.length - 4}` : '') : 'several countries');
+  const evLine = (e) => `${a('outbreak/' + e.event_id, `${dnameAll[e.disease] ?? 'Outbreak'} — ${evPlaces(e.countries)}`)}: latest official notice on ${longDate(e.last_report)} (${e.n_reports} notice${e.n_reports === 1 ? '' : 's'} so far).${e.cases && !e.counts_suppressed ? ` The notice states “${esc(e.cases.quote)}”.` : ''}`;
+  const recent = (list, n = 8) => list.slice().sort((x, y) => (x.last_report < y.last_report ? 1 : -1)).slice(0, n);
+  const homeBody = () => { const act = allEvents.filter((e) => e.rank?.active).sort((x, y) => y.rank.score - x.rank.score); const named = [...act.filter((e) => e.countries.length && e.disease !== 'other'), ...act.filter((e) => !e.countries.length)].slice(0, 3);
+    const ds = Object.keys(overviews).sort((x, y) => 'WMY'.indexOf(overviews[x].period_type) - 'WMY'.indexOf(overviews[y].period_type)).slice(0, 3);
+    return `<h2>${esc(en['summary.title'])}</h2>${ul([...named.map(evLine), ...ds.map((id) => `${a('disease/' + id, dnameAll[id])}: ${worldLine(id) ?? ''}`)])}<p>${a('outbreaks', `All ${allEvents.length} outbreak events`)} · ${a('diseases', en['title.diseases'])} · ${a('briefing', en['title.briefing'])}</p>`; };
+  const diseaseBody = (d) => { const o = overviews[d.id]; const mine = recent(allEvents.filter((e) => e.disease === d.id)); let out = '';
+    if (o) { const wl = worldLine(d.id); if (wl) out += `<h2>Latest complete period</h2><p>World total: ${wl}</p>`;
+      const top = Object.entries(o.latest).filter(([, r]) => r.value !== null && r.value !== undefined).sort((x, y) => (y[1].value ?? 0) - (x[1].value ?? 0)).slice(0, 10);
+      if (top.length) out += `<h2>Countries with the highest reported figures</h2><table class="data"><thead><tr><th scope="col">Country</th><th scope="col" class="n">${esc(measure(o.skey))}</th><th scope="col">Period covered</th></tr></thead><tbody>${top.map(([c, r]) => `<tr><th scope="row">${a(`place/${c}?d=${d.id}`, cname(c))}</th><td class="n">${num(r.value)}</td><td>${span(r, o)}</td></tr>`).join('')}</tbody></table>`; }
+    if (mine.length) out += `<h2>Official outbreak notices</h2>${ul(mine.map(evLine))}`;
+    return out; };
+  const placeBody = (iso3) => { const rows = Object.entries(overviews).map(([id, o]) => [id, o, o.latest[iso3]]).filter(([, , r]) => r && r.value !== null && r.value !== undefined);
+    const mine = recent(allEvents.filter((e) => e.countries.includes(iso3)), 6); let out = '';
+    if (rows.length) out += `<h2>Latest reported figures</h2><table class="data"><thead><tr><th scope="col">Disease</th><th scope="col" class="n">Reported</th><th scope="col">What is counted</th><th scope="col">Period covered</th></tr></thead><tbody>${rows.map(([id, o, r]) => `<tr><th scope="row">${a(`place/${iso3}?d=${id}`, dnameAll[id])}</th><td class="n">${num(r.value)}</td><td>${esc(measure(o.skey))}</td><td>${span(r, o)}</td></tr>`).join('')}</tbody></table>`;
+    if (mine.length) out += `<h2>Official outbreak notices naming ${esc(cname(iso3))}</h2>${ul(mine.map(evLine))}`;
+    return out; };
+  const eventBody = (e) => { const f = join(data, 'events', `${e.event_id}.json`); if (!existsSync(f)) return ''; const full = JSON.parse(readFileSync(f, 'utf8')); const src = JSON.parse(readFileSync(join(data, 'sources.json'), 'utf8')).sources;
+    const sname = (id) => src.find((x) => x.id === id)?.short_name ?? id;
+    let out = `<p>${e.cases && !e.counts_suppressed ? `The latest notice with a count states “${esc(e.cases.quote)}” (read automatically from the notice; check the original).` : 'No single case count is quoted for this event.'}</p><h2>Official notices, newest first</h2>`;
+    out += ul(full.reports.slice().reverse().slice(0, 40).map((r) => `<b>${longDate(r.published)}</b> · ${esc(sname(r.source_id))}: <a href="${esc(r.url)}" rel="noopener noreferrer">${esc(r.title)}</a>`));
+    return out; };
+  const policyBody = (id) => { let out = ''; const base = `policy.${id}.`; const secs = [...new Set(Object.keys(en).filter((k) => k.startsWith(base) && k.endsWith('.title')).map((k) => k.slice(base.length, -6)))];
+    for (const sec of secs) { out += `<h2>${esc(en[`${base}${sec}.title`])}</h2>`; for (let i = 1; en[`${base}${sec}.p${i}`]; i++) out += `<p>${esc(en[`${base}${sec}.p${i}`])}</p>`; const lis = []; for (let i = 1; en[`${base}${sec}.li${i}`]; i++) lis.push(esc(en[`${base}${sec}.li${i}`])); out += ul(lis); }
+    return out; };
+  const weekBody = (wk) => `<h2>New outbreak events (${wk.new_events.length})</h2>${ul(wk.new_events.map(evLine)) || '<p>None.</p>'}<h2>Events with new notices (${wk.updated_events.length})</h2>${ul(wk.updated_events.map(evLine)) || '<p>None.</p>'}`;
   const lead = (k, fb) => (en[k] ?? fb ?? '').replace(/\{[^}]+\}/g, '').replace(/\s+/g, ' ').trim();
-  write('', site.name, lead('overview.leadShort'), { lastmod: built });
+  write('', site.name, lead('overview.leadShort'), { lastmod: built, body: homeBody() });
   const STATIC = [
     ['outbreaks', en['title.outbreaks'], lead('outbreaks.lead')], ['map', en['title.map'], lead('mappage.lead')], ['diseases', en['title.diseases'], lead('diseases.lead')],
     ['briefing', en['title.briefing'], 'New and updated official outbreak notices and the largest changes in reported counts, week by week.'],
@@ -100,23 +159,25 @@ writeFileSync(join(dist, '_headers'), headers.join('\n'));
     ['learn', en['title.learn'], 'Interactive lessons and illustrative simulations about how outbreaks grow and how reporting works. Not forecasts.'],
     ['spread', en['title.spread'], 'A notice-by-notice map of where official reports placed an outbreak over time.'],
   ];
-  for (const [p, title, d] of STATIC) write(p, title, d, { lastmod: built });
+  const POLICY = new Set(['privacy', 'accessibility', 'corrections', 'editorial-standards']);
+  const latestWeek = existsSync(join(data, 'weekly', 'latest.json')) ? J('weekly/latest.json') : null;
+  for (const [p, title, d] of STATIC) write(p, title, d, { lastmod: built, body: POLICY.has(p) ? policyBody(p) : p === 'briefing' && latestWeek ? weekBody(latestWeek) : p === 'outbreaks' ? ul(recent(allEvents.filter((e) => e.rank?.active), 20).map(evLine)) : p === 'diseases' ? ul(diseasesAll.map((d) => a('disease/' + d.id, d.name))) : '' });
   const diseases = J('diseases.json').diseases; const dname = Object.fromEntries(diseases.map((d) => [d.id, d.name]));
   for (const d of diseases) write(`disease/${d.id}`, d.name, d.has_timeseries
     ? `${d.name}: officially reported figures by country, the latest complete period, outbreak notices and sources.`
-    : `${d.name}: official outbreak notices, grouped into events, with sources.`, { lastmod: built });
+    : `${d.name}: official outbreak notices, grouped into events, with sources.`, { lastmod: built, body: diseaseBody(d) });
   const places = Object.values(J('places.json').places ?? J('places.json'));
   const pname = {};
   for (const p of places) { if (!p.iso3) continue; let n = p.name; try { n = PLAIN[p.iso2] ?? regions.of(p.iso2) ?? p.name; } catch { /* keep the source's name */ } pname[p.iso3] = n; }
-  for (const [iso3, n] of Object.entries(pname)) write(`place/${iso3}`, n, `${n}: officially reported infectious disease figures, how up to date its reporting is, and official outbreak notices that name it.`, { lastmod: built });
+  for (const [iso3, n] of Object.entries(pname)) write(`place/${iso3}`, n, `${n}: officially reported infectious disease figures, how up to date its reporting is, and official outbreak notices that name it.`, { lastmod: built, body: placeBody(iso3) });
   const where = (cs) => (cs.length ? cs.slice(0, 4).map((c) => pname[c] ?? c).join(', ') + (cs.length > 4 ? ` +${cs.length - 4}` : '') : 'several countries');
   for (const e of J('events/index.json').events) {
     const title = `${dname[e.disease] ?? 'Outbreak'} — ${where(e.countries)}`;
-    write(`outbreak/${e.event_id}`, title, `${title}: ${e.n_reports} official notice${e.n_reports === 1 ? '' : 's'} between ${longDate(e.first_report)} and ${longDate(e.last_report)}, with the source of each.`, { article: true, lastmod: e.last_report });
+    write(`outbreak/${e.event_id}`, title, `${title}: ${e.n_reports} official notice${e.n_reports === 1 ? '' : 's'} between ${longDate(e.first_report)} and ${longDate(e.last_report)}, with the source of each.`, { article: true, lastmod: e.last_report, body: eventBody(e) });
   }
   if (existsSync(join(data, 'weekly', 'index.json'))) for (const w of J('weekly/index.json').weeks) {
     const [y, n] = w.split('-W'); const wk = J(`weekly/${w}.json`);
-    write(`briefing/${w}`, `Week ${parseInt(n, 10)}, ${y}: what official reports said`, `Official outbreak notices and the largest changes in reported counts between ${longDate(wk.from)} and ${longDate(wk.to)}.`, { article: true, lastmod: wk.to });
+    write(`briefing/${w}`, `Week ${parseInt(n, 10)}, ${y}: what official reports said`, `Official outbreak notices and the largest changes in reported counts between ${longDate(wk.from)} and ${longDate(wk.to)}.`, { article: true, lastmod: wk.to, body: weekBody(wk) });
   }
   // ---- sitemap and robots: English pages only; embeds are for framing, not for search results
   writeFileSync(join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${esc(u.url)}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>\n`);

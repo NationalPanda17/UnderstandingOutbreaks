@@ -12,7 +12,7 @@ import { DiseasePage, Diseases } from './pages/DiseasePages';
 import { Explorer } from './pages/Explorer';
 import { About, Changelog, Changes, Cite, GlossaryPage, Methodology, Quality, ReportersGuide, Researchers, SourceStatus, Sources } from './pages/InfoPages';
 import { MapPage } from './pages/MapPage';
-import { Outbreak, Outbreaks } from './pages/OutbreakPages';
+import { Outbreak, Outbreaks, StoryKit } from './pages/OutbreakPages';
 import { Overview } from './pages/Overview';
 import { Place } from './pages/Place';
 import { Accessibility, Briefing, CorrectionsPolicy, EditorialStandards, NotFound, Privacy } from './pages/Policies';
@@ -34,7 +34,7 @@ function Page({ parts }: { parts: string[] }) {
     case 'disease': return <DiseasePage id={b} />;
     case 'place': return <Place iso3={(b ?? '').toUpperCase()} />;
     case 'outbreaks': return <Outbreaks />;
-    case 'outbreak': return <Outbreak id={b} />;
+    case 'outbreak': return parts[2] === 'kit' ? <StoryKit id={b} /> : <Outbreak id={b} />;
     case 'map': return <MapPage />;
     case 'explorer': return <Explorer />;
     case 'changes': return <Changes />;
@@ -69,6 +69,7 @@ function App() {
   const [err, setErr] = useState<unknown>(null);
   useEffect(() => { loadCore().then(setCore).catch(setErr); }, []);
   useEffect(() => { loadLocale(route.locale).then(() => { setReady(route.locale); storage.set('locale', route.locale); }); }, [route.locale]);
+  useEffect(() => { if (core && ready === route.locale) document.getElementById('static')?.remove(); }, [core, ready, route.locale]);
   useEffect(() => {
     if (!ready) return;
     const key = 'title.' + (route.parts[0] ?? 'overview');
@@ -86,7 +87,9 @@ function App() {
     return () => obs.disconnect();
   }, [ready, core, route.parts.join('/')]);
   if (err) return <div class="wrap"><ErrorBox error={err} /></div>;
-  if (!core || ready !== route.locale) return <div class="wrap"><p role="status">Loading…</p></div>;
+  // A pre-built page already shows its headline content as plain HTML (#static, written at build time). It stays
+  // until the app has its data, then gives way to the app; a page without it shows the usual placeholder.
+  if (!core || ready !== route.locale) return document.getElementById('static') ? null : <div class="wrap"><Loading /></div>;
   return (
     <AppCtx.Provider value={{ core, route }}>
       <Layout><Page parts={route.parts} /></Layout>

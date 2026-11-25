@@ -4,7 +4,7 @@ import { href, setParams } from '../lib/app';
 import { getJSON, getOptional, loadRevisions, loadTs, type EventIdx, type Flag, type TsFile } from '../lib/data';
 import { date, num, periodInSentence, periodLabel, smart, t } from '../lib/i18n';
 import { seriesProv } from '../lib/prov';
-import { comparableKeys, measureInSentence, measureLabel, placeName, seriesLabel, toSeries } from '../lib/series';
+import { comparableKeys, measureInSentence, measureLabel, placeName, seriesLabel, toSeries, rangeOver, samePeriodPastYears } from '../lib/series';
 import type { SeriesData } from '../lib/transforms';
 import { ChartCard } from '../components/ChartCard';
 import { Regions } from '../components/Regions';
@@ -43,6 +43,12 @@ function PlaceSummary({ name, disease, iso3, s }: { name: string; disease: strin
           : rate !== null && <div><span class="k">{t('placesum.rate')}</span><b>{smart(rate)}</b><span class="s">{periodLabel(s.p[i], s.ptype)}</span></div>}
         {r && <div><span class="k">{t('health.title')}</span><b class="words">{r.periods_behind === 0 ? t('placesum.upToDate') : t('placesum.behind.' + rep.data!.period_type, { n: r.periods_behind })}</b><span class="s">{t('health.present', { pct: Math.round(r.completeness * 100), n: r.expected })}</span></div>}
       </div>
+      {(() => {
+        const range = span > 1 ? rangeOver(s.p, s.v, i, span) : rangeOver(s.p, s.v, i, 10);
+        const prev = samePeriodPastYears(s.p, s.v, s.p[i], s.ptype, 1)[0];
+        if (!range || range.hi.period === range.lo.period) return null;
+        return <p class="placesum-context" data-testid="place-context">{t('placesum.range.' + s.ptype, { hi: num(range.hi.value), hiPeriod: periodInSentence(range.hi.period, s.ptype), lo: num(range.lo.value), loPeriod: periodInSentence(range.lo.period, s.ptype) })}{prev && prev.value !== null && <> {t('placesum.yearAgo.' + s.ptype, { value: num(prev.value) })}</>}</p>;
+      })()}
       {rep.data && reportingText(rep.data, iso3) && <p class="sr" data-testid="reporting-health">{reportingText(rep.data, iso3)}</p>}
     </section>
   );

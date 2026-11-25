@@ -39,6 +39,14 @@ COUNT_HEADLINE_MAX_COUNTRIES = 3
 GEOCODE_METHOD = {"name": "gazetteer_match", "version": "1"}
 SUMMARY_METHOD = {"name": "template_summary", "version": "1"}
 COUNT_METHOD = {"name": "regex_count_extraction", "version": "1"}
+# A figure is attributed to one country only when the sentence that states it names that country and no other.
+COUNTRY_COUNT_METHOD = {"name": "single_country_sentence_count", "version": "1", "max_sentence_chars": 320,
+                        "requires": "a totals phrase; no increment, subset or caption wording; no earlier year"}
+TOTAL_CUE_RX = re.compile(r"\b(total of|a total|cumulative|cumulatively|as of|to date|so far|since the (?:start|beginning))\b", re.I)
+INCREMENT_CUE_RX = re.compile(r"\b(additional|new|further|another|more|increase of|rise of|of (?:these|which|whom)|among (?:these|them))\b", re.I)
+# Captions of figures and tables run into the next sentence once the page is flattened to text: never read them.
+CAPTION_CUE_RX = re.compile(r"\b(figure|table|map|distribution of|epidemic curve|source:)\b", re.I)
+YEAR_RX = re.compile(r"\b(19\d{2}|20\d{2})\b")
 NO_RECENT_UPDATE_DAYS = 90
 ADMIN_WORDS = r"(?:Province|Region|State|District|County|Governorate|Department|Prefecture|Oblast|Division|Zone|Territory)"
 
@@ -326,6 +334,87 @@ def extract_counts(text: str) -> dict:
     return out
 
 
+SENTENCE_RX = re.compile(r"(?<=[.;!?])\s+(?=[A-Z(\"“])")
+
+
+def extract_country_counts(text: str, countries: list[str], geocoder, year: int | None = None) -> dict:
+    """Case and death counts a notice states as a total for one named country.
+
+    Deliberately narrow, because a wrong figure beside a country's name is worse than none. A count is attributed
+    to a country only when one sentence states it and that sentence (1) names exactly one country, which the notice
+    is about, (2) says it is a total ("a total of", "cumulative", "as of", "to date", "so far"), (3) has no wording
+    of an increment or a subset ("additional", "new", "of these"), and (4) mentions no year before the notice's own
+    (background on earlier outbreaks). The first such sentence per country and measure is used. Tables, lists and
+    sentences naming several countries are not read: those figures stay on the notice.
+    """
+    out: dict = {}
+    if len(countries) < 1:
+        return out
+    for sent in SENTENCE_RX.split(text):
+        if len(sent) > COUNTRY_COUNT_METHOD["max_sentence_chars"] or not any(ch.isdigit() for ch in sent):
+            continue
+        if not TOTAL_CUE_RX.search(sent) or INCREMENT_CUE_RX.search(sent) or CAPTION_CUE_RX.search(sent):
+            continue
+        if year and any(int(y) < year for y in YEAR_RX.findall(sent)):
+            continue
+        named = geocoder.countries(sent)
+        if len(named) != 1 or named[0] not in countries:
+            continue
+        got = extract_counts(sent)
+        slot = out.setdefault(named[0], {})
+        for k in ("cases", "deaths"):
+            if k in got and k not in slot:
+                slot[k] = {**got[k], "quote": sent.strip()[:320], "method": COUNTRY_COUNT_METHOD["name"],
+                           "method_version": COUNTRY_COUNT_METHOD["version"]}
+    return {c: v for c, v in out.items() if v}
+
+
+def apply_count_reviews(report: dict, reviews: list[dict]) -> list[str]:
+    """Apply a person's review of the automated readings of one notice (config/count_reviews.yaml).
+
+    ``confirm`` marks a reading as checked; ``correct`` replaces its value (the original reading is kept beside it);
+    ``reject`` removes it. A review that does not match a reading is returned as a problem and changes nothing.
+    """
+    problems = []
+    for rv in reviews:
+        field, country, action = rv.get("field"), rv.get("country"), rv.get("action")
+        where = (report.get("country_counts") or {}).get(country, {}) if country else report["counts"]
+        label = f"{report['report_id']} {field}{' ' + country if country else ''}"
+        if field not in ("cases", "deaths") or action not in ("confirm", "correct", "reject"):
+            problems.append(f"{label}: field must be cases or deaths, and action confirm, correct or reject")
+            continue
+        if field not in where:
+            if action == "correct" and isinstance(rv.get("value"), int) and rv.get("quote"):
+                # a figure the program missed, supplied by a person with the notice's own words
+                parent = report.setdefault("country_counts", {}).setdefault(country, {}) if country else report["counts"]
+                parent[field] = {"value": rv["value"], "quote": str(rv["quote"])[:320], "method": "human_review", "method_version": "1",
+                                 **({"case_definition": rv.get("case_definition", "unknown")} if field == "cases" else {}),
+                                 "review": {"action": "added", "date": str(rv.get("reviewed", "")), "note": rv.get("note", "")}}
+            else:
+                problems.append(f"{label}: no automated reading to review")
+            continue
+        cur = where[field]
+        if action == "reject":
+            del where[field]
+            report.setdefault("rejected_counts", []).append({"field": field, "country": country, "value": cur["value"], "date": str(rv.get("reviewed", "")), "note": rv.get("note", "")})
+        elif action == "confirm":
+            if "value" in rv and rv["value"] != cur["value"]:
+                problems.append(f"{label}: review confirms {rv['value']} but the reading is {cur['value']} (the notice may have been revised)")
+                continue
+            cur["review"] = {"action": "confirmed", "date": str(rv.get("reviewed", "")), "note": rv.get("note", "")}
+        else:
+            if not isinstance(rv.get("value"), int):
+                problems.append(f"{label}: a correction needs a whole-number value")
+                continue
+            cur["review"] = {"action": "corrected", "previous_value": cur["value"], "date": str(rv.get("reviewed", "")), "note": rv.get("note", "")}
+            cur["value"] = rv["value"]
+            if rv.get("case_definition") and field == "cases":
+                cur["case_definition"] = rv["case_definition"]
+    if report.get("country_counts"):
+        report["country_counts"] = {c: v for c, v in report["country_counts"].items() if v}
+    return problems
+
+
 ROUTE_RX = re.compile(r"\b(imported|importation|medical(?:ly)? evacuat\w*|evacuat\w*|repatriat\w*|travel history|history of travel|travell?ed (?:to|from)|returned from|returning from|arrived from)\b", re.I)
 ONSET_RX = re.compile(r"\b(symptom onset|onset of symptoms|date of onset|onset date|developed symptoms on|became symptomatic on|onset on)\b", re.I)
 
@@ -364,9 +453,13 @@ def status_from_text(text: str) -> tuple[str, str | None]:
 
 # ----------------------------------------------------------------------------- normalize, group, rank
 
-def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocoder: Geocoder) -> tuple[list[dict], list[str]]:
+def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocoder: Geocoder, reviews: list[dict] | None = None,
+                      problems: list[str] | None = None) -> tuple[list[dict], list[str]]:
     """Attach disease, countries, locations, counts and status to each report. Returns (reports, unmapped names)."""
     unmapped: list[str] = []
+    by_report: dict[str, list[dict]] = {}
+    for rv in reviews or []:
+        by_report.setdefault(str(rv.get("report_id")), []).append(rv)
     for r in reports:
         dpart, ppart = title_parts(r["title"])
         did, alias = normalizer.normalize(dpart)
@@ -384,9 +477,17 @@ def normalize_reports(reports: list[dict], normalizer: DiseaseNormalizer, geocod
         r["scope"] = "country" if countries else "multi-country or global (no single country named in the title)"
         r["locations"] = geocoder.locate(countries, r["text"])
         r["counts"] = extract_counts(r["text"])
+        r["country_counts"] = (extract_country_counts(r["text"], countries, geocoder, int(str(r["published"])[:4]))
+                               if len(countries) > 1 else {})
+        if r["report_id"] in by_report:
+            bad = apply_count_reviews(r, by_report.pop(r["report_id"]))
+            if problems is not None:
+                problems.extend(bad)
         r["status_stated"], r["status_quote"] = status_from_text(r["text"])
         r["route_quotes"] = quoted_sentences(r["text"], ROUTE_RX)
         r["onset_quotes"] = quoted_sentences(r["text"], ONSET_RX)
+    if problems is not None:
+        problems.extend(f"{rid}: the review names a notice that is not in the current feeds" for rid in sorted(by_report))
     return reports, sorted(set(unmapped))
 
 
@@ -505,6 +606,12 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
             if k not in seen:
                 seen.add(k)
                 locs.append({**l, "report_id": r["report_id"]})
+    # Per country: the figure from the most recent notice that states one for that country alone.
+    country_counts: dict = {}
+    for r in reps:
+        for iso3, got in (r.get("country_counts") or {}).items():
+            for k, v in got.items():
+                country_counts.setdefault(iso3, {})[k] = {**v, "as_of": r["published"], "report_id": r["report_id"], "url": r["url"]}
     qf = ["counts-extracted-automatically"] if latest_counts else ["no-counts-stated"]
     if g["disease"] == "other":
         qf.append("disease-unmapped")
@@ -531,10 +638,12 @@ def build_event(eid: str, g: dict, today: dt.date) -> dict:
         "deaths": ({**latest_counts["deaths"], "as_of": counts_report["published"], "report_id": counts_report["report_id"]}
                    if "deaths" in latest_counts else None),
         "counts_suppressed": suppressed,
+        "country_counts": {c: country_counts[c] for c in g["countries"] if c in country_counts},
         "source_ids": sorted({r["source_id"] for r in reps}), "quality_flags": qf, "origin_type": "site-derived",
-        "methods": {"grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD, "summary": SUMMARY_METHOD, "counts": COUNT_METHOD},
-        "reports": [{k: r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
-                                       "fetch_id", "raw_record_ref", "countries", "broad", "counts", "status_stated", "status_quote",
+        "methods": {"grouping": GROUP_METHOD, "geocoding": GEOCODE_METHOD, "summary": SUMMARY_METHOD, "counts": COUNT_METHOD,
+                    "country_counts": COUNTRY_COUNT_METHOD},
+        "reports": [{k: (r.get(k) or {}) if k == "country_counts" else r[k] for k in ("report_id", "source_id", "dataset_id", "title", "url", "published", "last_modified",
+                                       "fetch_id", "raw_record_ref", "countries", "broad", "counts", "country_counts", "status_stated", "status_quote",
                                        "disease_name_in_source", "route_quotes", "onset_quotes")} | {"origin_type": "source-reported"} for r in reps],
         "source_weight": max(r["source_weight"] for r in reps),
     }

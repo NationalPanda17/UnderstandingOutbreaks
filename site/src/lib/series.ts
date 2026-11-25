@@ -50,3 +50,53 @@ export function mapMetricLabel(core: Core, disease: string, window: number, ptyp
   if (d?.map_metric === 'percent_positive') return t('map.metric.percentPositive', { n: window });
   return t('map.metric.rate.' + ptype, { n: window });
 }
+
+// ---------------------------------------------------------------- context: the same period in earlier years
+
+/** ISO week number and ISO year of a date (weeks start on Monday; week 1 holds the year's first Thursday). */
+export function isoWeek(iso: string): { year: number; week: number } {
+  const d = new Date(iso + 'T00:00:00Z');
+  const day = (d.getUTCDay() + 6) % 7;                 // Monday = 0
+  d.setUTCDate(d.getUTCDate() - day + 3);              // the Thursday of this week
+  const year = d.getUTCFullYear();
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const week = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getUTCDay() + 6) % 7)) / 7);
+  return { year, week };
+}
+
+export interface PastYear { period: string; year: number; value: number | null; index: number }
+/** The same week (ISO week number) or the same month in each of the previous `years` years, newest first.
+ *  A year with no such period, or no value for it, is listed with a null value rather than left out, so a gap in
+ *  reporting stays visible. Week 53 is compared with week 52 of years that have no week 53. */
+export function samePeriodPastYears(p: string[], v: (number | null)[], anchor: string, ptype: string, years = 5): PastYear[] {
+  if (ptype !== 'W' && ptype !== 'M') return [];
+  const out: PastYear[] = [];
+  if (ptype === 'M') {
+    for (let k = 1; k <= years; k++) {
+      const period = `${parseInt(anchor.slice(0, 4), 10) - k}${anchor.slice(4)}`;
+      const i = p.indexOf(period);
+      out.push({ period, year: parseInt(period.slice(0, 4), 10), value: i >= 0 ? v[i] : null, index: i });
+    }
+    return out;
+  }
+  const a = isoWeek(anchor);
+  const byKey = new Map<string, number>();
+  p.forEach((x, i) => { const w = isoWeek(x); byKey.set(`${w.year}-${w.week}`, i); });
+  for (let k = 1; k <= years; k++) {
+    const y = a.year - k;
+    const i = byKey.get(`${y}-${a.week}`) ?? (a.week === 53 ? byKey.get(`${y}-52`) : undefined) ?? -1;
+    out.push({ period: i >= 0 ? p[i] : '', year: y, value: i >= 0 ? v[i] : null, index: i });
+  }
+  return out;
+}
+
+/** Highest and lowest reported value among the complete periods of a window ending at index `end`. */
+export function rangeOver(p: string[], v: (number | null)[], end: number, span: number): { hi: { period: string; value: number }; lo: { period: string; value: number }; n: number } | null {
+  let hi: { period: string; value: number } | null = null; let lo: { period: string; value: number } | null = null; let n = 0;
+  for (let i = Math.max(0, end - span + 1); i <= end; i++) {
+    const x = v[i]; if (x === null || x === undefined) continue; n++;
+    if (!hi || x > hi.value) hi = { period: p[i], value: x };
+    if (!lo || x < lo.value) lo = { period: p[i], value: x };
+  }
+  return hi && lo && n >= 2 ? { hi, lo, n } : null;
+}

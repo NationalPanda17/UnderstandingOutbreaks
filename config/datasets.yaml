@@ -367,6 +367,23 @@ subnational:
     link_kind: dataset-level link
     refresh_days: 30
     expected_min_rows: 2000
+  # US states: provisional cumulative counts at the last week of each completed year, from the weekly tables of the
+  # US National Notifiable Diseases Surveillance System (a work of the US Government). Only the last week of a year
+  # is requested; the current year is never used. See pipeline/uo/subnational.py (parse_nndss_records).
+  nndss_states:
+    id: cdc_nndss_states
+    source_id: cdc_nndss
+    raw_ext: json
+    url: "https://data.cdc.gov/resource/x9gk-5huc.json?$select=states,year,week,label,m3,m3_flag,location1&$where=week%20in('52','53')%20and%20location1%20is%20not%20null%20and%20label%20in('Measles,%20Imported','Measles,%20Indigenous','Mpox','Cholera')&$order=year,week,label,states&$limit=50000"
+    release: "NNDSS Weekly Data"
+    deep_link: "https://data.cdc.gov/NNDSS/NNDSS-Weekly-Data/x9gk-5huc"
+    link_kind: dataset-level link
+    refresh_days: 7
+    expected_min_rows: 400
+    diseases:
+      measles: ["Measles, Imported", "Measles, Indigenous"]
+      mpox: ["Mpox"]
+      cholera: ["Cholera"]
   boundaries_admin1:
     id: ne_admin1_10m
     source_id: naturalearth

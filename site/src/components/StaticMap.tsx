@@ -4,7 +4,7 @@
  *  Africa. Equal Earth keeps areas in proportion, so a shaded country takes up the share of the picture it takes up
  *  of the world. These maps are plain SVG: they export cleanly, print well and need no map engine.
  *  This file is loaded on demand (d3-geo is not in the main bundle). */
-import { geoArea, geoEqualEarth, geoPath } from 'd3-geo';
+import { geoArea, geoCentroid, geoEqualEarth, geoPath } from 'd3-geo';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { dataUrl } from '../lib/app';
 import { smart, t } from '../lib/i18n';
@@ -176,11 +176,10 @@ export function RegionMap({ iso3, values, breaks, labels, title, height = 440, s
   const w = 760;
   const list = useMemo(() => {
     if (!fc) return [];
-    // centre on the country (its bounds can cross the antimeridian only for a few island states; the fit copes)
-    let lo = 180, hi = -180;
-    const scan = (c: any) => { if (typeof c[0] === 'number') { lo = Math.min(lo, c[0]); hi = Math.max(hi, c[0]); } else c.forEach(scan); };
-    fc.features.forEach((f: any) => scan(f.geometry.coordinates));
-    const proj = geoEqualEarth().rotate([-(lo + hi) / 2, 0]).fitExtent([[6, 6], [w - 6, height - 6]], fc);
+    // Centre on the country's own centre of area, not the middle of its longitude range: a country that crosses the
+    // date line (the United States through Alaska's islands, Russia, Fiji) would otherwise be centred on the far
+    // side of the world and drawn as specks at both edges.
+    const proj = geoEqualEarth().rotate([-geoCentroid(fc)[0], 0]).fitExtent([[6, 6], [w - 6, height - 6]], fc);
     const path = geoPath(proj).digits(1);
     return fc.features.map((f: any) => ({ id: f.properties.id as string, name: f.properties.name as string, d: path(f) ?? '' }));
   }, [fc, height]);

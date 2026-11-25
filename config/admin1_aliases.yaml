@@ -27,6 +27,10 @@ aliases:
     "BALUCH": "Baluchistan"
     "ICT": "F.C.T."
     "KPK": "K.P."
+  USA:
+    # two regions answer to "Washington" (the state, and Washington, D.C. by an alternate name): the state is meant,
+    # since the District of Columbia is reported under its own name
+    "Washington": "Washington"
   THA:
     "BUNGKAN": "Bueng Kan"
     "KAMPAENG PHET": "Kamphaeng Phet"
@@ -76,6 +80,9 @@ not_mappable:
     other-unit: ["AUTONOMOUS REGION IN MUSLIM MINDANAO (ARMM)", "BANGSAMORO AUTONOMOUS REGION IN MUSLIM MINDANAO (BARMM)", "CORDILLERA ADMINISTRATIVE REGION (CAR)", "NATIONAL CAPITAL REGION (NCR)", "REGION 4", "REGION CARAGA (CARAGA)", "REGION I (ILOCOS REGION)", "REGION II (CAGAYAN VALLEY)", "REGION III (CENTRAL LUZON)", "REGION IV-A (CALABARZON)", "REGION IV-B (MIMAROPA)", "REGION IX (ZAMBOANGA PENINSULA)", "REGION V (BICOL REGION)", "REGION VI (WESTERN VISAYAS)", "REGION VII (CENTRAL VISAYAS)", "REGION VIII (EASTERN VISAYAS)", "REGION X (NORTHERN MINDANAO)", "REGION XI (DAVAO REGION)", "REGION XII (SOCCSKSARGEN)", "REGION XIII (CARAGA)"]
   SAU:
     other-unit: ["AHSA", "AL-AHSA", "AL-SHAMAL", "BISHA", "BISHAH", "GONFUDA", "GORIAT", "HAFR AL-BATEN", "HAFR AL-BATIN", "JEDDAH", "MEDINAH", "NORTHERN", "QASSIM", "QUNFUDAH", "QURAYYAT", "TAIF", "TA`IF", "THE HOLY CAPITAL"]
+  USA:
+    # US territories report to the same system but are not states on the boundary file
+    other-unit: ["American Samoa", "Commonwealth of Northern Mariana Islands", "Northern Mariana Islands", "Guam", "Puerto Rico", "U.S. Virgin Islands"]
   VNM:
     newer: ["HA TAY"]
     ambiguous: ["BAC KAN", "DONG NAI", "HUNG YEN"]

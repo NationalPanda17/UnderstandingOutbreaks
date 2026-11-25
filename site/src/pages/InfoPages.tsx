@@ -117,19 +117,20 @@ export function Methodology() {
   const flu = useAsync(() => getOptional<any>('flags/influenza.json'), []);
   const ev = useAsync(() => getOptional<any>('events/index.json'), []);
   return (
+    <div class="withtoc">
+    <nav class="toc" aria-label={t('methodology.toc')}><b>{t('methodology.toc')}</b><ul>{METHOD_SECTIONS.map((s) => <li key={s}><a href={'#' + s}>{t(`methodology.${s}.title`)}</a></li>)}<li><a href="#parameters">{t('methodology.params')}</a></li></ul></nav>
     <div class="prose">
       <h1>{t('nav.methodology')}</h1>
       <Positioning />
       <p class="lead">{t('methodology.lead')}</p>
-      <nav aria-label={t('methodology.toc')}><ul>{METHOD_SECTIONS.map((s) => <li key={s}><a href={'#' + s}>{t(`methodology.${s}.title`)}</a></li>)}</ul></nav>
       <Sections base="methodology" ids={METHOD_SECTIONS} />
-      <h2>{t('methodology.params')}</h2>
+      <h2 id="parameters">{t('methodology.params')}</h2>
       <p>{t('methodology.paramsNote')}</p>
       {flags.data && <><h3>{t('methodology.paramsCounts')}</h3><pre>{JSON.stringify({ method: flags.data.method, params: flags.data.params }, null, 2)}</pre></>}
       {flu.data && <><h3>{t('methodology.paramsFlu')}</h3><pre data-testid="params-flu">{JSON.stringify({ method: flu.data.method, basis: flu.data.basis, params: flu.data.params }, null, 2)}</pre></>}
       {ev.data?.methods && <><h3>{t('methodology.paramsEvents')}</h3><pre>{JSON.stringify(ev.data.methods, null, 2)}</pre></>}
-      {ev.data && <pre>{JSON.stringify(ev.data.methods, null, 2)}</pre>}
       <p><a href={href(route, 'changelog')}>{t('methodology.changelog')}</a> · <a href={href(route, 'learn/not-predictions')}>{t('learn.notPredictions')}</a></p>
+    </div>
     </div>
   );
 }

@@ -167,7 +167,7 @@ def write_subnational(ctx: Context, out: Path) -> None:
     for disease, prod in sub.items():
         common = {"disease": disease, "level": "admin1", "origin_type": "site-derived", "source_ids": prod["source_ids"],
                   "method": prod["method"], "fetches": prod["fetches"], "release": prod["release"], "deep_link": prod["deep_link"],
-                  "generated_at": prod["generated_at"]}
+                  "generated_at": prod["generated_at"], **({"note": prod["note"]} if prod.get("note") else {})}
         index = {}
         for iso3, c in prod["countries"].items():
             latest = max((c["years"][i] for u in c["units"] if u["id"] for i, v in enumerate(u["values"]) if v is not None), default=None)

@@ -13,7 +13,7 @@ import { MapLegend, quantileBreaks } from './mapUtil';
 import { SourceChip, useApp } from './SourceChip';
 
 interface Unit { id: string | null; name: string | null; name_in_source: string; values: (number | null)[]; definitions: (string | null)[]; resolution: (string | null)[]; conflict_years?: number[] }
-interface RegionFile { iso3: string; years: number[]; units: Unit[]; n_units: number; n_matched: number; conflicts: string[]; unmatched_names: string[]; source_ids: string[]; method: { name: string; version: string }; fetches: { data: { retrieved_at: string } }; release: string }
+interface RegionFile { note?: string; iso3: string; years: number[]; units: Unit[]; n_units: number; n_matched: number; conflicts: string[]; unmatched_names: string[]; source_ids: string[]; method: { name: string; version: string }; fetches: { data: { retrieved_at: string } }; release: string }
 
 export function Regions({ disease, iso3 }: { disease: string; iso3: string }) {
   const { core, route } = useApp();
@@ -46,7 +46,7 @@ export function Regions({ disease, iso3 }: { disease: string; iso3: string }) {
   const name = placeName(core, iso3);
   const title = t('regions.title', { disease: diseaseName(core, disease), name, year: String(y) });
   const prov: Prov = { title, origin: 'site-derived', sourceIds: d.source_ids, asOf: d.fetches.data.retrieved_at.slice(0, 10), snapshotId: route.snapshot ?? core.manifest.snapshot_id, method: d.method,
-    notes: [t('regions.note.release', { release: d.release })] };
+    notes: [d.note ?? t('regions.note.release', { release: d.release })] };
   const rows = d.units.filter((u) => u.values[yi] !== null).sort((a, b) => (b.values[yi] as number) - (a.values[yi] as number));
   const doExport = async (kind: 'png' | 'svg') => {
     if (!svgRef.current) return;

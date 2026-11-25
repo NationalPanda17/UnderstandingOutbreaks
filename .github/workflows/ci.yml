@@ -47,3 +47,12 @@ jobs:
       - name: Lazy-loading check (tool runtimes and solvers absent from main and embed bundles)
         working-directory: site
         run: npm run check:bundles
+      - name: Browser checks on the built site (served the way Cloudflare Pages serves it)
+        env: { UO_SKIP_CHECKS: "SQL console", WRANGLER_SEND_METRICS: "false" }
+        run: |
+          cd healthcheck && npm install --no-audit --no-fund && npx playwright install --with-deps chromium && cd ..
+          npx --yes wrangler@4 pages dev site/dist --port 8788 --ip 127.0.0.1 > pages-dev.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:8788/en/ && break; sleep 2; done
+          curl -sf -o /dev/null http://127.0.0.1:8788/en/ || { echo "the built site did not start"; tail -40 pages-dev.log; exit 1; }
+          node healthcheck/check.mjs http://127.0.0.1:8788 || { cat healthcheck/health-report.md; exit 1; }
+          cat healthcheck/health-report.md >> "$GITHUB_STEP_SUMMARY"

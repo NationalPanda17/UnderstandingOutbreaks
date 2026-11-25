@@ -181,6 +181,12 @@ first-level region, for the countries where OpenDengue reports at that level.
   matched. Nothing is matched by similarity. A person can add a reviewed mapping in `config/admin1_aliases.yaml`. A name that was reviewed and cannot be drawn
   (a part of a boundary region, a region newer than the boundary file, a different kind of unit, or a duplicate
   spelling that would conflict) is listed there under `not_mappable` with its reason; it stays in the tables.
+- **United States by state.** For measles, mpox and cholera, the value for a state and year is the cumulative
+  year-to-date count in the last week (52 or 53) of that year in the US CDC NNDSS weekly tables, as published that
+  week. The tables are provisional, so later corrections are not included, and the current year is never used. A
+  "-" in the table is a zero; any other flag means no figure. Measles is the sum of imported and indigenous cases,
+  and only when both have a figure. New York State is the sum of the "New York" and "New York City" rows, which the
+  source reports separately. Territories are listed but not drawn.
 - **Unmatched names** stay in the published table, marked as not on the map, and are listed in a GitHub issue.
 - **Two names for one region.** If two source names match the same region and both report the same year, the
   region is left off the map for that year and the table says so; the values are never added together.

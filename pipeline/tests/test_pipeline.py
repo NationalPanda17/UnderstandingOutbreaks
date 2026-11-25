@@ -739,3 +739,80 @@ def test_a_notice_listing_many_countries_does_not_glue_or_inflate_events():
     assert max(len(e["countries"]) for e in evs) == 1                      # the global notice adds no country to any event
     assert len([e for e in evs if e["countries"]]) == 2                    # and does not merge the two outbreaks
     assert E.GROUP_METHOD["max_notice_countries"] <= 12
+
+
+def _geo_two():
+    places = {"COD": {"name": "Democratic Republic of the Congo", "centroid": [23, -3]}, "UGA": {"name": "Uganda", "centroid": [32, 1]},
+              "KEN": {"name": "Kenya", "centroid": [38, 0]}}
+    return E.Geocoder(places, {"aliases": {"COD": ["DRC"]}}, {})
+
+
+def test_a_count_is_given_to_a_country_only_when_one_sentence_states_its_total_and_names_it_alone():
+    g = _geo_two()
+    text = ("As of 3 November, a total of 10 668 confirmed cases, including 5 198 deaths, have been reported. "
+            "Uganda has reported a total of 46 confirmed cases and 12 deaths as of 2 November. "
+            "Kenya and Uganda together reported a total of 50 suspected cases. "
+            "In the DRC, an additional 964 confirmed cases have been recorded. "
+            "To date, 9 900 confirmed cases have been recorded in the DRC; so far 4 800 deaths were recorded in the DRC. "
+            "In 2018, a total of 23 confirmed cases were reported from Kenya. "
+            "Kenya has reported 7 cases. "
+            "Tanzania reported a total of 3 cases.")
+    cc = E.extract_country_counts(text, ["COD", "UGA", "KEN"], g, 2026)
+    assert cc["UGA"]["cases"]["value"] == 46 and cc["UGA"]["cases"]["case_definition"] == "confirmed" and cc["UGA"]["deaths"]["value"] == 12
+    assert cc["UGA"]["cases"]["quote"] == "Uganda has reported a total of 46 confirmed cases and 12 deaths as of 2 November."
+    assert cc["COD"]["cases"]["value"] == 9900 and cc["COD"]["deaths"]["value"] == 4800   # the "additional 964" sentence is not a total
+    assert "KEN" not in cc      # named with Uganda; a 2018 background figure; a figure with no totals wording: none is used
+    assert E.extract_country_counts(text, ["COD"], g, 2026).keys() == {"COD"}             # a country the notice is not about is ignored
+    assert E.extract_country_counts("Cases were reported in Uganda as of 2 November.", ["UGA", "KEN"], g, 2026) == {}
+
+
+def test_a_review_confirms_corrects_rejects_or_adds_a_reading_and_reports_what_does_not_match():
+    def rep():
+        return {"report_id": "x:1", "counts": {"cases": {"value": 46, "case_definition": "confirmed", "quote": "46 confirmed cases"}, "deaths": {"value": 12, "quote": "12 deaths"}},
+                "country_counts": {"UGA": {"cases": {"value": 40, "quote": "Uganda has reported 40 confirmed cases."}}}}
+    r = rep()
+    assert E.apply_count_reviews(r, [{"field": "cases", "action": "confirm", "value": 46, "reviewed": "2026-11-25"}]) == []
+    assert r["counts"]["cases"]["review"]["action"] == "confirmed" and r["counts"]["cases"]["value"] == 46
+    r = rep()
+    assert E.apply_count_reviews(r, [{"field": "cases", "country": "UGA", "action": "correct", "value": 41, "reviewed": "2026-11-25"}]) == []
+    assert r["country_counts"]["UGA"]["cases"]["value"] == 41 and r["country_counts"]["UGA"]["cases"]["review"]["previous_value"] == 40
+    r = rep()
+    assert E.apply_count_reviews(r, [{"field": "deaths", "action": "reject", "reviewed": "2026-11-25"}]) == []
+    assert "deaths" not in r["counts"] and r["rejected_counts"][0]["value"] == 12
+    r = rep()
+    assert E.apply_count_reviews(r, [{"field": "deaths", "country": "KEN", "action": "correct", "value": 3, "quote": "Kenya: 3 deaths (Table 1)", "reviewed": "2026-11-25"}]) == []
+    assert r["country_counts"]["KEN"]["deaths"]["method"] == "human_review" and r["country_counts"]["KEN"]["deaths"]["review"]["action"] == "added"
+    r = rep()
+    bad = E.apply_count_reviews(r, [{"field": "cases", "action": "confirm", "value": 99}, {"field": "deaths", "country": "KEN", "action": "confirm"}, {"field": "cases", "action": "correct"}])
+    assert len(bad) == 3 and r == rep()         # nothing changes when a review does not match
+
+
+def test_us_state_figures_take_the_last_week_of_each_completed_year_and_only_complete_sums():
+    import datetime as _dt, json as _json
+    from uo import subnational as S
+    def row(state, year, week, label, m3=None, flag=None, loc=True):
+        r = {"states": state, "year": str(year), "week": str(week), "label": label}
+        if loc: r["location1"] = state
+        if m3 is not None: r["m3"] = str(m3)
+        if flag: r["m3_flag"] = flag
+        return r
+    rows = [
+        row("Texas", 2025, 52, "Measles, Imported", 3), row("Texas", 2025, 52, "Measles, Indigenous", 700),
+        row("Texas", 2025, 53, "Measles, Imported", 4), row("Texas", 2025, 53, "Measles, Indigenous", 762),   # week 53 is the year's last week
+        row("Ohio", 2025, 53, "Measles, Imported", flag="-"), row("Ohio", 2025, 53, "Measles, Indigenous", 30),  # "-" means no reported cases
+        row("Utah", 2025, 53, "Measles, Imported", flag="N"), row("Utah", 2025, 53, "Measles, Indigenous", 5),   # not reportable: no total
+        row("Iowa", 2025, 53, "Measles, Indigenous", 9),                                                         # one label missing: no total
+        row("U.S. Residents", 2025, 53, "Measles, Imported", 85, loc=False), row("U.S. Residents", 2025, 53, "Measles, Indigenous", 2000, loc=False),
+        row("Texas", 2026, 46, "Measles, Imported", 1), row("Texas", 2026, 46, "Measles, Indigenous", 2),        # current year: left out
+        row("Texas", 2024, 40, "Measles, Imported", 1), row("Texas", 2024, 40, "Measles, Indigenous", 2),        # year's data stop before week 52: left out
+        row("Texas", 2025, 53, "Mpox", 77),
+    ]
+    df = S.parse_nndss_records(_json.dumps(rows).encode(), _dt.date(2026, 11, 25), ["Measles, Imported", "Measles, Indigenous"])
+    got = {(r.name, r.year): r.value for r in df.itertuples(index=False)}
+    assert got == {("Texas", 2025): 766.0, ("Ohio", 2025): 30.0}
+    assert set(df["iso3"]) == {"USA"} and "week 53" in df.iloc[0]["detail"]
+    ny = [row("NEW YORK", 2024, 52, "Mpox", 10), row("NEW YORK CITY", 2024, 52, "Mpox", 30), row("New York", 2025, 53, "Mpox", 5), row("TEXAS", 2024, 52, "Mpox", 2), row("Texas", 2025, 53, "Mpox", 3)]
+    got = {(r.name, r.year): r.value for r in S.parse_nndss_records(_json.dumps(ny).encode(), _dt.date(2026, 11, 25), ["Mpox"]).itertuples(index=False)}
+    assert got == {("New York", 2024): 40.0, ("Texas", 2024): 2.0, ("Texas", 2025): 3.0}   # 2025: the city's figure is missing, so no state figure
+    one = S.parse_nndss_records(_json.dumps(rows).encode(), _dt.date(2026, 11, 25), ["Mpox"])
+    assert [(r.name, r.value) for r in one.itertuples(index=False)] == [("Texas", 77.0)]

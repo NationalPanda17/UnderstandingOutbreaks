@@ -544,3 +544,34 @@ describe('home summary, update history, weekly briefing, exported images', () =>
     expect(svg).toContain('Source: X');
   });
 });
+
+describe('context for a figure: the same period in earlier years, and the range over a year', () => {
+  it('ISO weeks follow the Thursday rule across year boundaries', async () => {
+    const { isoWeek } = await import('../src/lib/series');
+    expect(isoWeek('2026-10-19')).toEqual({ year: 2026, week: 43 });
+    expect(isoWeek('2024-12-30')).toEqual({ year: 2025, week: 1 });     // Monday of ISO week 1 of 2025
+    expect(isoWeek('2020-12-28')).toEqual({ year: 2020, week: 53 });
+    expect(isoWeek('2021-01-04')).toEqual({ year: 2021, week: 1 });
+  });
+
+  it('finds the same ISO week or month in earlier years and keeps a missing year visible', async () => {
+    const { samePeriodPastYears } = await import('../src/lib/series');
+    const p = ['2023-10-23', '2024-10-21', '2025-10-13', '2025-10-20', '2026-10-19'];
+    const v = [11505, 5452, 1, 12143, 17668];
+    const w = samePeriodPastYears(p, v, '2026-10-19', 'W', 4);
+    expect(w.map((x) => [x.year, x.period, x.value])).toEqual([[2025, '2025-10-20', 12143], [2024, '2024-10-21', 5452], [2023, '2023-10-23', 11505], [2022, '', null]]);
+    const m = samePeriodPastYears(['2024-08-01', '2025-08-01', '2026-08-01'], [5, null, 9], '2026-08-01', 'M', 3);
+    expect(m.map((x) => [x.year, x.value])).toEqual([[2025, null], [2024, 5], [2023, null]]);
+    expect(samePeriodPastYears(['2024-01-01'], [1], '2024-01-01', 'Y')).toEqual([]);
+    // week 53 is compared with week 52 of a year that has no week 53
+    expect(samePeriodPastYears(['2019-12-23', '2020-12-28'], [7, 8], '2020-12-28', 'W', 1)[0]).toMatchObject({ period: '2019-12-23', value: 7 });
+  });
+
+  it('reports the highest and lowest complete period of a window, ignoring gaps', async () => {
+    const { rangeOver } = await import('../src/lib/series');
+    const p = ['a', 'b', 'c', 'd', 'e']; const v = [50, null, 3, 9, 4];
+    expect(rangeOver(p, v, 4, 4)).toEqual({ hi: { period: 'd', value: 9 }, lo: { period: 'c', value: 3 }, n: 3 });
+    expect(rangeOver(p, v, 4, 5)!.hi).toEqual({ period: 'a', value: 50 });
+    expect(rangeOver(p, [null, null, null, null, 4], 4, 5)).toBeNull();
+  });
+});

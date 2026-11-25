@@ -184,6 +184,7 @@ export function Layout({ children }: { children: any }) {
               <li>{t('footer.privacy')}</li>
             </ul>
           </div>
+          <p class="small"><ThemePicker /></p>
           <p class="small" title={latest}>{t('footer.snapshot', { id: snapLabel(latest), date: date(core.manifest.generated_at) })} · {t('footer.attribution')}</p>
         </div>
       </footer>
@@ -208,6 +209,23 @@ export function SnapshotPicker() {
       </label>
       <span class="small muted">{t('pin.count', { n: snaps.length })} {t('pin.vintage')}</span>
     </div>
+  );
+}
+
+/** Appearance: follow the device (the default), or always light, or always dark. Saved on this device only. */
+export function ThemePicker() {
+  const [v, setV] = useState(() => storage.get('theme') ?? 'auto');
+  const set = (x: string) => {
+    setV(x);
+    if (x === 'auto') { storage.remove('theme'); document.documentElement.removeAttribute('data-theme'); }
+    else { storage.set('theme', x); document.documentElement.setAttribute('data-theme', x); }
+  };
+  return (
+    <label class="themepick">{t('theme.label')}{' '}
+      <select value={v} onChange={(e) => set((e.target as HTMLSelectElement).value)} data-testid="theme-pick">
+        <option value="auto">{t('theme.auto')}</option><option value="light">{t('theme.light')}</option><option value="dark">{t('theme.dark')}</option>
+      </select>
+    </label>
   );
 }
 

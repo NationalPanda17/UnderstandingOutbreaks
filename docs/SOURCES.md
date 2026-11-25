@@ -157,3 +157,19 @@ The age-structured template uses a synthetic, user-editable matrix and says so.
 
 `config/context_links.json` lists outbound links to Nextstrain and official travel and health pages. They were not
 individually re-checked live and are flagged for review; the link checker covers registry and dataset URLs only.
+
+## Sources assessed on 2026-11-25
+
+Licence statements were read from each publisher's own pages on that date.
+
+| Source | What it offers | Licence as stated | Decision |
+|---|---|---|---|
+| US CDC NNDSS weekly tables (`data.cdc.gov`, dataset `x9gk-5huc`) | Weekly provisional counts of notifiable diseases by US state and territory, 2022 onward, through an open API | Work of the US Government (public domain in the United States) | **Added** for measles, mpox and cholera by state: the cumulative count at the last week of each completed year |
+| ECDC website material | Epidemiological updates (already read for titles, dates and links) | ECDC's intellectual property notice: CC BY 4.0 unless otherwise stated | Licence entry updated; still only titles, dates and links are shown |
+| ECDC ERVISS weekly data (GitHub `EU-ECDC/Respiratory_viruses_weekly_data`) | Weekly sentinel tests, detections and positivity for influenza, RSV and SARS-CoV-2 in 30 European countries, 2022 onward, as CSV | The repository carries the European Union Public Licence 1.2, a copyleft licence written for software. ECDC's README also says publication from this repository is paused during a system transition | **Not added.** Whether figures derived from EUPL-licensed files can be published beside data under other licences is a decision for the maintainers |
+| PAHO/EIH Open Data (`opendata.paho.org`) | Regional indicators and dashboards | "Creative Commons license 3.0"; the page does not say which variant, and adds that some resources carry another | **Not added** until the variant is confirmed for the specific dataset; no per-disease machine-readable weekly file was identified |
+| Africa CDC weekly epidemic intelligence reports | Weekly event summaries for the continent | No terms-of-use page was found; reports are PDF documents | **Not added**: no stated reuse terms, and PDF reports are not read by this site |
+
+The OpenDengue regional data remains the only subnational source outside the United States. No other open,
+machine-readable first-level series with clear reuse terms was identified in this pass.
+

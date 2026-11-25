@@ -30,6 +30,10 @@ from .core import (CONFIG, STATE, Fetch, SchemaChange, archive_raw, http_get, is
 from .timeseries import DENGUE_PRIORITY
 
 METHOD = {"name": "dengue_admin1_annual", "version": "1"}
+NNDSS_METHOD = {"name": "nndss_state_year_end", "version": "1", "new_york": "state = New York + New York City"}
+# Flags in the weekly tables: "-" is "no reported cases" (a zero). Every other flag means no figure is available.
+NNDSS_ZERO_FLAGS = {"-"}
+NYC, NY_REST = "New York City", "New York"
 NAME_FIELDS = ("name", "name_alt", "name_local", "gn_name", "woe_name", "name_en", "gns_name", "abbrev", "postal")
 GENERIC = r"\b(province|state|region|department|departamento|provincia|estado|prefecture|governorate|district|city|municipality|of|de|del|la|el)\b"
 
@@ -100,6 +104,59 @@ def parse_admin1_records(content: bytes, today: dt.date) -> pd.DataFrame:
     return best.rename(columns={"ISO_A0": "iso3", "adm_1_name": "name"})[["iso3", "name", "year", "value", "ptype", "detail"]]
 
 
+def parse_nndss_records(content: bytes, today: dt.date, labels: list[str]) -> pd.DataFrame:
+    """One value per (US reporting area, year): the cumulative year-to-date count at the last week of that year.
+
+    The weekly tables are provisional and are published as they stood each week, so the figure for a year is what
+    had been reported by its final week, not a later corrected total. Several labels (measles: imported and
+    indigenous) are added together, and only when every one of them has a figure. The current year is left out.
+    Rows for regions of the country and for the national total are not used: only rows for one reporting area.
+    """
+    import json as _json
+    rows = _json.loads(content)
+    need = {"states", "year", "week", "label", "location1"}
+    if not isinstance(rows, list) or not rows or not need <= set().union(*(r.keys() for r in rows[:200])):
+        raise SchemaChange("NNDSS weekly data: expected rows with states, year, week, label, location1",
+                           expected=sorted(need), found=sorted(rows[0].keys()) if isinstance(rows, list) and rows else [])
+    recs = []
+    for r in rows:
+        if r.get("label") not in labels or not r.get("location1"):
+            continue
+        year, week = int(r["year"]), int(r["week"])
+        if year >= today.year:
+            continue
+        if r.get("m3") not in (None, ""):
+            value = float(r["m3"])
+        elif str(r.get("m3_flag", "")).strip() in NNDSS_ZERO_FLAGS:
+            value = 0.0
+        else:
+            value = None
+        name = str(r["location1"]).strip()
+        if name.isupper():  # earlier years are in capitals: the same area must not appear twice
+            name = name.title().replace(" Of ", " of ").replace("U.s.", "U.S.")
+        recs.append({"name": name, "year": year, "week": week, "label": r["label"], "value": value})
+    df = pd.DataFrame(recs, columns=["name", "year", "week", "label", "value"])
+    if df.empty:
+        return pd.DataFrame(columns=["iso3", "name", "year", "value", "ptype", "detail"])
+    last = df.groupby("year")["week"].transform("max")
+    df = df[(df["week"] == last) & (last >= 52)]
+    out = []
+    for (name, year), g in df.groupby(["name", "year"], sort=True):
+        if set(g["label"]) != set(labels) or g["value"].isna().any():
+            continue  # a label missing or without a figure: no total is published for this area and year
+        out.append({"iso3": "USA", "name": name, "year": int(year), "value": float(g["value"].sum()), "ptype": "W",
+                    "detail": f"provisional notified cases, cumulative to week {int(g['week'].iloc[0])} as then published"
+                              + (f" ({' + '.join(labels)})" if len(labels) > 1 else "")})
+    # New York City reports separately from the rest of New York State. The state's figure is the two added together,
+    # and only when both are present; neither is shown on its own, because neither is the state.
+    by = {(o["name"], o["year"]): o for o in out}
+    out = [o for o in out if o["name"] not in (NYC, NY_REST)]
+    for (name, year), rest in sorted(by.items()):
+        if name == NY_REST and (NYC, year) in by:
+            out.append({**rest, "value": rest["value"] + by[(NYC, year)]["value"], "detail": rest["detail"] + "; New York City, reported separately, is included"})
+    return pd.DataFrame(out, columns=["iso3", "name", "year", "value", "ptype", "detail"])
+
+
 def read_admin1_shapes(content: bytes) -> list[dict]:
     """Natural Earth admin-1 records with their geometry (unsimplified)."""
     import shapefile  # pyshp
@@ -136,6 +193,9 @@ def name_index(shapes: list[dict]) -> dict[str, dict[str, set[str]]]:
                 if f:
                     c.setdefault(f, set()).add(s["code"])
                     c.setdefault(f.replace(" ", ""), set()).add(s["code"])
+        # the region's own name, kept apart: a reviewed alias that two regions answer to (the state of Washington and
+        # Washington, D.C.) is settled in favour of the region whose own name it is
+        c.setdefault("=primary", {}).setdefault(fold(s["name"]), set()).add(s["code"])  # type: ignore[union-attr]
     return idx
 
 
@@ -145,6 +205,8 @@ def match_name(iso3: str, name: str, idx: dict, aliases: dict) -> str | None:
     reviewed = (aliases.get(iso3) or {}).get(name)
     if reviewed:
         hit = by_country.get(fold(reviewed)) or set()
+        if len(hit) > 1:
+            hit = (by_country.get("=primary") or {}).get(fold(reviewed)) or set()
         return next(iter(hit)) if len(hit) == 1 else None
     f = fold(name)
     for key in (f, f.replace(" ", "")):
@@ -267,6 +329,54 @@ def build_dengue_product(records: pd.DataFrame, shapes: list[dict], aliases: dic
     return {"countries": countries, "boundaries": boundaries, "unmatched": sorted(unmatched)}
 
 
+def _nndss_products(cfg: dict, registry: dict, offline: bool, now: dt.datetime, load, save, log, f_shape: Fetch, aliases: dict, reviewed: set) -> dict:
+    """US state products (one per disease) from the NNDSS weekly tables. A failure here never affects dengue: the
+    last derived products are reused if there are any, and an issue is recorded."""
+    ds = cfg.get("nndss_states")
+    if not ds:
+        return {}
+    cache_path = STATE / "subnational" / "nndss_states.json"
+    cached = read_json(cache_path)
+    try:
+        f = _fetch(ds, registry, offline, now, load, save)
+        if f is None:
+            return (cached or {}).get("products", {})
+        key = {"data": f.raw_file_hash, "shapes": f_shape.raw_file_hash, "method": NNDSS_METHOD, "aliases": aliases, "year": now.year, "diseases": ds["diseases"]}
+        if cached and cached.get("key") == key:
+            return cached["products"]
+        log("subnational: deriving US state figures from NNDSS")
+        content = open(f.raw_path, "rb").read()
+        shapes = [s for s in read_admin1_shapes(open(f_shape.raw_path, "rb").read()) if s["iso3"] == "USA"]
+        products, total, pending = {}, 0, []
+        for disease, labels in ds["diseases"].items():
+            records = parse_nndss_records(content, now.date(), list(labels))
+            total += len(records)
+            if records.empty:
+                continue
+            prod = build_dengue_product(records, shapes, aliases)
+            pending += [u for u in prod["unmatched"] if u not in reviewed]
+            products[disease] = {**prod, "method": NNDSS_METHOD, "source_ids": [ds["source_id"], "naturalearth"],
+                                 "fetches": {"data": f.public(), "boundaries": f_shape.public()}, "release": ds.get("release"),
+                                 "deep_link": ds.get("deep_link"), "generated_at": iso(now),
+                                 "note": "US CDC NNDSS weekly tables. Provisional counts, cumulative to the last week of each year as published that week; later corrections are not included."}
+        if total < int(ds.get("expected_min_rows", 1)):
+            raise SchemaChange(f"NNDSS weekly data: only {total} area-years derived")
+        if pending:
+            record_issue("unmatched-region", "US reporting areas without a matching boundary",
+                         "These reporting areas in the NNDSS weekly tables did not match exactly one Natural Earth region of the "
+                         "United States, so they are listed in the published tables but not drawn on maps. Add a reviewed mapping to "
+                         "`config/admin1_aliases.yaml`, or list the name under `not_mappable` there (never guessed automatically):\n\n"
+                         + "\n".join(f"- {u}" for u in sorted(set(pending))), source_id=ds["source_id"], dedupe_key="unmatched-us-areas")
+        write_json(cache_path, {"key": key, "products": products})
+        return products
+    except Exception as e:  # noqa: BLE001 - never take dengue or the rest of the site down
+        log("subnational (NNDSS) failed:", type(e).__name__, e)
+        record_issue("source-failure", "US state figures could not be built",
+                     f"**Error:** {type(e).__name__}: {e}\n\n**Effect:** the last derived US state figures stay live. "
+                     "Nothing was changed automatically; a person needs to review.", source_id=ds.get("source_id"), dedupe_key="subnational-nndss")
+        return (cached or {}).get("products", {})
+
+
 def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dict | None:
     """Fetch (or reuse), derive (or reuse the cached derivation) and return the product, or None on failure.
 
@@ -305,9 +415,11 @@ def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dic
                          "same country, so they are listed in the published tables but not drawn on maps. Add a reviewed "
                          "mapping to `config/admin1_aliases.yaml`, or list the name under `not_mappable` there (never guessed automatically):\n\n"
                          + "\n".join(f"- {u}" for u in pending), source_id="opendengue", dedupe_key="unmatched-regions")
-        return {"dengue": {**product, "method": METHOD, "source_ids": ["opendengue", "naturalearth"],
-                           "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
-                           "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}}
+        out = {"dengue": {**product, "method": METHOD, "source_ids": ["opendengue", "naturalearth"],
+                          "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
+                          "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}}
+        out.update(_nndss_products(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
+        return out
     except Exception as e:  # noqa: BLE001 - any failure here must not take the rest of the site down
         log("subnational failed:", type(e).__name__, e)
         record_issue("source-failure", "Subnational dengue data could not be built",
