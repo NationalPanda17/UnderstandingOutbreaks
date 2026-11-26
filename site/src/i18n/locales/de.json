@@ -2119,5 +2119,6 @@
  "withdrawn.all": "Aktuelle Ausbrüche ansehen",
  "offline.banner": "Sie sind offline. Diese Seite und ihre Zahlen wurden bei einem früheren Besuch auf diesem Gerät gespeichert und sind möglicherweise nicht aktuell.",
  "policy.privacy.device.p3": "Damit bereits besuchte Seiten ohne Verbindung geöffnet werden können, behält Ihr Browser eine Kopie davon und von ihren Datendateien auf Ihrem Gerät. Die Kopie wird nirgendwohin gesendet; wenn Sie die Daten der Website im Browser löschen, wird sie entfernt.",
- "glossary.what": "was das bedeutet"
+ "glossary.what": "was das bedeutet",
+ "method.ukhsa_region_onset_year": "Für jede der neun Regionen Englands und jedes Jahr wurden die laborbestätigten Masernfälle nach der Woche des Symptombeginns addiert. Gezeigt werden nur Jahre, in denen jede Woche vorliegt und außerhalb des Meldeverzugs liegt. Die Umrisse der Regionen wurden durch Zusammenfassen von Gebieten der Grenzdatei gebildet."
 }

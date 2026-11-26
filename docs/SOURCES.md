@@ -175,9 +175,9 @@ Licence statements were read from each publisher's own pages on that date.
 | Source | What it offers | Licence as stated | Decision |
 |---|---|---|---|
 | Robert Koch Institute, "Laborbestätigte Influenzafälle in Deutschland" (GitHub `robert-koch-institut/Influenzafaelle_in_Deutschland`) | Laboratory-confirmed influenza cases per reporting week, federal state and age group, 2020 onward, as one TSV file | The dataset's README: CC BY 4.0, free to use on condition that the Robert Koch Institute is named as the source | **Added**: influenza by federal state, complete years |
-| UK Health Security Agency data dashboard (`api.ukhsa-dashboard.data.gov.uk`) | Measles cases by onset week for England and UKHSA regions; respiratory indicators | Not yet read from the publisher's own terms page | **Not added**: the licence statement has to be read first; UKHSA regions are also not first-level regions on the boundary file |
+| UK Health Security Agency data dashboard (`api.ukhsa-dashboard.data.gov.uk`) | Laboratory-confirmed measles cases by week of symptom onset for England and its nine regions, October 2023 onward, through an open API | The dashboard's pages: "All content is available under the Open Government Licence v3.0, except where otherwise stated" | **Added**: measles by English region, complete years (2024 and 2025). England only |
 | Brazil (Ministry of Health open data, InfoDengue) | State-level notifications | Not assessed in this pass | **Not added** |
 
-Subnational data now covers dengue (OpenDengue, many countries), the United States (measles, mpox, cholera) and
-Germany (influenza).
+Subnational data now covers dengue (OpenDengue, many countries), the United States (measles, mpox, cholera),
+Germany (influenza) and England (measles).
 

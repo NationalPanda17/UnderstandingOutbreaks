@@ -35,6 +35,8 @@ NNDSS_METHOD = {"name": "nndss_state_year_end", "version": "1", "new_york": "sta
 NNDSS_ZERO_FLAGS = {"-"}
 RKI_METHOD = {"name": "rki_state_calendar_year", "version": "1", "age_group": "00+", "year": "ISO-week year, complete years only"}
 RKI_ALL_AGES, RKI_NATIONAL_ID = "00+", "00"
+UKHSA_METHOD = {"name": "ukhsa_region_onset_year", "version": "1", "year": "ISO-week year of symptom onset, complete years only",
+                "boundaries": "Natural Earth areas of England combined into its nine regions"}
 NYC, NY_REST = "New York City", "New York"
 NAME_FIELDS = ("name", "name_alt", "name_local", "gn_name", "woe_name", "name_en", "gns_name", "abbrev", "postal")
 GENERIC = r"\b(province|state|region|department|departamento|provincia|estado|prefecture|governorate|district|city|municipality|of|de|del|la|el)\b"
@@ -50,7 +52,7 @@ def fold(s: str) -> str:
 
 # ----------------------------------------------------------------------------- fetching
 
-def _fetch(ds: dict, registry: dict, offline: bool, now: dt.datetime, load, save) -> Fetch | None:
+def _fetch(ds: dict, registry: dict, offline: bool, now: dt.datetime, load, save, get=None) -> Fetch | None:
     """Reuse the stored fetch unless it is older than refresh_days; returns None only when offline with nothing stored."""
     old = (load(ds["id"]) or [None])[0]
     if old is not None:
@@ -59,7 +61,7 @@ def _fetch(ds: dict, registry: dict, offline: bool, now: dt.datetime, load, save
             return old
     if offline:
         return None
-    content, headers = http_get(ds["url"], timeout=600)
+    content, headers = (get(ds), {}) if get else http_get(ds["url"], timeout=600)
     f = archive_raw(ds, registry, ds["url"], content, headers, link_kind=ds.get("link_kind", "deep"), now=now)
     save(ds["id"], [f])
     return f
@@ -200,6 +202,133 @@ def parse_rki_flu_records(content: bytes, today: dt.date) -> pd.DataFrame:
     return pd.DataFrame(out, columns=["iso3", "name", "year", "value", "ptype", "detail"])
 
 
+def parse_ukhsa_region_records(content: bytes, today: dt.date) -> pd.DataFrame:
+    """One value per (English region, year): measles cases by week of symptom onset, added up over a complete year.
+
+    ``content`` is the JSON this site stores from the UKHSA data dashboard API: ``{"regions": {name: [rows]}}``, the
+    weekly rows of one metric for each UKHSA region. Each row is one week (its date is the Monday) for all ages and
+    both sexes; weeks without cases are present with a value of zero. A year is used only when every ISO week of it
+    is present exactly once and none is flagged as still within the reporting delay. The current year is left out.
+    """
+    import json as _json
+    doc = _json.loads(content)
+    regions = doc.get("regions") if isinstance(doc, dict) else None
+    if not isinstance(regions, dict) or not regions:
+        raise SchemaChange("UKHSA measles by region: expected {'regions': {name: [rows]}}", expected=["regions"],
+                           found=sorted(doc) if isinstance(doc, dict) else [type(doc).__name__])
+    need = {"date", "metric_value", "age", "sex", "in_reporting_delay_period"}
+    out = []
+    for name, rows in sorted(regions.items()):
+        if rows and not need <= set(rows[0]):
+            raise SchemaChange("UKHSA measles by region: row fields missing", expected=sorted(need), found=sorted(rows[0]))
+        by_year: dict[int, list] = {}
+        for r in rows:
+            if r.get("age") != "all" or r.get("sex") != "all" or r.get("stratum", "default") != "default":
+                continue
+            y, w, _ = dt.date.fromisoformat(str(r["date"])[:10]).isocalendar()
+            by_year.setdefault(y, []).append((w, r["metric_value"], bool(r["in_reporting_delay_period"])))
+        for year, got in sorted(by_year.items()):
+            weeks = dt.date(year, 12, 28).isocalendar()[1]
+            if year >= today.year or sorted(w for w, _, _ in got) != list(range(1, weeks + 1)):
+                continue
+            if any(delay or v is None for _, v, delay in got):
+                continue
+            out.append({"iso3": "GBR", "name": name, "year": year, "value": float(sum(v for _, v, _ in got)), "ptype": "W",
+                        "detail": f"laboratory-confirmed cases by week of symptom onset, weeks 1 to {weeks}, all ages"})
+    return pd.DataFrame(out, columns=["iso3", "name", "year", "value", "ptype", "detail"])
+
+
+def dissolve(geoms: list[dict]) -> dict:
+    """One outline for several neighbouring areas: borders that two of the areas share are removed.
+
+    Works on exact coordinates. An edge that appears once in each direction is an internal border and is dropped; the
+    edges left over are joined into rings. If they cannot all be joined (the areas do not share exact borders), the
+    areas are returned side by side as one multi-polygon instead, which draws the same filled shape with its
+    internal borders still visible. Rings are returned as separate polygons; holes are not reconstructed, which the
+    fill rule of the map and of GeoJSON viewers handles for the island-and-enclave cases that occur here.
+    """
+    polys = [poly for g in geoms for poly in (g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]])]
+    edges: dict[tuple, int] = {}
+    for poly in polys:
+        for ring in poly:
+            pts = [tuple(pt[:2]) for pt in ring]
+            for a_, b_ in zip(pts, pts[1:]):
+                if a_ != b_:
+                    edges[(a_, b_)] = edges.get((a_, b_), 0) + 1
+    keep = [(a_, b_) for (a_, b_), n in edges.items() if (b_, a_) not in edges for _ in range(n)]
+    nxt: dict[tuple, list] = {}
+    for a_, b_ in keep:
+        nxt.setdefault(a_, []).append(b_)
+    rings = []
+    while nxt:
+        start = next(iter(nxt))
+        ring, cur = [start], start
+        while True:
+            outs = nxt.get(cur)
+            if not outs:
+                return {"type": "MultiPolygon", "coordinates": [[[list(pt) for pt in r] for r in poly] for poly in polys]}
+            b_ = outs.pop()
+            if not outs:
+                del nxt[cur]
+            ring.append(b_)
+            cur = b_
+            if cur == start:
+                break
+        if len(ring) >= 4:
+            rings.append([list(pt) for pt in ring])
+    return {"type": "MultiPolygon", "coordinates": [[r] for r in rings]}
+
+
+def group_shapes(shapes: list[dict], iso3: str, split_unit: str) -> list[dict]:
+    """Regions of one country built by combining boundary areas that the boundary file itself assigns to them.
+
+    Areas in the part of the country named ``split_unit`` (England) are combined by the file's own ``region``
+    attribute; the other parts (Scotland, Wales, Northern Ireland) each become one shape, so the map shows them as
+    areas without data rather than leaving them off. Nothing is assigned by this site: an area with no region
+    attribute is left out and reported by the caller through the unmatched names.
+    """
+    groups: dict[tuple, list] = {}
+    for s in shapes:
+        if s["iso3"] != iso3 or not s.get("unit"):
+            continue
+        key = (s["unit"], s["group"]) if s["unit"] == split_unit else (s["unit"], "")
+        if s["unit"] == split_unit and not s["group"]:
+            continue
+        groups.setdefault(key, []).append(s)
+    out = []
+    for (unit, group), members in sorted(groups.items()):
+        name = group or unit
+        code = f"{iso3}-G-" + re.sub(r"[^a-z0-9]+", "-", fold(name)).strip("-")
+        out.append({"code": code, "iso3": iso3, "name": name, "names": [name], "geom": dissolve([m["geom"] for m in members]),
+                    "unit": unit, "group": group, "n_members": len(members)})
+    return out
+
+
+def _ukhsa_get(ds: dict) -> bytes:
+    """All weekly rows of one metric for every UKHSA region, as one JSON document (the API serves them in pages)."""
+    import json as _json
+    from urllib.parse import quote
+    base = ds["url"].rstrip("/")
+    listing, _ = http_get(base + "/geographies", timeout=120)
+    names = [g["name"] for g in _json.loads(listing)]
+    if not names:
+        raise SchemaChange("UKHSA measles by region: the API lists no regions")
+    regions = {}
+    for name in names:
+        url = f"{base}/geographies/{quote(name)}/metrics/{ds['metric']}?page_size=365"
+        rows: list = []
+        for _ in range(20):
+            page = _json.loads(http_get(url, timeout=120)[0])
+            rows += page.get("results") or []
+            url = page.get("next")
+            if not url:
+                break
+        else:
+            raise SchemaChange(f"UKHSA measles by region: too many pages for {name}")
+        regions[name] = sorted(rows, key=lambda r: str(r.get("date")))
+    return _json.dumps({"metric": ds["metric"], "regions": regions}, sort_keys=True, separators=(",", ":")).encode()
+
+
 def read_admin1_shapes(content: bytes) -> list[dict]:
     """Natural Earth admin-1 records with their geometry (unsimplified)."""
     import shapefile  # pyshp
@@ -221,7 +350,8 @@ def read_admin1_shapes(content: bytes) -> list[dict]:
         if not rec.get("adm1_code") or not rec.get("name"):
             continue
         out.append({"code": rec["adm1_code"], "iso3": rec["adm0_a3"], "name": rec["name"],
-                    "names": [str(rec[k]) for k in NAME_FIELDS if rec.get(k)], "geom": sr.shape.__geo_interface__})
+                    "names": [str(rec[k]) for k in NAME_FIELDS if rec.get(k)], "geom": sr.shape.__geo_interface__,
+                    "unit": str(rec.get("geonunit") or ""), "group": str(rec.get("region") or "")})
     return out
 
 
@@ -463,8 +593,57 @@ def _rki_products(cfg: dict, registry: dict, offline: bool, now: dt.datetime, lo
         return (cached or {}).get("products", {})
 
 
+def _ukhsa_products(cfg: dict, registry: dict, offline: bool, now: dt.datetime, load, save, log, f_shape: Fetch, aliases: dict, reviewed: set) -> dict:
+    """Measles by English region, from the UKHSA data dashboard. A failure here never affects the other products."""
+    ds = cfg.get("ukhsa_measles_regions")
+    if not ds:
+        return {}
+    cache_path = STATE / "subnational" / "ukhsa_measles_regions.json"
+    cached = read_json(cache_path)
+    try:
+        f = _fetch(ds, registry, offline, now, load, save, get=_ukhsa_get)
+        if f is None:
+            return (cached or {}).get("products", {})
+        key = {"data": f.raw_file_hash, "shapes": f_shape.raw_file_hash, "method": UKHSA_METHOD, "aliases": aliases, "year": now.year}
+        if cached and cached.get("key") == key:
+            return cached["products"]
+        log("subnational: deriving measles by English region")
+        records = parse_ukhsa_region_records(open(f.raw_path, "rb").read(), now.date())
+        if len(records) < int(ds.get("expected_min_rows", 1)):
+            raise SchemaChange(f"UKHSA measles by region: only {len(records)} region-years derived")
+        shapes = group_shapes(read_admin1_shapes(open(f_shape.raw_path, "rb").read()), "GBR", "England")
+        prod = build_dengue_product(records, shapes, aliases)
+        pending = [u for u in prod["unmatched"] if u not in reviewed]
+        if pending:
+            record_issue("unmatched-region", "English regions without a matching boundary",
+                         "These region names in the UKHSA measles data did not match exactly one region built from the Natural Earth "
+                         "areas of England, so they are listed in the published tables but not drawn on maps. Add a reviewed mapping "
+                         "to `config/admin1_aliases.yaml` (never guessed automatically):\n\n" + "\n".join(f"- {u}" for u in sorted(set(pending))),
+                         source_id=ds["source_id"], dedupe_key="unmatched-en-regions")
+        products = {ds["disease"]: {**prod, "method": UKHSA_METHOD, "source_ids": [ds["source_id"], "naturalearth"],
+                                    "fetches": {"data": f.public(), "boundaries": f_shape.public()}, "release": ds.get("release"),
+                                    "deep_link": ds.get("deep_link"), "generated_at": iso(now),
+                                    "note": "UK Health Security Agency data dashboard. England only: laboratory-confirmed measles cases by week of symptom onset, "
+                                            "added up over each complete year, for England's nine regions. Scotland, Wales and Northern Ireland "
+                                            "are not in this source and are shown without data."}}
+        write_json(cache_path, {"key": key, "products": products})
+        return products
+    except Exception as e:  # noqa: BLE001 - never take the other products or the rest of the site down
+        log("subnational (UKHSA) failed:", type(e).__name__, e)
+        record_issue("source-failure", "English region measles figures could not be built",
+                     f"**Error:** {type(e).__name__}: {e}\n\n**Effect:** the last derived figures stay live. "
+                     "Nothing was changed automatically; a person needs to review.", source_id=ds.get("source_id"), dedupe_key="subnational-ukhsa")
+        return (cached or {}).get("products", {})
+
+
+def add_products(out: dict, more: dict) -> None:
+    """Add products to ``out`` (disease -> list of products). Two sources can cover one disease in different countries."""
+    for disease, prod in more.items():
+        out.setdefault(disease, []).append(prod)
+
+
 def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dict | None:
-    """Fetch (or reuse), derive (or reuse the cached derivation) and return the product, or None on failure.
+    """Fetch (or reuse), derive (or reuse the cached derivation) and return {disease: [products]}, or None on failure.
 
     On failure an issue is recorded and the caller keeps the last published files.
     """
@@ -501,11 +680,12 @@ def run(registry: dict, offline: bool, now: dt.datetime, load, save, log) -> dic
                          "same country, so they are listed in the published tables but not drawn on maps. Add a reviewed "
                          "mapping to `config/admin1_aliases.yaml`, or list the name under `not_mappable` there (never guessed automatically):\n\n"
                          + "\n".join(f"- {u}" for u in pending), source_id="opendengue", dedupe_key="unmatched-regions")
-        out = {"dengue": {**product, "method": METHOD, "source_ids": ["opendengue", "naturalearth"],
-                          "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
-                          "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}}
-        out.update(_nndss_products(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
-        out.update(_rki_products(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
+        out: dict = {}
+        add_products(out, {"dengue": {**product, "method": METHOD, "source_ids": ["opendengue", "naturalearth"],
+                                      "fetches": {"data": f_data.public(), "boundaries": f_shape.public()},
+                                      "release": data_ds.get("release"), "deep_link": data_ds.get("deep_link"), "generated_at": iso(now)}})
+        for build in (_nndss_products, _rki_products, _ukhsa_products):
+            add_products(out, build(cfg, registry, offline, now, load, save, log, f_shape, aliases, reviewed))
         return out
     except Exception as e:  # noqa: BLE001 - any failure here must not take the rest of the site down
         log("subnational failed:", type(e).__name__, e)

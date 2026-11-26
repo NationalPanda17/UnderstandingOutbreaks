@@ -15,5 +15,6 @@
   "withdrawn.all": "Voir les flambées en cours",
   "offline.banner": "Vous êtes hors connexion. Cette page et ses chiffres ont été enregistrés sur cet appareil lors d’une visite précédente et peuvent ne plus être à jour.",
   "policy.privacy.device.p3": "Pour que les pages déjà consultées s’ouvrent sans connexion, votre navigateur en garde une copie, ainsi que de leurs fichiers de données, sur votre appareil. Cette copie n’est jamais envoyée où que ce soit, et effacer les données du site dans votre navigateur la supprime.",
-  "glossary.what": "ce que cela signifie"
+  "glossary.what": "ce que cela signifie",
+  "method.ukhsa_region_onset_year": "Pour chacune des neuf régions d’Angleterre et chaque année, les cas de rougeole confirmés en laboratoire ont été additionnés selon la semaine de début des symptômes. Seules les années dont toutes les semaines sont présentes et hors du délai de déclaration sont affichées. Les contours des régions ont été obtenus en combinant des zones du fichier de limites."
 }

@@ -13,6 +13,8 @@ panel and export, so a change here must come with a version bump in the code.
   by hand and none described the event (they were global totals since 2003, yearly burden estimates or earlier
   outbreaks). The field is not requested and never read.
 - `rki_state_calendar_year` v1 (new): see METHODOLOGY, "Germany by federal state".
+- `ukhsa_region_onset_year` v1 (new): see METHODOLOGY, "England by region". Region outlines are built by combining
+  boundary areas (`dissolve`, `group_shapes`).
 - Images that a notice labels as a table are listed for human review (`table_images`); they are never read.
 
 ## 2026-11-25

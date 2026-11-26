@@ -15,5 +15,6 @@
   "withdrawn.all": "See current outbreaks",
   "offline.banner": "You are offline. This page and its figures were saved on this device during an earlier visit and may be out of date.",
   "policy.privacy.device.p3": "So that pages you have already visited open without a connection, your browser keeps a copy of them and of their data files on your device. The copy is never sent anywhere, and clearing the site’s data in your browser removes it.",
-  "glossary.what": "what this means"
+  "glossary.what": "what this means",
+  "method.ukhsa_region_onset_year": "For each of England’s nine regions and each year, laboratory-confirmed measles cases were added up by the week in which symptoms began. Only years with every week present and outside the reporting delay are shown. The region outlines were made by combining areas of the boundary file."
 }

@@ -9,6 +9,8 @@ Release notes. Each entry starts with `## YYYY-MM-DD — title` and is shown on 
   (see the corrections log). A withdrawn page's address now says so.
 - Germany by federal state: laboratory-confirmed influenza cases per complete year, from the Robert Koch
   Institute's open data (CC BY 4.0).
+- England by region: laboratory-confirmed measles cases per complete year for England's nine regions, from the
+  UKHSA data dashboard (Open Government Licence v3.0). Scotland, Wales and Northern Ireland are not in the source.
 - Offline reading: pages and data a browser has already opened are kept on that device and open again without a
   connection, with a notice that they may be out of date. Nothing is fetched ahead of time or sent anywhere.
 - Glossary: provisional, cumulative, laboratory-confirmed and automated reading added; the outbreak page links the

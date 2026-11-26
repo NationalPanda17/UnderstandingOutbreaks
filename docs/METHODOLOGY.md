@@ -199,6 +199,16 @@ first-level region, for the countries where OpenDengue reports at that level.
   row for a state is a week without notified cases there; this was checked by adding up the states, which equals
   the national row for every complete year. A year is used only when the national row is present for each of its
   weeks, and the current year is never used. Counts of confirmed cases depend on how much testing is done.
+- **England by region.** For measles, the value for a region and year is the sum of laboratory-confirmed cases by
+  week of symptom onset over that ISO-week year, from the UKHSA data dashboard. A year is used only when every week
+  is present and none is flagged by the source as still within its reporting delay; the current year is never
+  used. The source covers England only: Scotland, Wales and Northern Ireland are drawn without data. The boundary
+  file has no outline for England's nine regions, so each is made by combining the areas the boundary file itself
+  assigns to that region and removing the borders they share. Three region names differ between the two and are
+  mapped by a reviewed entry in `config/admin1_aliases.yaml`.
+- **Several sources for one disease.** Regional figures for a disease can come from different sources in different
+  countries (measles: United States and England). Each country's file names its own source and method; figures
+  from two sources are never combined for one country.
 - **Unmatched names** stay in the published table, marked as not on the map, and are listed in a GitHub issue.
 - **Two names for one region.** If two source names match the same region and both report the same year, the
   region is left off the map for that year and the table says so; the values are never added together.

@@ -27,6 +27,11 @@ aliases:
     "BALUCH": "Baluchistan"
     "ICT": "F.C.T."
     "KPK": "K.P."
+  GBR:
+    # UKHSA's names for three of England's nine regions differ from the boundary file's names for the same regions
+    "London": "Greater London"
+    "East of England": "East"
+    "Yorkshire and Humber": "Yorkshire and the Humber"
   USA:
     # two regions answer to "Washington" (the state, and Washington, D.C. by an alternate name): the state is meant,
     # since the District of Columbia is reported under its own name

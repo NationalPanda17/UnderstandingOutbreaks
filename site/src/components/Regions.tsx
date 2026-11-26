@@ -56,6 +56,8 @@ export function Regions({ disease, iso3 }: { disease: string; iso3: string }) {
   return (
     <section class="card" style={{ marginTop: '16px' }} id="place-regions">
       <header><div><h2>{title}</h2><p class="sub">{t('regions.sub', { matched: d.n_matched, total: d.n_units })}</p></div><SourceChip prov={prov} /></header>
+      {/* what the figures cover, in the source's terms (for example "England only"), where a reader sees it before the map */}
+      {d.note && <p class="small muted" data-testid="regions-note">{d.note}</p>}
       <div class="tools" role="group" aria-label={t('regions.year')}>
         <button type="button" class="btn small" disabled={years.indexOf(y) <= 0} aria-label={t('mappage.prev')} onClick={() => setYear(years[years.indexOf(y) - 1])}>‹</button>
         <label>{t('regions.year')} <select value={String(y)} onChange={(e) => setYear(parseInt((e.target as HTMLSelectElement).value, 10))}>{years.map((x) => <option key={x} value={String(x)}>{x}</option>)}</select></label>

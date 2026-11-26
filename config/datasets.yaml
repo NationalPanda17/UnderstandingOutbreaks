@@ -397,6 +397,21 @@ subnational:
     link_kind: dataset-level link
     refresh_days: 7
     expected_min_rows: 64
+  # England's nine regions: laboratory-confirmed measles cases by week of symptom onset, from the UKHSA data
+  # dashboard API (Open Government Licence v3.0). Added up per complete ISO-week year. The API serves one region per
+  # request; the pipeline stores all of them as one JSON file. See pipeline/uo/subnational.py.
+  ukhsa_measles_regions:
+    id: ukhsa_measles_regions
+    source_id: ukhsa
+    disease: measles
+    raw_ext: json
+    url: "https://api.ukhsa-dashboard.data.gov.uk/themes/infectious_disease/sub_themes/vaccine_preventable/topics/Measles/geography_types/UKHSA%20Region"
+    metric: measles_cases_casesByOnsetWeek
+    release: "UKHSA data dashboard, measles cases by onset week"
+    deep_link: "https://ukhsa-dashboard.data.gov.uk/vaccine-preventable-diseases/measles"
+    link_kind: dataset-level link
+    refresh_days: 7
+    expected_min_rows: 9
   boundaries_admin1:
     id: ne_admin1_10m
     source_id: naturalearth

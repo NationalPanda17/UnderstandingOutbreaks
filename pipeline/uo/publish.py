@@ -164,24 +164,32 @@ def write_subnational(ctx: Context, out: Path) -> None:
         if prev.exists():
             shutil.copytree(prev, out / "subnational")
         return
-    for disease, prod in sub.items():
-        common = {"disease": disease, "level": "admin1", "origin_type": "site-derived", "source_ids": prod["source_ids"],
-                  "method": prod["method"], "fetches": prod["fetches"], "release": prod["release"], "deep_link": prod["deep_link"],
-                  "generated_at": prod["generated_at"], **({"note": prod["note"]} if prod.get("note") else {})}
-        index = {}
-        for iso3, c in prod["countries"].items():
-            latest = max((c["years"][i] for u in c["units"] if u["id"] for i, v in enumerate(u["values"]) if v is not None), default=None)
-            index[iso3] = {"years": [c["years"][0], c["years"][-1]], "latest_year": latest, "n_units": c["n_units"], "n_matched": c["n_matched"]}
-            write_json(out / "subnational" / disease / f"{iso3}.json", {**common, "iso3": iso3, **c,
-                       "unmatched_names": [u["name_in_source"] for u in c["units"] if not u["id"]],
-                       "notes": {"values": "Reported counts, not rates: the sources read by this site publish no population figures at this level.",
-                                 "definitions": "The case definition differs between regions and years; it is listed for every value.",
-                                 "boundaries": "Natural Earth admin-1 (public domain), simplified by this site. Approximate; no position on any territory is implied."}})
-            b = dict(prod["boundaries"][iso3])
-            b.update({"source_id": "naturalearth", "origin_type": "source-reported", "attribution": ctx.registry["naturalearth"]["citation"]})
-            write_json(out / "subnational" / "boundaries" / f"{iso3}.geojson", b)
-        write_json(out / "subnational" / disease / "index.json", {**common, "countries": index, "n_unmatched_names": len(prod["unmatched"])})
-
+    for disease, prods in sub.items():
+        # one disease can have regional figures from several sources, each for its own countries
+        index, source_ids, n_unmatched, first = {}, [], 0, None
+        for prod in (prods if isinstance(prods, list) else [prods]):
+            common = {"disease": disease, "level": "admin1", "origin_type": "site-derived", "source_ids": prod["source_ids"],
+                      "method": prod["method"], "fetches": prod["fetches"], "release": prod["release"], "deep_link": prod["deep_link"],
+                      "generated_at": prod["generated_at"], **({"note": prod["note"]} if prod.get("note") else {})}
+            first = first or common
+            source_ids += [x for x in prod["source_ids"] if x not in source_ids]
+            n_unmatched += len(prod["unmatched"])
+            for iso3, c in prod["countries"].items():
+                if iso3 in index:
+                    continue  # the first source listed for a country keeps it; figures from two sources are never mixed
+                latest = max((c["years"][i] for u in c["units"] if u["id"] for i, v in enumerate(u["values"]) if v is not None), default=None)
+                index[iso3] = {"years": [c["years"][0], c["years"][-1]], "latest_year": latest, "n_units": c["n_units"], "n_matched": c["n_matched"],
+                               "source_ids": prod["source_ids"]}
+                write_json(out / "subnational" / disease / f"{iso3}.json", {**common, "iso3": iso3, **c,
+                           "unmatched_names": [u["name_in_source"] for u in c["units"] if not u["id"]],
+                           "notes": {"values": "Reported counts, not rates: the sources read by this site publish no population figures at this level.",
+                                     "definitions": "The case definition differs between regions and years; it is listed for every value.",
+                                     "boundaries": "Natural Earth admin-1 (public domain), simplified by this site. Approximate; no position on any territory is implied."}})
+                b = dict(prod["boundaries"][iso3])
+                b.update({"source_id": "naturalearth", "origin_type": "source-reported", "attribution": ctx.registry["naturalearth"]["citation"]})
+                write_json(out / "subnational" / "boundaries" / f"{iso3}.geojson", b)
+        if first:
+            write_json(out / "subnational" / disease / "index.json", {**first, "source_ids": source_ids, "countries": index, "n_unmatched_names": n_unmatched})
 
 REPORTING_WINDOW = {"W": 26, "M": 12, "Y": 5}
 

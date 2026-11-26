@@ -500,6 +500,52 @@ def test_rki_state_years_are_complete_years_only():
         SN.parse_rki_flu_records(b"a\tb\n1\t2\n", dt.date(2026, 1, 1))
 
 
+def test_ukhsa_region_years_need_every_week_and_no_reporting_delay():
+    from uo import subnational as SN
+    def rows(year, n_weeks, delay_last=False, value=1.0, age="all"):
+        first = dt.date.fromisocalendar(year, 1, 1)
+        return [{"date": (first + dt.timedelta(weeks=i)).isoformat(), "metric_value": value, "age": age, "sex": "all", "stratum": "default",
+                 "in_reporting_delay_period": delay_last and i == n_weeks - 1} for i in range(n_weeks)]
+    doc = {"regions": {"London": rows(2024, 52, value=2.0) + rows(2025, 52, delay_last=True) + rows(2026, 40),   # 2025 still in the delay; 2026 is current
+                       "North East": rows(2024, 51) + rows(2024, 52, age="01-04"),                               # a week missing; other ages ignored
+                       "South West": rows(2024, 52, value=0.0)}}                                                  # a year of zeros is a real zero
+    df = SN.parse_ukhsa_region_records(json.dumps(doc).encode(), dt.date(2026, 11, 25))
+    assert [(r["name"], r["year"], r["value"]) for r in df.to_dict("records")] == [("London", 2024, 104.0), ("South West", 2024, 0.0)]
+    assert set(df["iso3"]) == {"GBR"}
+    with pytest.raises(SchemaChange):
+        SN.parse_ukhsa_region_records(b'{"results": []}', dt.date(2026, 1, 1))
+
+
+def test_dissolve_removes_shared_borders_and_grouping_follows_the_boundary_file():
+    from uo import subnational as SN
+    sq = lambda x: {"type": "Polygon", "coordinates": [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]]}  # noqa: E731
+    left, right = sq(0), {"type": "Polygon", "coordinates": [[[1, 0], [1, 1], [2, 1], [2, 0], [1, 0]][::-1]]}
+    right["coordinates"][0] = [[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]
+    got = SN.dissolve([left, right])
+    assert got["type"] == "MultiPolygon" and len(got["coordinates"]) == 1
+    ring = got["coordinates"][0][0]
+    assert ring[0] == ring[-1] and len(ring) == 7 and {tuple(p) for p in ring} == {(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)}
+    apart = SN.dissolve([sq(0), sq(5)])            # not neighbours: two outlines
+    assert len(apart["coordinates"]) == 2
+    shapes = [{"code": "a", "iso3": "GBR", "name": "A", "names": ["A"], "geom": left, "unit": "England", "group": "East"},
+              {"code": "b", "iso3": "GBR", "name": "B", "names": ["B"], "geom": right, "unit": "England", "group": "East"},
+              {"code": "c", "iso3": "GBR", "name": "C", "names": ["C"], "geom": sq(5), "unit": "Wales", "group": "East Wales"},
+              {"code": "d", "iso3": "GBR", "name": "D", "names": ["D"], "geom": sq(7), "unit": "England", "group": ""},   # no region stated: left out
+              {"code": "e", "iso3": "FRA", "name": "E", "names": ["E"], "geom": sq(9), "unit": "France", "group": "X"}]
+    out = SN.group_shapes(shapes, "GBR", "England")
+    assert [(o["code"], o["name"], o["n_members"]) for o in out] == [("GBR-G-east", "East", 2), ("GBR-G-wales", "Wales", 1)]
+    aliases = core.load_yaml(core.CONFIG / "admin1_aliases.yaml")["aliases"]["GBR"]
+    assert aliases == {"London": "Greater London", "East of England": "East", "Yorkshire and Humber": "Yorkshire and the Humber"}
+
+
+def test_two_sources_can_cover_one_disease():
+    from uo import subnational as SN
+    out: dict = {}
+    SN.add_products(out, {"measles": {"countries": {"USA": {}}}})
+    SN.add_products(out, {"measles": {"countries": {"GBR": {}}}, "influenza": {"countries": {"DEU": {}}}})
+    assert [sorted(p["countries"]) for p in out["measles"]] == [["USA"], ["GBR"]] and len(out["influenza"]) == 1
+
+
 # ----------------------------------------------------------------------------- failures become issues (never pull requests)
 
 def test_source_failure_writes_an_issue_with_last_good_snapshot_and_schema_diff(tmp_path, monkeypatch):

@@ -209,7 +209,7 @@ def run(offline: bool = False, now: dt.datetime | None = None) -> dict:
 
     ctx = publish.Context(site=site, registry=registry, diseases_doc=diseases_doc, datasets=ds_by_id, places=places,
                           boundaries=boundaries, df=df, history=history, snapshots=snapshots, snapshot_id=snapshot_id,
-                          fetches=all_fetches, ref_fetches={**{k: f.public() for k, f in ref_fetches.items()}, **({} if not sub else {v['dataset_id']: v for v in sub['dengue']['fetches'].values()})},
+                          fetches=all_fetches, ref_fetches={**{k: f.public() for k, f in ref_fetches.items()}, **({} if not sub else {v['dataset_id']: v for prods in sub.values() for prod in prods for v in prod['fetches'].values()})},
                           status=status, events=ev_out["events"], event_history=ev_out["history"],
                           unmapped=ev_out["unmapped"], subnational=sub, now=now, changes=changes if is_new_snapshot else changes.iloc[0:0])
     summary = publish.publish_all(ctx, log)

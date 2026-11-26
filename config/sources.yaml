@@ -155,6 +155,21 @@ sources:
     citation: "US Centers for Disease Control and Prevention. National Notifiable Diseases Surveillance System, Weekly Tables of Infectious Disease Data. https://www.cdc.gov/nndss/"
     cadence: weekly
     kind: timeseries
+  - id: ukhsa
+    name: UK Health Security Agency data dashboard
+    short_name: UKHSA data dashboard
+    publisher: UK Health Security Agency
+    landing_url: https://ukhsa-dashboard.data.gov.uk/
+    license: Open Government Licence v3.0, except where otherwise stated
+    # The dashboard's pages state: "All content is available under the Open Government Licence v3.0, except where
+    # otherwise stated". Read 2026-11-25 on the home, about and access-our-data pages.
+    license_url: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+    license_verification: verified-live
+    license_checked: "2026-11-25"
+    redistribute_raw: true
+    citation: "UK Health Security Agency. UKHSA data dashboard. https://ukhsa-dashboard.data.gov.uk/ Contains public sector information licensed under the Open Government Licence v3.0."
+    cadence: weekly
+    kind: timeseries
   - id: rki
     name: Robert Koch Institute, laboratory-confirmed influenza cases in Germany
     short_name: RKI influenza cases

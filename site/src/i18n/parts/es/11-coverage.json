@@ -15,5 +15,6 @@
   "withdrawn.all": "Ver los brotes actuales",
   "offline.banner": "No tiene conexión. Esta página y sus cifras se guardaron en este dispositivo en una visita anterior y pueden estar desactualizadas.",
   "policy.privacy.device.p3": "Para que las páginas que ya ha visitado se abran sin conexión, su navegador guarda una copia de ellas y de sus archivos de datos en su dispositivo. La copia nunca se envía a ningún sitio, y borrar los datos del sitio en su navegador la elimina.",
-  "glossary.what": "qué significa"
+  "glossary.what": "qué significa",
+  "method.ukhsa_region_onset_year": "Para cada una de las nueve regiones de Inglaterra y cada año, se sumaron los casos de sarampión confirmados por laboratorio según la semana de inicio de los síntomas. Solo se muestran los años con todas las semanas presentes y fuera del retraso de notificación. Los contornos de las regiones se formaron combinando áreas del archivo de límites."
 }
